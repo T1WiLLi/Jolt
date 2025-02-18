@@ -3,101 +3,96 @@ package ca.jolt.logging;
 import java.util.logging.ConsoleHandler;
 import java.util.logging.Handler;
 import java.util.logging.Level;
-import java.util.logging.LogManager;
 import java.util.logging.Logger;
 
 /**
- * LogConfigurator is responsible for configuring the Java Util Logging (JUL)
- * framework
- * to use a custom formatter {@link LogFormatter} and setting up the logging
- * levels
- * and handlers for various loggers.
+ * Configures the logging system for the Jolt framework. This class sets up
+ * a unified logging format for both application and Tomcat logs.
  * 
  * <p>
- * This class sets the logging manager to
- * {@code org.apache.juli.ClassLoaderLogManager}
- * and configures the logging settings programmatically. It removes existing
- * handlers
- * from the root logger and adds a {@link ConsoleHandler} with a custom
- * {@link LogFormatter}.
- * Additionally, it configures specific loggers for Apache Tomcat components and
- * the
- * application's package to use the same handler and formatter.
+ * The configuration:
  * </p>
+ * <ul>
+ * <li>Sets the log level to INFO by default</li>
+ * <li>Applies the {@link JoltLogFormatter} to all logs</li>
+ * <li>Configures both application and Tomcat logging</li>
+ * <li>Removes existing handlers to ensure consistent formatting</li>
+ * </ul>
  * 
  * <p>
- * Usage:
+ * Basic usage example:
  * </p>
  * 
- * <pre>
- * {@code
- * LogConfigurator.configure();
+ * <pre>{@code
+ * // Logging will be automatically configured on startup
+ * // Then you can use standard Java logging:
+ * Logger logger = Logger.getLogger(YourClass.class.getName());
+ * logger.info("Application message");
+ * logger.warning("Warning message");
+ * 
+ * // With exceptions:
+ * try {
+ *     // Some code
+ * } catch (Exception e) {
+ *     logger.log(Level.SEVERE, "Error occurred", e);
  * }
- * </pre>
- * 
- * <p>
- * Example:
- * </p>
- * 
- * <pre>
- * {@code
- * public class Main {
- *     public static void main(String[] args) {
- *         LogConfigurator.configure();
- *         Logger logger = Logger.getLogger(Main.class.getName());
- *         logger.info("Application started");
- *     }
- * }
- * </pre>
+ * }</pre>
  * 
  * @author William Beaudin
- * 
+ * @see LogFormatter
+ * @see LogInitializer
  * @since 1.0
  */
-public class LogConfigurator {
+public final class LogConfigurator {
+
+    private static final String[] DEFAULT_LOGGERS = {
+            "", // Root logger
+            "org.apache.catalina", // Tomcat
+            "org.apache.coyote", // Tomcat
+            "org.apache.tomcat", // Tomcat
+            "org.apache.jasper", // Tomcat
+            "ca.jolt" // Jolt
+    };
+
+    private LogConfigurator() {
+        // Prevent instantiation
+    }
+
+    /**
+     * Configures the logging system with Jolt's default settings.
+     * This method is typically called automatically by {@link LogInitializer}
+     * but can be called manually if needed.
+     * 
+     * @throws LoggingConfigurationException if configuration fails
+     */
     public static void configure() {
         try {
             System.setProperty("java.util.logging.manager", "org.apache.juli.ClassLoaderLogManager");
             System.setProperty("java.util.logging.config.class", "ca.jolt.logging.LogConfigurator");
 
-            LogManager logManager = LogManager.getLogManager();
-            logManager.reset();
+            ConsoleHandler handler = new ConsoleHandler();
+            handler.setFormatter(new LogFormatter());
+            handler.setLevel(Level.INFO);
 
-            ConsoleHandler consoleHandler = new ConsoleHandler();
-            consoleHandler.setFormatter(new LogFormatter());
-            consoleHandler.setLevel(Level.INFO);
-
-            Logger rootLogger = Logger.getLogger("");
-            rootLogger.setLevel(Level.INFO);
-
-            for (Handler handler : rootLogger.getHandlers()) {
-                rootLogger.removeHandler(handler);
+            for (String loggerName : DEFAULT_LOGGERS) {
+                configureLogger(Logger.getLogger(loggerName), handler);
             }
 
-            rootLogger.addHandler(consoleHandler);
-
-            String[] loggers = {
-                    "org.apache.catalina",
-                    "org.apache.coyote",
-                    "org.apache.tomcat",
-                    "ca.jolt"
-            };
-
-            for (String loggerName : loggers) {
-                Logger logger = Logger.getLogger(loggerName);
-                logger.setLevel(Level.INFO);
-                for (Handler handler : logger.getHandlers()) {
-                    logger.removeHandler(handler);
-                }
-                logger.addHandler(consoleHandler);
-                logger.setUseParentHandlers(false);
-            }
-
-            Logger.getLogger("Main").info("Logging system initialized successfully");
+            Logger.getLogger(LogConfigurator.class.getName())
+                    .info("Jolt logging system initialized successfully");
 
         } catch (Exception e) {
-            System.err.println("Failed to initialize logging: " + e.getMessage());
-            e.printStackTrace();
+            throw new LoggingConfigurationException("Failed to initialize logging system", e);
         }
+    }
+
+    private static void configureLogger(Logger logger, Handler handler) {
+        for (Handler h : logger.getHandlers()) {
+            logger.removeHandler(h);
+        }
+
+        logger.setLevel(Level.INFO);
+        logger.addHandler(handler);
+        logger.setUseParentHandlers(false);
     }
 }
