@@ -1,5 +1,9 @@
-package ca.jolt;
+package ca.jolt.tomcat;
 
+import ca.jolt.tomcat.abstraction.WebServer;
+import ca.jolt.tomcat.config.ServerConfig;
+import ca.jolt.tomcat.config.SslConfig;
+import ca.jolt.exceptions.ServerException;
 import org.apache.catalina.Context;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;
@@ -7,28 +11,44 @@ import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.logging.Logger;
 
-public class TomcatServer {
+public class TomcatServer implements WebServer {
+
+    private static final Logger logger = Logger.getLogger(TomcatServer.class.getName());
+
     private final Tomcat tomcat;
     private final ServerConfig config;
-    private volatile ServerStatus status;
 
-    public TomcatServer(ServerConfig config) {
+    protected TomcatServer(ServerConfig config) {
         this.tomcat = new Tomcat();
         this.config = config != null ? config : new ServerConfig();
-        this.status = ServerStatus.STOPPED;
     }
 
-    public void start() {
+    @Override
+    public void start() throws ServerException {
         try {
-            status = ServerStatus.STARTING;
             ensureTempDirExists();
             configureTomcat();
             tomcat.start();
-            status = ServerStatus.RUNNING;
         } catch (Exception e) {
-            status = ServerStatus.ERROR;
+            throw new ServerException("Failed to start the server", e);
         }
+    }
+
+    @Override
+    public void stop() throws ServerException {
+        try {
+            tomcat.stop();
+        } catch (Exception e) {
+            throw new ServerException("Failed to stop the server", e);
+        }
+    }
+
+    @Override
+    public void restart() throws ServerException {
+        stop();
+        start();
     }
 
     private void ensureTempDirExists() {
@@ -36,21 +56,8 @@ public class TomcatServer {
             Path tempDir = Paths.get(config.getTempDir());
             Files.createDirectories(tempDir);
         } catch (Exception e) {
+            logger.severe("Failed to create temp dir: " + e.getMessage());
         }
-    }
-
-    public void stop() {
-        try {
-            status = ServerStatus.STOPPING;
-            tomcat.stop();
-            status = ServerStatus.STOPPED;
-        } catch (Exception e) {
-            status = ServerStatus.ERROR;
-        }
-    }
-
-    public ServerStatus getStatus() {
-        return status;
     }
 
     private void configureTomcat() {

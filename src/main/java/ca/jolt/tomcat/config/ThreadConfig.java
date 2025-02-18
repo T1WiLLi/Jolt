@@ -1,8 +1,11 @@
-package ca.jolt;
+package ca.jolt.tomcat.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import lombok.Setter;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Setter
 public class ThreadConfig {
     private static final int DEFAULT_MIN_THREADS = 10;
     private static final int DEFAULT_MAX_THREADS = 200;
@@ -13,13 +16,11 @@ public class ThreadConfig {
     private Long timeout;
 
     public ThreadConfig() {
-        // Initialize with default values
         this.minThreads = DEFAULT_MIN_THREADS;
         this.maxThreads = DEFAULT_MAX_THREADS;
         this.timeout = DEFAULT_TIMEOUT;
     }
 
-    // Getters with default values
     public int getMinThreads() {
         return minThreads != null ? minThreads : DEFAULT_MIN_THREADS;
     }
@@ -30,18 +31,5 @@ public class ThreadConfig {
 
     public long getTimeout() {
         return timeout != null ? timeout : DEFAULT_TIMEOUT;
-    }
-
-    // Setters
-    public void setMinThreads(Integer minThreads) {
-        this.minThreads = minThreads;
-    }
-
-    public void setMaxThreads(Integer maxThreads) {
-        this.maxThreads = maxThreads;
-    }
-
-    public void setTimeout(Long timeout) {
-        this.timeout = timeout;
     }
 }

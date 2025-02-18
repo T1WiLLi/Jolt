@@ -1,8 +1,11 @@
-package ca.jolt;
+package ca.jolt.tomcat.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 
+import lombok.Setter;
+
 @JsonIgnoreProperties(ignoreUnknown = true)
+@Setter
 public class SslConfig {
     private static final int DEFAULT_SSL_PORT = 8443;
 
@@ -13,12 +16,10 @@ public class SslConfig {
     private String keyAlias;
 
     public SslConfig() {
-        // Initialize with default values
         this.enabled = false;
         this.port = DEFAULT_SSL_PORT;
     }
 
-    // Getters with default values
     public boolean isEnabled() {
         return enabled != null ? enabled : false;
     }
@@ -37,26 +38,5 @@ public class SslConfig {
 
     public String getKeyAlias() {
         return keyAlias;
-    }
-
-    // Setters
-    public void setEnabled(Boolean enabled) {
-        this.enabled = enabled;
-    }
-
-    public void setPort(Integer port) {
-        this.port = port;
-    }
-
-    public void setKeystorePath(String keystorePath) {
-        this.keystorePath = keystorePath;
-    }
-
-    public void setKeystorePassword(String keystorePassword) {
-        this.keystorePassword = keystorePassword;
-    }
-
-    public void setKeyAlias(String keyAlias) {
-        this.keyAlias = keyAlias;
     }
 }

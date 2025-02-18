@@ -3,15 +3,23 @@ package ca.jolt;
 import java.util.logging.Logger;
 
 import ca.jolt.logging.LogConfigurator;
+import ca.jolt.logging.StartupLog;
+import ca.jolt.tomcat.WebServerBuilder;
+import ca.jolt.tomcat.abstraction.WebServer;
 
 public class Main {
     private static final Logger logger = Logger.getLogger(Main.class.getName());
 
     public static void main(String[] args) throws Exception {
+        StartupLog.printStartup();
         LogConfigurator.configure();
 
-        ServerConfig serverConfig = new ServerConfig();
-        TomcatServer server = new TomcatServer(serverConfig);
+        WebServer server = new WebServerBuilder()
+                .withPort(8080)
+                .withTempDir("tmp/tomcat")
+                .build();
+
+        server.start();
         logger.info("Tomcat started. Visit http://localhost:8080 to test.");
         server.start();
     }
