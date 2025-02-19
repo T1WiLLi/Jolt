@@ -5,9 +5,11 @@ import ca.jolt.tomcat.config.ServerConfig;
 import ca.jolt.tomcat.config.ServerConfigBuilder;
 import ca.jolt.tomcat.config.SslConfigBuilder;
 import ca.jolt.tomcat.config.ThreadConfigBuilder;
+import ca.jolt.exceptions.ServerException;
 
 public class WebServerBuilder {
     private final ServerConfigBuilder configBuilder;
+    private WebServerType webServerType = WebServerType.TOMCAT; // Default to Tomcat
 
     public WebServerBuilder() {
         this.configBuilder = new ServerConfigBuilder(this);
@@ -23,6 +25,11 @@ public class WebServerBuilder {
         return this;
     }
 
+    public WebServerBuilder withServerType(WebServerType type) {
+        this.webServerType = type;
+        return this;
+    }
+
     public ThreadConfigBuilder withThreads() {
         return new ThreadConfigBuilder(this, configBuilder.getConfig());
     }
@@ -31,8 +38,8 @@ public class WebServerBuilder {
         return new SslConfigBuilder(this, configBuilder.getConfig());
     }
 
-    public WebServer build() {
+    public WebServer build() throws ServerException {
         ServerConfig config = configBuilder.build();
-        return new TomcatServer(config);
+        return WebServerFactory.createServer(this.webServerType, config).finalizeBuild();
     }
 }
