@@ -1,18 +1,24 @@
 package ca.jolt.tomcat.config;
 
+import ca.jolt.tomcat.WebServerBuilder;
 import ca.jolt.tomcat.abstraction.ConfigurationBuilder;
 
-public class SslConfigBuilder extends ConfigurationBuilder<SslConfig> {
-    private final ServerConfigBuilder parentBuilder;
+public class SslConfigBuilder implements ConfigurationBuilder<SslConfig> {
+    private final WebServerBuilder parentBuilder;
     private final SslConfig config;
 
-    public SslConfigBuilder(ServerConfigBuilder parentBuilder, ServerConfig serverConfig) {
+    public SslConfigBuilder(WebServerBuilder parentBuilder, ServerConfig serverConfig) {
         this.parentBuilder = parentBuilder;
         this.config = serverConfig.getSsl();
     }
 
     public SslConfigBuilder withEnabled(boolean enabled) {
         config.setEnabled(enabled);
+        return this;
+    }
+
+    public SslConfigBuilder withPort(int port) {
+        config.setPort(port);
         return this;
     }
 
@@ -27,7 +33,7 @@ public class SslConfigBuilder extends ConfigurationBuilder<SslConfig> {
         return this;
     }
 
-    public ServerConfigBuilder and() {
+    public WebServerBuilder and() {
         return parentBuilder;
     }
 
@@ -38,9 +44,17 @@ public class SslConfigBuilder extends ConfigurationBuilder<SslConfig> {
     }
 
     @Override
-    protected void validate() {
-        if (config.isEnabled() && (config.getKeystorePath() == null || config.getKeystorePassword() == null)) {
-            throw new IllegalStateException("Keystore path and password are required when SSL is enabled.");
+    public void validate() {
+        if (config.isEnabled()) {
+            if (config.getKeystorePath() == null || config.getKeystorePassword() == null) {
+                throw new IllegalStateException("Keystore path and password are required when SSL is enabled.");
+            }
+            if (config.getKeyAlias() == null) {
+                throw new IllegalStateException("Key alias is required when SSL is enabled.");
+            }
+            if (config.getPort() <= 0) {
+                throw new IllegalStateException("SSL port must be positive when SSL is enabled.");
+            }
         }
     }
 }

@@ -8,6 +8,7 @@ import lombok.Setter;
 @Setter
 public class SslConfig {
     private static final int DEFAULT_SSL_PORT = 8443;
+    private static final boolean DEFAULT_SSL_ENABLED = false;
 
     private Boolean enabled;
     private Integer port;
@@ -21,7 +22,7 @@ public class SslConfig {
     }
 
     public boolean isEnabled() {
-        return enabled != null ? enabled : false;
+        return enabled != null ? enabled : DEFAULT_SSL_ENABLED;
     }
 
     public int getPort() {

@@ -1,12 +1,19 @@
 package ca.jolt.tomcat.config;
 
+import ca.jolt.tomcat.WebServerBuilder;
 import ca.jolt.tomcat.abstraction.ConfigurationBuilder;
 
-public class ServerConfigBuilder extends ConfigurationBuilder<ServerConfig> {
+public class ServerConfigBuilder implements ConfigurationBuilder<ServerConfig> {
     private final ServerConfig config;
+    private final WebServerBuilder parentBuilder;
 
-    public ServerConfigBuilder() {
+    public ServerConfigBuilder(WebServerBuilder parentBuilder) {
+        this.parentBuilder = parentBuilder;
         this.config = new ServerConfig();
+    }
+
+    public ServerConfig getConfig() {
+        return config;
     }
 
     public ServerConfigBuilder withPort(int port) {
@@ -20,11 +27,11 @@ public class ServerConfigBuilder extends ConfigurationBuilder<ServerConfig> {
     }
 
     public SslConfigBuilder withSsl() {
-        return new SslConfigBuilder(this, config);
+        return new SslConfigBuilder(parentBuilder, config);
     }
 
     public ThreadConfigBuilder withThreads() {
-        return new ThreadConfigBuilder(this, config);
+        return new ThreadConfigBuilder(parentBuilder, config);
     }
 
     @Override
@@ -34,7 +41,7 @@ public class ServerConfigBuilder extends ConfigurationBuilder<ServerConfig> {
     }
 
     @Override
-    protected void validate() {
+    public void validate() {
         if (config.getPort() == 0) {
             throw new IllegalStateException("Port is a required configuration.");
         }

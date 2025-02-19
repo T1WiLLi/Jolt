@@ -19,7 +19,6 @@ public class Main {
                 .withTempDir("tmp/tomcat")
                 .build();
 
-        server.start();
         logger.info("Tomcat started. Visit http://localhost:8080 to test.");
         server.start();
     }

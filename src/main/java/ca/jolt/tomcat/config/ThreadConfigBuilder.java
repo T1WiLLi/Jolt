@@ -1,12 +1,13 @@
 package ca.jolt.tomcat.config;
 
+import ca.jolt.tomcat.WebServerBuilder;
 import ca.jolt.tomcat.abstraction.ConfigurationBuilder;
 
-public class ThreadConfigBuilder extends ConfigurationBuilder<ThreadConfig> {
-    private final ServerConfigBuilder parentBuilder;
+public class ThreadConfigBuilder implements ConfigurationBuilder<ThreadConfig> {
+    private final WebServerBuilder parentBuilder;
     private final ThreadConfig config;
 
-    public ThreadConfigBuilder(ServerConfigBuilder parentBuilder, ServerConfig serverConfig) {
+    public ThreadConfigBuilder(WebServerBuilder parentBuilder, ServerConfig serverConfig) {
         this.parentBuilder = parentBuilder;
         this.config = serverConfig.getThreads();
     }
@@ -26,7 +27,7 @@ public class ThreadConfigBuilder extends ConfigurationBuilder<ThreadConfig> {
         return this;
     }
 
-    public ServerConfigBuilder and() {
+    public WebServerBuilder and() {
         return parentBuilder;
     }
 
@@ -37,9 +38,12 @@ public class ThreadConfigBuilder extends ConfigurationBuilder<ThreadConfig> {
     }
 
     @Override
-    protected void validate() {
+    public void validate() {
         if (config.getMinThreads() <= 0 || config.getMaxThreads() <= 0 || config.getTimeout() <= 0) {
             throw new IllegalStateException("Thread configuration values must be positive.");
+        }
+        if (config.getMinThreads() > config.getMaxThreads()) {
+            throw new IllegalStateException("Minimum threads cannot be greater than maximum threads.");
         }
     }
 }

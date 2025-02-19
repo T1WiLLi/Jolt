@@ -1,8 +1,8 @@
 package ca.jolt.tomcat.abstraction;
 
-public abstract class ConfigurationBuilder<T> {
+public interface ConfigurationBuilder<T> {
 
-    public abstract T build();
+    T build();
 
-    protected abstract void validate();
+    void validate();
 }
