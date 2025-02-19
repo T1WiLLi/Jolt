@@ -36,9 +36,9 @@ public class TomcatServer extends AbstractWebServer {
     @Override
     public void stop() throws ServerException {
         try {
+            logger.info("Server stopped successfully");
             tomcat.stop();
             deleteTempDir();
-            logger.info("Server stopped successfully");
         } catch (Exception e) {
             throw new ServerException("Failed to stop the server", e);
         }

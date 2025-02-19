@@ -12,16 +12,5 @@ public class Main {
 
         WebServer server = new WebServerBuilder().build();
         server.start();
-
-        // Exemple of how to setup route with Jolt
-        // Jolt.get("/", () -> "Hello World!"); // This is the most basic route.
-        // Jolt.get("/hello", (context) -> "Hello" + context.query("name")); // This
-        // route has a query parameter.
-        // Jolt.get("/hello/{name}", (context) -> "Hello " + context.path("name")); //
-        // This route has a path parameter.
-        // Jolt.get("/template", (context) -> new Template("index.html", new
-        // Model().withAttribute("name", "World"))); // This route uses a template.
-        // Jolt.get("/json", (context) -> new Person("Bob Dole", 18)).asJson(); // This
-        // route returns a JSON response.
     }
 }

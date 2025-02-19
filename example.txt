@@ -4,3 +4,13 @@
         // Jolt.get("/hello/{name}", (context) -> "Hello " + context.path("name")); // This route has a path parameter.
         // Jolt.get("/template", (context) -> new Template("index.html", new Model().withAttribute("name", "World"))); // This route uses a template.
         // Jolt.get("/json", (context) -> new Person("Bob Dole", 18)).asJson(); // This route returns a JSON response.
+
+        public class MyApp extends JoltApplication {
+
+                public static void main(String[] args) {
+                        buildServer() //.xxx()  config availble through the current WebServerBuilder.
+                        get("/", () -> "Hello World!");
+                        
+                        start();
+                }
+        }
