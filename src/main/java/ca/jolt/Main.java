@@ -6,11 +6,11 @@ import ca.jolt.tomcat.abstraction.WebServer;
 
 public class Main extends JoltApplication {
     public static void main(String[] args) throws Exception {
-        Main main = new Main();
+        launch(args);
+    }
 
-        main.useCustomError(false);
-        main.useCustomNotFound(false);
-
+    @Override
+    protected void setup() {
         buildServer()
                 .withPort(8080);
 
@@ -19,16 +19,9 @@ public class Main extends JoltApplication {
                 + ctx.path("age").orDefault(String.valueOf(Integer.MIN_VALUE)) + " years old!"));
         post("/user", (ctx) -> {
             User user = ctx.body(User.class);
-            return ctx.html("Hello, " + user.name + "!");
+            return ctx.html("Hello, " + user.name + "! You are " + user.age + " years old!");
         });
-
         setupSecret();
-        start();
-    }
-
-    private static class User {
-        public String name;
-        public int age;
     }
 
     @Override
@@ -36,11 +29,15 @@ public class Main extends JoltApplication {
         server.setRouter(router);
     }
 
+    private static class User {
+        public String name;
+        public int age;
+    }
+
     private static void setupSecret() {
         get("/hello", (ctx) -> {
             String name = ctx.query("name").orDefault("World!");
 
-            // Build the sparkle elements dynamically (50 sparkles)
             StringBuilder sparklesBuilder = new StringBuilder();
             for (int i = 0; i < 50; i++) {
                 double left = Math.random() * 100;

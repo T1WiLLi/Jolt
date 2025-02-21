@@ -35,6 +35,10 @@ public final class JoltHttpContext { // Improve this so that exception actually 
 
     // Request (Input)
 
+    public HttpServletRequest getRequest() {
+        return req;
+    }
+
     public String method() {
         return req.getMethod();
     }
@@ -102,6 +106,10 @@ public final class JoltHttpContext { // Improve this so that exception actually 
     }
 
     // Response (Output)
+
+    public HttpServletResponse getResponse() {
+        return res;
+    }
 
     public JoltHttpContext status(HttpStatus status) {
         res.setStatus(status.code());

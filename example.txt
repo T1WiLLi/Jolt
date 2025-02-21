@@ -8,9 +8,71 @@
         public class MyApp extends JoltApplication {
 
                 public static void main(String[] args) {
-                        buildServer() //.xxx()  config availble through the current WebServerBuilder.
-                        get("/", () -> "Hello World!");
-                        
-                        start();
+                        build().withPort(8080);
+                        launch();
+                }
+
+                @Override
+                public static void setup() {
+                        get(...)
+                        post(...)
+
+                        ect.
+                }
+        }
+
+
+Start implementing Security ! 
+
+        - The security module for the V1 will be based off API-KEY authentification. 
+        - We should have functions on the route to add security option to the route.
+        - We will need to implement function to generate API-KEY and to check API-KEY.
+        - We will need to implement function to add API-KEY to the route.
+        - We will need to implement function to remove API-KEY from the route.
+        - We will need to implement function to check if API-KEY is required for the route.
+        - We will need to implement function to check if API-KEY is valid for the route.
+        - And a bunch of other things for security, such as CORS, XSS, Headers , etc.
+        - We will also need to implement a (or to extends the existing) Cookie logic so that our framework user can use cookies in their application. Ofc, by default when they set a route with an API_KEY, we should all manage that by default.
+        - As the security is a big topic, we will need to implement a lot of things, so we will need to create a new module for security, and we will need to implement all the security features in this module.
+        - As the framework is first designed to make REST API, we won't be implementing CSFR, as it is not directly needed for REST API.
+        - We also want to keep it open for modification, because one of the first other thing I want to implement in V2 is Role-based access control, so we will need to keep it open for modification.
+
+        An example of a fully secured configuration App : 
+
+        public class MyApp extends JoltApplication {
+
+                public static void main(String[] args) {
+                        launch(args);
+                }
+
+                @Override
+                protected void setup() {
+                        configureServer(); // Configure the server
+
+                        get("/home", () -> "Hello World");
+                        get("/secret", () -> "This is a secret page", SecurityOption.KEY(... We should define a way to auth the key in here. )); // In V2, we will add SecurityOption.ROLE(Role.ADMIN)
+                }
+
+                @Override
+                private void configureServer() {
+                        build()
+                                .withPort(8080)
+                                .withSecurity() // And a bunch of other configuration, just like Spring-Boot, as we don't want to 'take' security issue lightly.
+                                        .withCORS()
+                                                .allowedCredentials()
+                                                .allowedHeaders("Authorization", "Cache-Control", "Content-Type")
+                                                .allowedMethods("GET", "POST", "PUT", "DELETE")
+                                                .allowedOrigins("http://localhost:8080")
+                                        .withHeaders()
+                                                .withXssProtection() // Maybe we should be able to customize XSS protection.
+                                                .frameOption(false)
+                                                .httpStrictTransportSecurity(true)
+                                                .referrerPolicy(ReferrerPolicy.SAME_ORIGIN)
+                                                .httpsOnly() // Maybe we should be able to customize HTTPS only. By default it's false so http works.
+                                        .secureRequests(secure -> secure
+                                                .route("/home").permitAll() // We have 4 options : permitAll(), secured(), permit(Method.GET, Method.POST), denyAll() 
+                                                .route("/secret").secured() // So we know it's secured, and in the route definition, we will pass the SecurityOption.
+                                                .anyRoute().denyAll())
+                                        .keyGeneration(HashAlgorithm.SHA256) // How the API_KEY will generate keys. We have 2 options : SHA256, SHA512 
                 }
         }

@@ -3,6 +3,7 @@ package ca.jolt.tomcat;
 import ca.jolt.core.JoltDispatcherServlet;
 import ca.jolt.core.Router;
 import ca.jolt.exceptions.ServerException;
+import ca.jolt.exceptions.handler.GlobalExceptionHandler;
 import ca.jolt.tomcat.abstraction.AbstractWebServer;
 import ca.jolt.tomcat.config.ServerConfig;
 import org.apache.catalina.Context;
@@ -18,8 +19,7 @@ public class TomcatServer extends AbstractWebServer {
 
     private Tomcat tomcat;
     private Router router;
-    private boolean customNotFound;
-    private boolean customError;
+    private GlobalExceptionHandler exceptionHandler;
 
     public TomcatServer(ServerConfig config) {
         configure(config);
@@ -30,9 +30,9 @@ public class TomcatServer extends AbstractWebServer {
         this.router = router;
     }
 
-    public void setCustomErrorPages(boolean customNotFound, boolean customError) {
-        this.customNotFound = customNotFound;
-        this.customError = customError;
+    @Override
+    public void setExceptionHandler(GlobalExceptionHandler exceptionHandler) {
+        this.exceptionHandler = exceptionHandler;
     }
 
     @Override
@@ -55,7 +55,7 @@ public class TomcatServer extends AbstractWebServer {
             tomcat.start();
             log.info("Tomcat started on port " + config.getPort());
         } catch (Exception e) {
-            throw new ServerException("Failed to start the server", e);
+            throw new ServerException("Failed to start the server: " + e.getMessage(), e);
         }
     }
 
@@ -76,7 +76,7 @@ public class TomcatServer extends AbstractWebServer {
             Context context = tomcat.addContext("", docBase);
 
             if (router != null) {
-                JoltDispatcherServlet dispatcher = new JoltDispatcherServlet(router, customNotFound, customError);
+                JoltDispatcherServlet dispatcher = new JoltDispatcherServlet(router, exceptionHandler);
                 Tomcat.addServlet(context, "JoltServlet", dispatcher);
                 context.addServletMappingDecoded("/*", "JoltServlet");
             } else {

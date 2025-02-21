@@ -2,6 +2,7 @@ package ca.jolt.tomcat.abstraction;
 
 import ca.jolt.core.Router;
 import ca.jolt.exceptions.ServerException;
+import ca.jolt.exceptions.handler.GlobalExceptionHandler;
 import ca.jolt.tomcat.config.ServerConfig;
 import ca.jolt.tomcat.shutdown.ShutdownHooks;
 
@@ -15,6 +16,8 @@ public interface WebServer {
     void configure(ServerConfig config) throws ServerException;
 
     void setRouter(Router router);
+
+    void setExceptionHandler(GlobalExceptionHandler exceptionHandler);
 
     /**
      * Finalizes the build of the WebServer and adds a shutdown hook to stop the
