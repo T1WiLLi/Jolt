@@ -2,11 +2,11 @@ package ca.jolt;
 
 import ca.jolt.core.JoltApplication;
 import ca.jolt.core.Router;
-import ca.jolt.tomcat.abstraction.WebServer;
+import ca.jolt.server.abstraction.WebServer;
 
 public class Main extends JoltApplication {
     public static void main(String[] args) throws Exception {
-        launch(args);
+        launch(Main.class, args);
     }
 
     @Override

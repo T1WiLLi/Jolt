@@ -3,11 +3,13 @@ package ca.jolt.core;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
+import ca.jolt.exceptions.ServerException;
+import ca.jolt.injector.JoltContainer;
 import ca.jolt.logging.LogConfigurator;
 import ca.jolt.logging.StartupLog;
 import ca.jolt.routing.RouteHandler;
-import ca.jolt.tomcat.WebServerBuilder;
-import ca.jolt.tomcat.abstraction.WebServer;
+import ca.jolt.server.WebServerBuilder;
+import ca.jolt.server.abstraction.WebServer;
 
 /**
  * Base class for a Jolt application.
@@ -54,13 +56,14 @@ public abstract class JoltApplication {
         StartupLog.printStartup();
         LogConfigurator.configure();
         log.info("JoltApplication initialized");
+        JoltContainer.getInstance().scanPackage("ca.jolt").initialize();
     }
 
     /**
      * Launches the application by reflectively instantiating the provided subclass,
      * calling its setup() method, and then building and starting the server.
-     *
-     * @param appClass the application class (e.g., MyApp.class)
+     * 
+     * @param appClass the subclass of JoltApplication to launch
      * @param args     command-line arguments
      */
     public static <T extends JoltApplication> void launch(Class<T> appClass, String[] args) {
@@ -68,7 +71,7 @@ public abstract class JoltApplication {
             if (instance == null) {
                 instance = appClass.getDeclaredConstructor().newInstance();
             }
-            instance.setup(); // user-defined route and server configuration
+            instance.setup(); // user-defined setup: routes, server configuration, etc.
             if (instance.serverBuilder == null) {
                 instance.serverBuilder = new WebServerBuilder();
             }
@@ -79,6 +82,16 @@ public abstract class JoltApplication {
         } catch (Exception e) {
             log.severe("Failed to launch application: " + e.getMessage());
             System.exit(1);
+        }
+    }
+
+    public static void stop() {
+        if (instance != null) {
+            try {
+                instance.webServer.stop();
+            } catch (ServerException e) {
+                e.printStackTrace();
+            }
         }
     }
 

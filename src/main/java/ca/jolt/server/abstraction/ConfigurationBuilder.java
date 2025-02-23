@@ -1,4 +1,4 @@
-package ca.jolt.tomcat.abstraction;
+package ca.jolt.server.abstraction;
 
 public interface ConfigurationBuilder<T> {
 

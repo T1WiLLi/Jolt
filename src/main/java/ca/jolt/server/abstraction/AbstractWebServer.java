@@ -1,4 +1,4 @@
-package ca.jolt.tomcat.abstraction;
+package ca.jolt.server.abstraction;
 
 import java.io.IOException;
 import java.net.ServerSocket;
@@ -9,7 +9,7 @@ import java.util.Comparator;
 import java.util.logging.Logger;
 
 import ca.jolt.exceptions.ServerException;
-import ca.jolt.tomcat.config.ServerConfig;
+import ca.jolt.server.config.ServerConfig;
 
 public abstract class AbstractWebServer implements WebServer {
     protected ServerConfig config;

@@ -1,11 +1,11 @@
-package ca.jolt.tomcat;
+package ca.jolt.server;
 
-import ca.jolt.tomcat.abstraction.WebServer;
-import ca.jolt.tomcat.config.ServerConfig;
-import ca.jolt.tomcat.config.ServerConfigBuilder;
-import ca.jolt.tomcat.config.SslConfigBuilder;
-import ca.jolt.tomcat.config.ThreadConfigBuilder;
 import ca.jolt.exceptions.ServerException;
+import ca.jolt.server.abstraction.WebServer;
+import ca.jolt.server.config.ServerConfig;
+import ca.jolt.server.config.ServerConfigBuilder;
+import ca.jolt.server.config.SslConfigBuilder;
+import ca.jolt.server.config.ThreadConfigBuilder;
 
 public class WebServerBuilder {
     private final ServerConfigBuilder configBuilder;

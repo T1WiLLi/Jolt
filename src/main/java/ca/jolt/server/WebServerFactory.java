@@ -1,8 +1,8 @@
-package ca.jolt.tomcat;
+package ca.jolt.server;
 
 import ca.jolt.exceptions.ServerException;
-import ca.jolt.tomcat.abstraction.WebServer;
-import ca.jolt.tomcat.config.ServerConfig;
+import ca.jolt.server.abstraction.WebServer;
+import ca.jolt.server.config.ServerConfig;
 
 import java.util.HashMap;
 import java.util.Map;

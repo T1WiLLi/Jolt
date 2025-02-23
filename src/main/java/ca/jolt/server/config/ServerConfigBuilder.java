@@ -1,7 +1,7 @@
-package ca.jolt.tomcat.config;
+package ca.jolt.server.config;
 
-import ca.jolt.tomcat.WebServerBuilder;
-import ca.jolt.tomcat.abstraction.ConfigurationBuilder;
+import ca.jolt.server.WebServerBuilder;
+import ca.jolt.server.abstraction.ConfigurationBuilder;
 
 public class ServerConfigBuilder implements ConfigurationBuilder<ServerConfig> {
     private final ServerConfig config;

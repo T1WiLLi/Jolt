@@ -21,6 +21,7 @@
                 }
         }
 
+Start implementing dependency injection, maybe not using @Bean tho.
 
 Start implementing Security ! 
 

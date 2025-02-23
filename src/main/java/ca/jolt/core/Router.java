@@ -14,8 +14,6 @@ public final class Router {
 
     private final List<Route> routes = new ArrayList<>();
 
-    // Overloaded registration methods for different handler types
-
     public Router get(String path, RouteHandler handler) {
         addRoute(new Route("GET", path, handler));
         return this;
@@ -50,6 +48,16 @@ public final class Router {
 
     public Router delete(String path, Supplier<Object> supplier) {
         return delete(path, RouteHandler.fromSupplier(supplier));
+    }
+
+    public List<String> getAllowedMethods(String path) {
+        List<String> allowed = new ArrayList<>();
+        for (Route route : routes) {
+            if (route.getPattern().matcher(path).matches()) {
+                allowed.add(route.getHttpMethod());
+            }
+        }
+        return allowed;
     }
 
     public RouteMatch match(String method, String requestPath) {

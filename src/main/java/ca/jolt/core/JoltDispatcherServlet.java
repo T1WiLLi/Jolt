@@ -10,6 +10,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.logging.Logger;
 
 public final class JoltDispatcherServlet extends HttpServlet {
@@ -35,8 +36,16 @@ public final class JoltDispatcherServlet extends HttpServlet {
 
         RouteMatch match = router.match(method, path);
         if (match == null) {
+            List<String> allowedMethods = router.getAllowedMethods(path);
+            if (!allowedMethods.isEmpty()) {
+                log.info("HTTP method " + method + " is not allowed for path: " + path);
+                res.setHeader("Allow", String.join(", ", allowedMethods));
+                res.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
+                        "HTTP method " + method + " not allowed for " + path);
+                return;
+            }
             log.info("No route matched for path: " + path);
-            res.sendError(HttpServletResponse.SC_NOT_FOUND);
+            res.sendError(HttpServletResponse.SC_NOT_FOUND, "No route found for " + path);
             return;
         }
 

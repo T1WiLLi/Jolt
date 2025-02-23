@@ -1,11 +1,12 @@
-package ca.jolt.tomcat;
+package ca.jolt.server;
 
 import ca.jolt.core.JoltDispatcherServlet;
 import ca.jolt.core.Router;
 import ca.jolt.exceptions.ServerException;
 import ca.jolt.exceptions.handler.GlobalExceptionHandler;
-import ca.jolt.tomcat.abstraction.AbstractWebServer;
-import ca.jolt.tomcat.config.ServerConfig;
+import ca.jolt.server.abstraction.AbstractWebServer;
+import ca.jolt.server.config.ServerConfig;
+
 import org.apache.catalina.Context;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.startup.Tomcat;

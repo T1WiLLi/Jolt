@@ -1,7 +1,7 @@
-package ca.jolt.tomcat.shutdown;
+package ca.jolt.server.shutdown;
 
 import ca.jolt.exceptions.ServerException;
-import ca.jolt.tomcat.abstraction.WebServer;
+import ca.jolt.server.abstraction.WebServer;
 
 public class ShutdownHooks {
     public static void addShutdownHook(WebServer server) {

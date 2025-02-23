@@ -1,4 +1,4 @@
-package ca.jolt.tomcat;
+package ca.jolt.server;
 
 import java.util.HashMap;
 import java.util.Map;

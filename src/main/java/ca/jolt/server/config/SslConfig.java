@@ -1,4 +1,4 @@
-package ca.jolt.tomcat.config;
+package ca.jolt.server.config;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 

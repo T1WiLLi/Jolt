@@ -1,10 +1,10 @@
-package ca.jolt.tomcat.abstraction;
+package ca.jolt.server.abstraction;
 
 import ca.jolt.core.Router;
 import ca.jolt.exceptions.ServerException;
 import ca.jolt.exceptions.handler.GlobalExceptionHandler;
-import ca.jolt.tomcat.config.ServerConfig;
-import ca.jolt.tomcat.shutdown.ShutdownHooks;
+import ca.jolt.server.config.ServerConfig;
+import ca.jolt.server.shutdown.ShutdownHooks;
 
 public interface WebServer {
     public void start() throws ServerException;

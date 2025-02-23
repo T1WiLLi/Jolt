@@ -42,12 +42,11 @@ import java.util.logging.LogRecord;
  * @see LogConfigurator
  * @since 1.0
  */
-public class LogFormatter extends Formatter {
+public final class LogFormatter extends Formatter {
     private static final ThreadLocal<DateTimeFormatter> formatter = ThreadLocal
             .withInitial(() -> DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss"));
 
     /**
-     * This function can be overriden to change the format of the log output.
      * {@inheritDoc}
      */
     @Override
@@ -65,7 +64,7 @@ public class LogFormatter extends Formatter {
         return formatStackTrace(builder, record).toString();
     }
 
-    protected final StringBuilder formatStackTrace(StringBuilder sb, LogRecord record) {
+    private StringBuilder formatStackTrace(StringBuilder sb, LogRecord record) {
         if (record.getThrown() != null) {
             try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
                 record.getThrown().printStackTrace(pw);
