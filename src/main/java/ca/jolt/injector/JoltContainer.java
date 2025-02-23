@@ -26,8 +26,12 @@ import ca.jolt.exceptions.CircularDependencyException;
 import ca.jolt.exceptions.JoltDIException;
 import ca.jolt.injector.annotation.JoltBean;
 import ca.jolt.injector.annotation.JoltBeanInjection;
+import ca.jolt.injector.annotation.JoltConfiguration;
 import ca.jolt.injector.annotation.PostConstruct;
 import ca.jolt.injector.annotation.PreDestroy;
+import ca.jolt.injector.type.BeanScope;
+import ca.jolt.injector.type.ConfigurationType;
+import ca.jolt.injector.type.InitializationMode;
 import lombok.Getter;
 
 /**
@@ -107,10 +111,17 @@ public final class JoltContainer {
     private static final JoltContainer instance = new JoltContainer();
 
     private final Map<String, Class<?>> beanDefinitions = new HashMap<>();
+    // Cache for singleton instances.
     private final Map<String, Object> singletonInstances = new ConcurrentHashMap<>();
+    // Type-based lookup for singleton instances.
     private final Map<Class<?>, Object> typeToInstance = new ConcurrentHashMap<>();
+    // Tracks beans currently being created (for circular dependency detection).
     private final Set<String> beansInCreation = Collections.synchronizedSet(new HashSet<>());
+    // Managed beans list for lifecycle callback invocation.
     private final List<Object> managedBeans = new ArrayList<>();
+    // Configuration registry: maps configuration type to its instance.
+    private final Map<ConfigurationType, Object> configurations = new HashMap<>();
+
     private boolean isInitialized = false;
 
     private JoltContainer() {
@@ -134,6 +145,7 @@ public final class JoltContainer {
      *                    {@code null} or empty.
      * @throws JoltDIException if the base package is {@code null}, empty, not
      *                         found, or if an error occurs during scanning.
+     * @return the container instance for method chaining.
      */
     public JoltContainer scanPackage(String basePackage) throws JoltDIException {
         logger.info("Scanning package: " + basePackage);
@@ -162,7 +174,6 @@ public final class JoltContainer {
             logger.severe("Error scanning package: " + e.getMessage());
             throw new JoltDIException("Failed to scan package: " + basePackage, e);
         }
-
         return this;
     }
 
@@ -186,12 +197,13 @@ public final class JoltContainer {
      * </p>
      */
     public void initialize() {
-        logger.info("Initializing container with non-lazy singleton beans.");
+        logger.info("Initializing container with EAGER singleton beans.");
         if (!isInitialized) {
             for (Map.Entry<String, Class<?>> entry : beanDefinitions.entrySet()) {
                 Class<?> beanClass = entry.getValue();
                 JoltBean annotation = beanClass.getAnnotation(JoltBean.class);
-                if (!annotation.lazy() && "singleton".equals(annotation.scope())) {
+                if (annotation.initialization() == InitializationMode.EAGER &&
+                        annotation.scope() == BeanScope.SINGLETON) {
                     logger.info("Eagerly creating bean instance for: " + entry.getKey());
                     getBean(entry.getKey());
                 }
@@ -240,18 +252,14 @@ public final class JoltContainer {
         logger.info("Registering bean: " + beanClass.getName());
         validateState();
         Objects.requireNonNull(beanClass, "Bean class cannot be null");
-
         JoltBean annotation = beanClass.getAnnotation(JoltBean.class);
         if (annotation != null) {
             String beanName = getBeanName(beanClass, annotation);
-
             if (beanDefinitions.containsKey(beanName)) {
                 throw new JoltDIException("Duplicate bean name: " + beanName);
             }
-
             beanDefinitions.put(beanName, beanClass);
-
-            if (!annotation.lazy()) {
+            if (annotation.initialization() == InitializationMode.EAGER) {
                 getBean(beanName);
             }
         }
@@ -370,56 +378,57 @@ public final class JoltContainer {
     }
 
     /**
-     * Loads a class file and, if annotated with {@link JoltBean}, validates and
-     * registers it.
+     * Loads a class file and, if annotated with {@link JoltBean} or
+     * {@link JoltConfiguration},
+     * validates and registers it.
      *
      * @param file        the class file.
-     * @param basePackage the package name corresponding to the file location.
-     * @throws JoltDIException if the class cannot be loaded.
+     * @param basePackage the package corresponding to the file.
+     * @throws JoltDIException if the class cannot be loaded or processed.
      */
     private void processClassFile(File file, String basePackage) {
         String className = basePackage + "." +
                 file.getName().substring(0, file.getName().length() - 6);
         try {
             Class<?> clazz = Class.forName(className);
+            if (clazz.isAnnotationPresent(JoltConfiguration.class)) {
+                JoltConfiguration configAnno = clazz.getAnnotation(JoltConfiguration.class);
+                Object configInstance = clazz.getDeclaredConstructor().newInstance();
+                configurations.put(configAnno.value(), configInstance);
+                logger.info("Registered configuration: " + className + " for " + configAnno.value());
+            }
             if (clazz.isAnnotationPresent(JoltBean.class)) {
                 validateBeanClass(clazz);
                 registerBean(clazz);
             }
         } catch (ClassNotFoundException e) {
             throw new JoltDIException("Failed to load class: " + className, e);
+        } catch (Exception e) {
+            throw new JoltDIException("Error processing class: " + className, e);
         }
     }
 
     /**
-     * Validates that the given bean class meets the necessary criteria.
-     *
-     * <p>
-     * The validation checks that the class is concrete (not abstract or an
-     * interface), provides a public no-argument
-     * constructor, and has valid lifecycle methods (only one {@code PostConstruct}
-     * and one {@code PreDestroy} method,
-     * each with no parameters).
-     * </p>
+     * Validates that the bean class meets the necessary criteria:
+     * <ul>
+     * <li>The class must be concrete (not abstract or an interface).</li>
+     * <li>The class must provide a public no-argument constructor.</li>
+     * <li>If present, lifecycle methods must be defined correctly (only one per
+     * type and no parameters).</li>
+     * </ul>
      *
      * @param beanClass the bean class to validate.
-     * @throws JoltDIException if the class is abstract, an interface, or does not
-     *                         meet the constructor/lifecycle method requirements.
+     * @throws JoltDIException if validation fails.
      */
     private void validateBeanClass(Class<?> beanClass) {
-        if (Modifier.isAbstract(beanClass.getModifiers()) ||
-                Modifier.isInterface(beanClass.getModifiers())) {
-            throw new JoltDIException(
-                    "Bean class must be concrete: " + beanClass.getName());
+        if (Modifier.isAbstract(beanClass.getModifiers()) || Modifier.isInterface(beanClass.getModifiers())) {
+            throw new JoltDIException("Bean class must be concrete: " + beanClass.getName());
         }
-
         try {
             beanClass.getDeclaredConstructor();
         } catch (NoSuchMethodException e) {
-            throw new JoltDIException(
-                    "Bean class must have a no-arg constructor: " + beanClass.getName());
+            throw new JoltDIException("Bean class must have a no-arg constructor: " + beanClass.getName());
         }
-
         validateLifecycleMethods(beanClass, PostConstruct.class);
         validateLifecycleMethods(beanClass, PreDestroy.class);
     }
@@ -440,23 +449,18 @@ public final class JoltContainer {
      * @throws JoltDIException if more than one method is annotated or if a
      *                         lifecycle method has parameters.
      */
-    private void validateLifecycleMethods(Class<?> beanClass,
-            Class<? extends Annotation> annotationType) {
+    private void validateLifecycleMethods(Class<?> beanClass, Class<? extends Annotation> annotationType) {
         List<Method> annotatedMethods = Arrays.stream(beanClass.getDeclaredMethods())
                 .filter(method -> method.isAnnotationPresent(annotationType))
                 .collect(Collectors.toList());
-
         if (annotatedMethods.size() > 1) {
-            throw new JoltDIException(
-                    "Multiple " + annotationType.getSimpleName() +
-                            " methods found in " + beanClass.getName());
+            throw new JoltDIException("Multiple " + annotationType.getSimpleName() +
+                    " methods found in " + beanClass.getName());
         }
-
         for (Method method : annotatedMethods) {
             if (method.getParameterCount() > 0) {
-                throw new JoltDIException(
-                        "Lifecycle method must have no parameters: " +
-                                beanClass.getName() + "." + method.getName());
+                throw new JoltDIException("Lifecycle method must have no parameters: " +
+                        beanClass.getName() + "." + method.getName());
             }
         }
     }
@@ -482,31 +486,25 @@ public final class JoltContainer {
      */
     private Object createBean(Class<?> beanClass, String beanName) {
         if (!beansInCreation.add(beanName)) {
-            throw new CircularDependencyException(
-                    "Circular dependency detected for bean: " + beanName +
-                            ". Creation chain: " + String.join(" -> ", beansInCreation));
+            throw new CircularDependencyException("Circular dependency detected for bean: " + beanName +
+                    ". Creation chain: " + String.join(" -> ", beansInCreation));
         }
-
         try {
             Object instance = beanClass.getDeclaredConstructor().newInstance();
-
             JoltBean annotation = beanClass.getAnnotation(JoltBean.class);
-            if ("singleton".equals(annotation.scope())) {
+            if (annotation != null && annotation.scope() == BeanScope.SINGLETON) {
                 singletonInstances.put(beanName, instance);
                 typeToInstance.put(beanClass, instance);
                 managedBeans.add(instance);
             }
-
             injectDependencies(instance);
             beansInCreation.remove(beanName);
             invokeLifecycleMethod(instance, PostConstruct.class);
-
             return instance;
         } catch (Exception e) {
             beansInCreation.remove(beanName);
             logger.severe("Error creating bean " + beanName + ": " + e.getMessage());
-            throw new BeanCreationException(
-                    "Failed to create bean: " + beanName, e);
+            throw new BeanCreationException("Failed to create bean: " + beanName, e);
         }
     }
 
@@ -529,26 +527,23 @@ public final class JoltContainer {
     private void injectDependencies(Object instance) {
         Class<?> clazz = instance.getClass();
         for (Field field : clazz.getDeclaredFields()) {
-            JoltBeanInjection injection = field.getAnnotation(JoltBeanInjection.class);
-            if (injection != null) {
+            if (field.isAnnotationPresent(JoltBeanInjection.class)) {
                 try {
                     field.setAccessible(true);
-                    Object dependency = !injection.value().isEmpty() ? getBean(injection.value())
+                    JoltBeanInjection injection = field.getAnnotation(JoltBeanInjection.class);
+                    Object dependency = !injection.value().isEmpty()
+                            ? getBean(injection.value())
                             : getBean(field.getType());
-
                     if (dependency == null && injection.required()) {
-                        throw new BeanNotFoundException(
-                                "Required dependency not found for: " +
-                                        clazz.getName() + "." + field.getName());
+                        throw new BeanNotFoundException("Required dependency not found for: " +
+                                clazz.getName() + "." + field.getName());
                     }
-
                     field.set(instance, dependency);
                 } catch (IllegalAccessException e) {
-                    logger.severe("Error injecting dependency for field: " + clazz.getName() + "." + field.getName());
-                    throw new BeanCreationException(
-                            "Failed to inject dependency: " +
-                                    clazz.getName() + "." + field.getName(),
-                            e);
+                    logger.severe("Error injecting dependency for field: " +
+                            clazz.getName() + "." + field.getName());
+                    throw new BeanCreationException("Failed to inject dependency: " +
+                            clazz.getName() + "." + field.getName(), e);
                 }
             }
         }
@@ -579,10 +574,8 @@ public final class JoltContainer {
                     method.setAccessible(true);
                     method.invoke(instance);
                 } catch (Exception e) {
-                    throw new JoltDIException(
-                            "Failed to invoke lifecycle method on: " +
-                                    instance.getClass().getName(),
-                            e);
+                    throw new JoltDIException("Failed to invoke lifecycle method on: " +
+                            instance.getClass().getName(), e);
                 }
             }
         }
