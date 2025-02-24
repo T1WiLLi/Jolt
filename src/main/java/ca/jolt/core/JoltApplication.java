@@ -56,7 +56,7 @@ public abstract class JoltApplication {
         StartupLog.printStartup();
         LogConfigurator.configure();
         log.info("JoltApplication initialized");
-        JoltContainer.getInstance().scanPackage("ca.jolt").initialize();
+        JoltContainer.getInstance().scan("ca.jolt").initialize();
     }
 
     /**

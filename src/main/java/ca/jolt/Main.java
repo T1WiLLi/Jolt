@@ -2,6 +2,7 @@ package ca.jolt;
 
 import ca.jolt.core.JoltApplication;
 import ca.jolt.core.Router;
+import ca.jolt.injector.JoltContainer;
 import ca.jolt.server.abstraction.WebServer;
 
 public class Main extends JoltApplication {
@@ -11,6 +12,9 @@ public class Main extends JoltApplication {
 
     @Override
     protected void setup() {
+        A a = JoltContainer.getInstance().getBean(A.class);
+        a.doWork();
+
         buildServer()
                 .withPort(8080);
 
