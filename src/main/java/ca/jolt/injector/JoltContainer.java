@@ -93,10 +93,6 @@ public final class JoltContainer {
     private final BeanScanner beanScanner = new BeanScanner(beanRegistry, configurationManager);
     private boolean isInitialized = false;
 
-    private JoltContainer() {
-        // Private constructor to prevent instantiation
-    }
-
     /**
      * Scans the specified base package to discover and register all classes
      * annotated with {@link JoltBean}.
@@ -230,5 +226,35 @@ public final class JoltContainer {
      */
     public <T> T getBean(Class<T> type) {
         return beanRegistry.getBean(type);
+    }
+
+    /**
+     * Retrieves a bean instance by its type and name.
+     * 
+     * <p>
+     * This method searches through all registered bean definitions and names to
+     * returns the
+     * first beans to match the specified type and name.
+     * If the bean has already been instantiate (for example, as a singleton)
+     * the cached instance is returned. Otherwise, the bean is instantiated, its
+     * dependencies injected and its lifecycle callbacks invoked.
+     * 
+     * @param <T>  the expected type of the bean.
+     * @param type the class type of the bean to retrieve; must not be {@code null}.
+     * @param name the name of the class as {@code value} set in the annotation.
+     * @return an instance of the bean matching the specfified type and name.
+     * 
+     * @throws BeanNotFoundException if no bean is found that is
+     *                               assignable to the
+     *                               specified type.
+     * @throws BeanCreationException if an error occurs during the creation or
+     *                               initialization of the bean.
+     */
+    public <T> T getBean(Class<T> type, String name) {
+        return beanRegistry.getBean(type, name);
+    }
+
+    private JoltContainer() {
+        // Private constructor to prevent instantiation
     }
 }

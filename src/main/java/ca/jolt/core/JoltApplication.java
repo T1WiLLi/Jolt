@@ -71,7 +71,7 @@ public abstract class JoltApplication {
             if (instance == null) {
                 instance = appClass.getDeclaredConstructor().newInstance();
             }
-            instance.setup(); // user-defined setup: routes, server configuration, etc.
+            instance.setup();
             if (instance.serverBuilder == null) {
                 instance.serverBuilder = new WebServerBuilder();
             }
@@ -81,6 +81,24 @@ public abstract class JoltApplication {
             log.info("Server started successfully!");
         } catch (Exception e) {
             log.severe("Failed to launch application: " + e.getMessage());
+
+            StringBuilder stackTrace = new StringBuilder();
+            stackTrace.append("Stack trace:\n");
+            for (StackTraceElement element : e.getStackTrace()) {
+                stackTrace.append("    at ").append(element.toString()).append("\n");
+            }
+            log.severe(stackTrace.toString());
+
+            Throwable cause = e.getCause();
+            if (cause != null) {
+                log.severe("Caused by: " + cause.getMessage());
+                StringBuilder causeStackTrace = new StringBuilder();
+                for (StackTraceElement element : cause.getStackTrace()) {
+                    causeStackTrace.append("    at ").append(element.toString()).append("\n");
+                }
+                log.severe(causeStackTrace.toString());
+            }
+
             System.exit(1);
         }
     }

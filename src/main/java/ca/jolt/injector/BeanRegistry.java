@@ -137,6 +137,32 @@ class BeanRegistry {
         throw new BeanNotFoundException("No bean found of type: " + type.getName());
     }
 
+    /**
+     * Retrieve a bean by its type and name.
+     * 
+     * @param type the bean class
+     * @param name the bean name
+     * @param <T>  the expected bean type
+     * @return the bean instance
+     * @throws BeanNotFoundException if no bean is found assignable to the given
+     *                               type
+     */
+    public <T> T getBean(Class<T> type, String name) throws BeanNotFoundException {
+        Objects.requireNonNull(type, "Bean type cannot be null");
+        Objects.requireNonNull(name, "Bean name cannot be null");
+
+        // Check if a bean match the given type and name pass to the function.
+        for (Map.Entry<String, Class<?>> entry : beanDefinitions.entrySet()) {
+            if (type.isAssignableFrom(entry.getValue()) && entry.getKey().equals(name)) {
+                logger.info("Creating bean instance for type: " + type.getName() +
+                        " using bean name: " + entry.getKey());
+                return type.cast(createBean(entry.getValue(), entry.getKey()));
+            }
+        }
+        // If no bean match the given type and name, throw a BeanNotFoundException.
+        throw new BeanNotFoundException("No bean found of type: " + type.getName() + " and name: " + name);
+    }
+
     public void shutdown() {
         logger.info("Shutting down BeanRegistry. Invoking @PreDestroy methods.");
         for (Object bean : managedBeans) {

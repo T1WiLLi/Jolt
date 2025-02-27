@@ -77,3 +77,4 @@ Start implementing Security !
                                         .keyGeneration(HashAlgorithm.SHA256) // How the API_KEY will generate keys. We have 2 options : SHA256, SHA512 
                 }
         }
+
