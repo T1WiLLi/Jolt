@@ -1,4 +1,4 @@
-package ca.jolt.routing;
+package ca.jolt.routing.context;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -48,12 +48,12 @@ public final class JoltHttpContext { // Improve this so that exception actually 
         return (p == null || p.isEmpty()) ? "/" : p;
     }
 
-    public JoltHttpContextValue path(String name) {
-        return new JoltHttpContextValue(pathParams.get(name));
+    public PathContextValue path(String name) {
+        return new PathContextValue(pathParams.get(name));
     }
 
-    public JoltHttpContextValue query(String name) {
-        return new JoltHttpContextValue(req.getParameter(name));
+    public QueryContextValue query(String name) {
+        return new QueryContextValue(req.getParameter(name));
     }
 
     public Map<String, List<String>> query() {

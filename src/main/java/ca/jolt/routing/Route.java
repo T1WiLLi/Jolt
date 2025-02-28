@@ -2,6 +2,7 @@ package ca.jolt.routing;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import lombok.Getter;
@@ -36,16 +37,24 @@ public final class Route {
 
     private RoutePattern compile(String path) {
         List<String> names = new ArrayList<>();
-        java.util.regex.Pattern p = java.util.regex.Pattern.compile("\\{([^}]+)\\}");
-        java.util.regex.Matcher m = p.matcher(path);
+        Pattern pattern = Pattern.compile("\\{([a-zA-Z_][a-zA-Z0-9_]*)(?::(int|double))?\\}");
+        Matcher matcher = pattern.matcher(path);
         StringBuffer sb = new StringBuffer();
-        while (m.find()) {
-            String name = m.group(1);
-            names.add(name);
-            m.appendReplacement(sb, "([^/]+)");
+        while (matcher.find()) {
+            String paramName = matcher.group(1);
+            String paramType = matcher.group(2);
+            names.add(paramName);
+            String replacement;
+            if ("int".equalsIgnoreCase(paramType)) {
+                replacement = "(-?\\d+)";
+            } else if ("double".equalsIgnoreCase(paramType)) {
+                replacement = "(-?\\d+(?:\\.\\d+)?)";
+            } else {
+                replacement = "([^/]+)";
+            }
+            matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
         }
-        m.appendTail(sb);
-        String regex = "^" + sb.toString() + "$";
-        return new RoutePattern(Pattern.compile(regex), names);
+        matcher.appendTail(sb);
+        return new RoutePattern(Pattern.compile(new String("^" + sb.toString() + "$")), names);
     }
 }

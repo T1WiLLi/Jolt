@@ -15,8 +15,8 @@ public class Main extends JoltApplication {
                 .withPort(8080);
 
         get("/", () -> "Hello, World!");
-        get("/hello/{age}", (ctx) -> ctx.html("Hello " + ctx.query("name").orDefault("little one") + ", you are "
-                + ctx.path("age").orDefault(String.valueOf(Integer.MIN_VALUE)) + " years old!"));
+        get("/hello/{age:int}", (ctx) -> ctx.html("Hello " + ctx.query("name").orDefault("little one") + ", you are "
+                + ctx.path("age").asInt() + " years old!"));
         post("/user", (ctx) -> {
             User user = ctx.body(User.class);
             return ctx.html("Hello, " + user.name + "! You are " + user.age + " years old!");
