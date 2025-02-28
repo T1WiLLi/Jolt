@@ -12,8 +12,8 @@ public final class QueryContextValue extends JoltHttpContextValue {
         return value.orElse(defaultValue);
     }
 
-    public String orDefaultIf(Predicate<String> predicate, String defaultValue) {
-        return value.orElseGet(() -> predicate.test(defaultValue) ? defaultValue : null);
+    public String orDefaultIf(Predicate<String> condition, String defaultValue) {
+        return value.orElseGet(() -> condition.test(defaultValue) ? defaultValue : null);
     }
 
     public int asIntOrDefault(int defaultValue) {

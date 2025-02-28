@@ -1,8 +1,6 @@
 package ca.jolt;
 
 import ca.jolt.core.JoltApplication;
-import ca.jolt.core.Router;
-import ca.jolt.server.abstraction.WebServer;
 
 public class Main extends JoltApplication {
     public static void main(String[] args) throws Exception {
@@ -11,9 +9,6 @@ public class Main extends JoltApplication {
 
     @Override
     protected void setup() {
-        buildServer()
-                .withPort(80);
-
         get("/", () -> "Hello, World!");
         get("/hello/{age:int}", (ctx) -> ctx.html("Hello " + ctx.query("name").orDefault("little one") + ", you are "
                 + ctx.path("age").asInt() + " years old!"));
@@ -21,11 +16,6 @@ public class Main extends JoltApplication {
             User user = ctx.body(User.class);
             return ctx.html("Hello, " + user.name + "! You are " + user.age + " years old!");
         });
-    }
-
-    @Override
-    protected void configureRouting(WebServer server, Router router) {
-        server.setRouter(router);
     }
 
     private static class User {

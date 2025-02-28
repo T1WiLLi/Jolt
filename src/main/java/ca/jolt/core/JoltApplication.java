@@ -8,8 +8,9 @@ import ca.jolt.injector.JoltContainer;
 import ca.jolt.logging.LogConfigurator;
 import ca.jolt.logging.StartupLog;
 import ca.jolt.routing.RouteHandler;
-import ca.jolt.server.WebServerBuilder;
-import ca.jolt.server.abstraction.WebServer;
+import ca.jolt.server.TomcatServer;
+import ca.jolt.server.config.ConfigurationManager;
+import ca.jolt.server.config.ServerConfig;
 
 /**
  * Base class for a Jolt application.
@@ -45,8 +46,7 @@ public abstract class JoltApplication {
     private static JoltApplication instance;
 
     protected final Router router = new Router();
-    protected WebServerBuilder serverBuilder;
-    protected WebServer webServer;
+    protected TomcatServer server;
 
     protected JoltApplication() {
         if (instance != null) {
@@ -72,12 +72,13 @@ public abstract class JoltApplication {
                 instance = appClass.getDeclaredConstructor().newInstance();
             }
             instance.setup();
-            if (instance.serverBuilder == null) {
-                instance.serverBuilder = new WebServerBuilder();
-            }
-            instance.webServer = instance.serverBuilder.build();
-            instance.configureRouting(instance.webServer, instance.router);
-            instance.webServer.start();
+
+            ServerConfig config = ConfigurationManager.getInstance().getServerConfig();
+
+            instance.server = new TomcatServer(config);
+            instance.server.setRouter(instance.router);
+
+            instance.server.start();
             log.info("Server started successfully!");
         } catch (Exception e) {
             log.severe("Failed to launch application: " + e.getMessage());
@@ -104,9 +105,9 @@ public abstract class JoltApplication {
     }
 
     public static void stop() {
-        if (instance != null) {
+        if (instance != null && instance.server != null) {
             try {
-                instance.webServer.stop();
+                instance.server.stop();
             } catch (ServerException e) {
                 e.printStackTrace();
             }
@@ -118,14 +119,6 @@ public abstract class JoltApplication {
      * settings.
      */
     protected abstract void setup();
-
-    /**
-     * Called during launch() so that the user can bind the Router to the server.
-     *
-     * @param server the built WebServer instance
-     * @param router the Router containing route definitions
-     */
-    protected abstract void configureRouting(WebServer server, Router router);
 
     // DSL-like static methods for route definitions
 
@@ -159,16 +152,6 @@ public abstract class JoltApplication {
 
     protected static void delete(String path, Supplier<Object> supplier) {
         instance.router.delete(path, supplier);
-    }
-
-    /**
-     * Returns the WebServerBuilder instance, creating it if necessary.
-     */
-    public static WebServerBuilder buildServer() {
-        if (instance.serverBuilder == null) {
-            instance.serverBuilder = new WebServerBuilder();
-        }
-        return instance.serverBuilder;
     }
 
     /**
