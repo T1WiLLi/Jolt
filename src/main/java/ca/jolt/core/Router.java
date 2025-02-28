@@ -6,6 +6,7 @@ import java.util.Locale;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 
+import ca.jolt.exceptions.DuplicateRouteException;
 import ca.jolt.routing.Route;
 import ca.jolt.routing.RouteHandler;
 import ca.jolt.routing.RouteMatch;
@@ -74,6 +75,12 @@ public final class Router {
     }
 
     private Router addRoute(Route route) {
+        for (Route r : routes) {
+            if (r.getHttpMethod().equals(route.getHttpMethod()) && r.getPath().equals(route.getPath())) {
+                throw new DuplicateRouteException(
+                        "Route already exists for " + route.getHttpMethod() + " " + route.getPath());
+            }
+        }
         routes.add(route);
         return this;
     }

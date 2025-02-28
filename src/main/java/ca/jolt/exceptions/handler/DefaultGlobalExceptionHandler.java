@@ -4,7 +4,7 @@ import java.util.logging.Logger;
 
 import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.http.HttpStatus;
-import ca.jolt.routing.JoltHttpContext;
+import ca.jolt.routing.context.JoltHttpContext;
 import jakarta.servlet.http.HttpServletResponse;
 
 final class DefaultGlobalExceptionHandler implements GlobalExceptionHandler {

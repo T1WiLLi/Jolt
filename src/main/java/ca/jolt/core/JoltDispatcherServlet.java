@@ -1,9 +1,9 @@
 package ca.jolt.core;
 
 import ca.jolt.exceptions.handler.GlobalExceptionHandler;
-import ca.jolt.routing.JoltHttpContext;
 import ca.jolt.routing.RouteHandler;
 import ca.jolt.routing.RouteMatch;
+import ca.jolt.routing.context.JoltHttpContext;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;

@@ -1,6 +1,6 @@
 package ca.jolt.exceptions.handler;
 
-import ca.jolt.routing.JoltHttpContext;
+import ca.jolt.routing.context.JoltHttpContext;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**

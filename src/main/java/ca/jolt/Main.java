@@ -12,7 +12,7 @@ public class Main extends JoltApplication {
     @Override
     protected void setup() {
         buildServer()
-                .withPort(8080);
+                .withPort(80);
 
         get("/", () -> "Hello, World!");
         get("/hello/{age:int}", (ctx) -> ctx.html("Hello " + ctx.query("name").orDefault("little one") + ", you are "

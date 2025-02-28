@@ -136,10 +136,10 @@ public final class JoltHttpContext { // Improve this so that exception actually 
         return this;
     }
 
-    public JoltHttpContext json(String json) {
+    public JoltHttpContext json(Map<String, Object> json) {
         try {
             res.setContentType("application/json;charset=UTF-8");
-            res.getWriter().write(json);
+            JSON_MAPPER.writeValue(res.getWriter(), json);
         } catch (IOException e) {
             throw new RuntimeException(e);
         }
