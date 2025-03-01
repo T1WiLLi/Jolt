@@ -13,6 +13,14 @@
         <maven.compiler.target>21</maven.compiler.target>
     </properties>
 
+    <distributionManagement>
+      <repository>
+        <id>github</id>
+        <name>Github Packages</name>
+        <url>https://maven.pkg.github.com/T1WiLLi/jolt</url>
+      </repository>
+    </distributionManagement>
+
     <dependencies>
     <dependency>
         <groupId>org.apache.tomcat.embed</groupId>
