@@ -197,8 +197,7 @@ db.driver=com.mysql.cj.jdbc.Driver
             </p>
             <pre class="language-java line-numbers"><code>// Example route with a typed parameter
 get("/user/{age:int}", ctx -> {
-    int age = Integer.parseInt(ctx.path("age"));
-    return "User age: " + age;
+    return "User age: " + ctx.path("age").asInt();
 });
 </code></pre>
         </section>

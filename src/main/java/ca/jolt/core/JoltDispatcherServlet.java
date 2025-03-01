@@ -17,8 +17,8 @@ public final class JoltDispatcherServlet extends HttpServlet {
 
     private static final Logger log = Logger.getLogger(JoltDispatcherServlet.class.getName());
 
-    private transient final Router router;
-    private transient final GlobalExceptionHandler exceptionHandler;
+    private final transient Router router;
+    private final transient GlobalExceptionHandler exceptionHandler;
 
     public JoltDispatcherServlet(Router router, GlobalExceptionHandler exceptionHandler) {
         this.router = router;

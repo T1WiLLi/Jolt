@@ -43,6 +43,7 @@ public class TomcatServer {
             configureContext();
             startTomcat();
             logServerStart();
+            addShutdownHook();
             handleDaemonMode();
         } catch (Exception e) {
             throw new ServerException("Failed to start Tomcat: " + e.getMessage(), e);
@@ -59,6 +60,16 @@ public class TomcatServer {
         } catch (Exception e) {
             throw new ServerException("Failed to stop Tomcat", e);
         }
+    }
+
+    private void addShutdownHook() {
+        Runtime.getRuntime().addShutdownHook(new Thread(() -> {
+            try {
+                stop();
+            } catch (ServerException e) {
+                log.severe(() -> "Failed to stop Tomcat on shutdown: " + e.getMessage());
+            }
+        }));
     }
 
     private void validateEnvironment() throws ServerException {
