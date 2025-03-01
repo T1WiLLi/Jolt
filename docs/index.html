@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Jolt Framework Documentation</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Prism.js for Code Highlighting -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/themes/prism-tomorrow.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/prism.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/components/prism-java.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.27.0/components/prism-properties.min.js"></script>
+    <!-- Custom Styles -->
+    <link rel="stylesheet" href="style.css" />
+</head>
+
+<body class="bg-gray-900 text-gray-100">
+    <header class="py-6 border-b border-gray-700">
+        <div class="container mx-auto px-4">
+            <h1 class="text-4xl font-bold">Jolt Framework Documentation</h1>
+        </div>
+    </header>
+
+    <nav class="container mx-auto px-4 mt-8">
+        <h2 class="text-2xl font-semibold mb-4">Table of Contents</h2>
+        <ul class="list-decimal list-inside">
+            <li><a href="#overview" class="text-blue-400 hover:underline">Overview</a></li>
+            <li><a href="#getting-started" class="text-blue-400 hover:underline">Getting Started</a></li>
+            <li><a href="#application-properties" class="text-blue-400 hover:underline">Application.properties</a></li>
+            <li><a href="#configuration" class="text-blue-400 hover:underline">Configuration</a></li>
+            <li><a href="#dependency-injection" class="text-blue-400 hover:underline">Dependency Injection</a></li>
+            <li><a href="#routing" class="text-blue-400 hover:underline">Routing</a></li>
+            <li><a href="#logging" class="text-blue-400 hover:underline">Logging</a></li>
+            <li><a href="#joltcontext" class="text-blue-400 hover:underline">JoltContext (ctx)</a></li>
+        </ul>
+    </nav>
+
+    <main class="container mx-auto px-4 mt-10">
+        <!-- Overview Section -->
+        <section id="overview" class="mb-16">
+            <h2 class="text-3xl font-bold mb-4">Overview</h2>
+            <p class="mb-4">
+                Jolt is a lightweight, modular Java web framework designed to simplify high-performance web application
+                development.
+                It includes features for application bootstrapping, configuration management, dependency injection,
+                routing, logging,
+                and a comprehensive HTTP context API.
+            </p>
+            <p>
+                This documentation provides an in-depth guide to each of these components, with code examples and
+                configuration details
+                to help you build and maintain your application with ease.
+            </p>
+        </section>
+
+        <!-- Getting Started Section -->
+        <section id="getting-started" class="mb-16">
+            <h2 class="text-3xl font-bold mb-4">Getting Started</h2>
+            <p class="mb-4">
+                To begin using Jolt, add the required libraries to your project via your preferred build tool (Maven,
+                Gradle, etc.).
+                Then, create an application class by extending <code>JoltApplication</code> and implementing the
+                <code>setup()</code> method.
+            </p>
+            <pre class="language-java line-numbers"><code>package com.example;
+
+import ca.jolt.core.JoltApplication;
+
+public class MyApp extends JoltApplication {
+    public static void main(String[] args) {
+        launch(MyApp.class, args);
+    }
+    
+    @Override
+    protected void setup() {
+        get("/", () -> "Hello, World!");
+        get("/user/{id:int}", ctx -> "Hello, User #" + ctx.path("id"));
+    }
+}
+</code></pre>
+            <p>
+                The <code>setup()</code> method is used to define your routes and initialize resources.
+            </p>
+        </section>
+
+        <!-- Application.properties Section -->
+        <section id="application-properties" class="mb-16">
+            <h2 class="text-3xl font-bold mb-4">Application.properties</h2>
+            <p class="mb-4">
+                The <code>application.properties</code> file, located in the <code>META-INF</code> directory, is the
+                central configuration file for Jolt.
+                It defines key settings for both the server and the database.
+            </p>
+            <p class="mb-4">
+                Below is an example of a complete <code>application.properties</code> file with all available
+                configuration options:
+            </p>
+            <pre class="language-properties line-numbers"><code># =========================
+#  Basic server properties
+# =========================
+
+# The port on which Tomcat will listen (HTTP).
+server.port=80
+
+# Temp directory for Tomcat's files (logs, etc.).
+server.tempDir=tmp/tomcat
+
+# Whether to enable SSL (HTTPS).
+server.ssl.enabled=false
+
+# If SSL is enabled, the port to use.
+server.ssl.port=8443
+
+# Path to the keystore file for SSL, if enabled.
+server.ssl.keyStore=path/to/keystore.jks
+
+# Password for the keystore.
+server.ssl.keyStorePassword=changeit
+
+# Key alias in the keystore to use.
+server.ssl.keyAlias=myalias
+
+# Minimum worker threads in Tomcat.
+server.threads.min=10
+
+# Maximum worker threads in Tomcat.
+server.threads.max=200
+
+# Worker thread idle timeout (ms).
+server.threads.timeout=60000
+
+# Whether to run Tomcat as a daemon (non-blocking) in the background.
+server.daemon=false
+
+# Application name (used for logging, etc.).
+server.appName=MyJoltApp
+
+
+# =========================
+#  Database properties
+# =========================
+
+# JDBC URL for your database.
+db.url=jdbc:mysql://localhost:3306/mydb
+
+# Database username.
+db.username=root
+
+# Database password.
+db.password=secret
+
+# JDBC driver class name.
+db.driver=com.mysql.cj.jdbc.Driver
+</code></pre>
+        </section>
+
+        <!-- Configuration Section -->
+        <section id="configuration" class="mb-16">
+            <h2 class="text-3xl font-bold mb-4">Configuration</h2>
+            <p class="mb-4">
+                Jolt’s configuration is managed by the <code>ConfigurationManager</code>, which loads the
+                <code>application.properties</code> file
+                and instantiates typed configuration objects (e.g., <code>ServerConfig</code> and
+                <code>DatabaseConfig</code>).
+            </p>
+            <p>
+                Currently, you can configure a <strong>GlobalExceptionHandler</strong> to centrally manage errors
+                throughout your application.
+            </p>
+        </section>
+
+        <!-- Dependency Injection Section -->
+        <section id="dependency-injection" class="mb-16">
+            <h2 class="text-3xl font-bold mb-4">Dependency Injection</h2>
+            <p class="mb-4">
+                Jolt features a built-in dependency injection container. Annotate your classes with
+                <code>@JoltBean</code> to register them as beans,
+                and use <code>@JoltBeanInjection</code> on fields where dependencies should be injected.
+            </p>
+            <p>
+                The DI container scans for beans, resolves dependencies (ensuring no circular dependencies exist), and
+                invokes lifecycle methods
+                (e.g., those annotated with <code>@PostConstruct</code>).
+            </p>
+        </section>
+
+        <!-- Routing Section -->
+        <section id="routing" class="mb-16">
+            <h2 class="text-3xl font-bold mb-4">Routing</h2>
+            <p class="mb-4">
+                The routing system in Jolt is built around a simple, expressive DSL. It allows you to define endpoints
+                for various HTTP methods.
+                Routes can include typed parameters—for example, <code>"/user/{age:int}"</code> guarantees that the
+                <code>age</code> parameter is an integer.
+            </p>
+            <pre class="language-java line-numbers"><code>// Example route with a typed parameter
+get("/user/{age:int}", ctx -> {
+    int age = Integer.parseInt(ctx.path("age"));
+    return "User age: " + age;
+});
+</code></pre>
+        </section>
+
+        <!-- Logging Section -->
+        <section id="logging" class="mb-16">
+            <h2 class="text-3xl font-bold mb-4">Logging</h2>
+            <p class="mb-4">
+                Jolt includes a custom logging framework that ensures consistent, well-formatted log output.
+                The logging subsystem features a custom formatter and configurable logging levels, making it easy to
+                track and troubleshoot
+                application behavior.
+            </p>
+            <p>
+                Logging is configured during startup via the <code>LogConfigurator</code> and enhanced with the
+                <code>StartupLog</code> messages.
+            </p>
+        </section>
+
+        <!-- JoltContext Section -->
+        <section id="joltcontext" class="mb-16">
+            <h2 class="text-3xl font-bold mb-4">JoltContext (ctx)</h2>
+            <p class="mb-4">
+                The <code>JoltContext</code> (commonly referred to as <code>ctx</code>) is the primary interface for
+                handling HTTP requests and responses.
+                It provides a range of methods for accessing request data:
+            </p>
+            <ul class="list-disc list-inside mb-4">
+                <li><strong>Path Parameters:</strong> <code>ctx.path("key")</code> retrieves a parameter from the URL
+                    path.</li>
+                <li><strong>Query Parameters:</strong> <code>ctx.query("key")</code> fetches a value from the query
+                    string.</li>
+                <li><strong>Headers:</strong> <code>ctx.header("key")</code> returns the value of a specified HTTP
+                    header.</li>
+                <li><strong>Request Body:</strong> <code>ctx.body()</code> returns the content of the request body.</li>
+                <li><strong>HTTP Method:</strong> <code>ctx.method()</code> provides the HTTP method used for the
+                    request.</li>
+            </ul>
+            <p>
+                These methods allow you to easily extract and manipulate request data to build dynamic responses.
+            </p>
+        </section>
+    </main>
+
+    <footer class="container mx-auto px-4 py-6 border-t border-gray-700 mt-12">
+        <p class="text-center text-sm text-gray-500">&copy;
+            <script>new Date().getFullYear()</script> Jolt Framework. All rights reserved.
+        </p>
+    </footer>
+
+    <script src="main.js"></script>
+</body>
+
+</html>
