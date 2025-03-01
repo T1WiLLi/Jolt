@@ -14,6 +14,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ca.jolt.exceptions.JoltBadRequestException;
 import ca.jolt.exceptions.JoltHttpException;
+import ca.jolt.form.Form;
 import ca.jolt.http.HttpStatus;
 import ca.jolt.routing.builder.CookieBuilder;
 import jakarta.servlet.http.Cookie;
@@ -192,6 +193,57 @@ public final class JoltHttpContext {
         cookie.setMaxAge(0);
         res.addCookie(cookie);
         return this;
+    }
+
+    public Form queryToForm(String... excludes) {
+        Map<String, String> formData = new HashMap<>();
+        req.getParameterMap().forEach((key, values) -> {
+            if (!shouldExclude(key, excludes) && values.length > 0) {
+                formData.put(key, values[0]);
+            }
+        });
+        return new Form(formData);
+    }
+
+    public Form bodyToForm(String... excludes) {
+        Map<String, String> formData = new HashMap<>();
+        String contentType = req.getContentType();
+
+        if (contentType != null && contentType.contains("application/json")) {
+            String raw = bodyRaw();
+            if (!raw.isEmpty()) {
+                try {
+                    Map<String, Object> parsed = JSON_MAPPER.readValue(raw, new TypeReference<Map<String, Object>>() {
+                    });
+                    for (Map.Entry<String, Object> entry : parsed.entrySet()) {
+                        String key = entry.getKey();
+                        if (!shouldExclude(key, excludes)) {
+                            Object valueObj = entry.getValue();
+                            String valueStr = (valueObj == null) ? "" : valueObj.toString();
+                            formData.put(key, valueStr);
+                        }
+                    }
+                } catch (IOException e) {
+                    throw new JoltBadRequestException("Failed to parse JSON body: " + e.getMessage());
+                }
+            }
+        } else {
+            req.getParameterMap().forEach((key, values) -> {
+                if (!shouldExclude(key, excludes) && values.length > 0) {
+                    formData.put(key, values[0]);
+                }
+            });
+        }
+        return new Form(formData);
+    }
+
+    private boolean shouldExclude(String key, String[] excludes) {
+        for (String exclude : excludes) {
+            if (exclude.equals(key)) {
+                return true;
+            }
+        }
+        return false;
     }
 
     private Map<String, String> extractPathParams(Matcher matcher, List<String> paramNames) {

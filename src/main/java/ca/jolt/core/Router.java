@@ -5,6 +5,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
+import java.util.logging.Logger;
 
 import ca.jolt.exceptions.DuplicateRouteException;
 import ca.jolt.injector.annotation.JoltBean;
@@ -14,7 +15,7 @@ import ca.jolt.routing.RouteMatch;
 
 @JoltBean
 public final class Router {
-
+    private static final Logger logger = Logger.getLogger(Router.class.getName());
     private final List<Route> routes = new ArrayList<>();
 
     public Router() {
@@ -88,6 +89,7 @@ public final class Router {
             }
         }
         routes.add(route);
+        logger.info(() -> "Registered route: " + route.getHttpMethod() + " " + route.getPath());
         return this;
     }
 }
