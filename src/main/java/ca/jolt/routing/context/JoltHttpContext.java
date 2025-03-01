@@ -3,6 +3,7 @@ package ca.jolt.routing.context;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -14,11 +15,12 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import ca.jolt.exceptions.JoltBadRequestException;
 import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.http.HttpStatus;
+import ca.jolt.routing.builder.CookieBuilder;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-public final class JoltHttpContext { // Improve this so that exception actually return somethings to the client, and
-                                     // log it !!
+public final class JoltHttpContext {
 
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
 
@@ -162,6 +164,33 @@ public final class JoltHttpContext { // Improve this so that exception actually 
         } catch (IOException e) {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing HTML response", e);
         }
+        return this;
+    }
+
+    public Cookie getCookie(String name) {
+        Cookie[] cookies = req.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (cookie.getName().equals(name)) {
+                    return cookie;
+                }
+            }
+        }
+        return null;
+    }
+
+    public CookieBuilder addCookie() {
+        return new CookieBuilder(this.res);
+    }
+
+    public List<Cookie> getCookies() {
+        return req.getCookies() != null ? Arrays.asList(req.getCookies()) : Collections.emptyList();
+    }
+
+    public JoltHttpContext removeCookie(String name) {
+        Cookie cookie = new Cookie(name, "");
+        cookie.setMaxAge(0);
+        res.addCookie(cookie);
         return this;
     }
 
