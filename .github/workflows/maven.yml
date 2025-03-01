@@ -34,8 +34,8 @@ jobs:
       - name: SonarCloud analysis
         run: |
           mvn sonar:sonar -Pcoverage \
-            -Dsonar.projectKey=YOUR_SONARCLOUD_PROJECTKEY \
-            -Dsonar.organization=YOUR_SONARCLOUD_ORG \
+            -Dsonar.projectKey=T1WiLLi_Jolt \
+            -Dsonar.organization=jolt-studio \
             -Dsonar.host.url=https://sonarcloud.io \
             -Dsonar.login=${{ secrets.SONAR_TOKEN }}
 
