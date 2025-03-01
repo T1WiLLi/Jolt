@@ -21,7 +21,7 @@ import ca.jolt.injector.annotation.JoltConfiguration;
  * {@link JoltBean} and {@link JoltConfiguration}, and delegating registration
  * to the appropriate managers.
  */
-public final class BeanScanner {
+final class BeanScanner {
 
     private static final Logger logger = Logger.getLogger(BeanScanner.class.getName());
     private final BeanRegistry beanRegistry;

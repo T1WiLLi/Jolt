@@ -31,7 +31,7 @@ import ca.jolt.injector.type.InitializationMode;
  * instantiating them, performing dependency injection, and managing their
  * lifecycle.
  */
-class BeanRegistry {
+final class BeanRegistry {
 
     private static final Logger logger = Logger.getLogger(BeanRegistry.class.getName());
 

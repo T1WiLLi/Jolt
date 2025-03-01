@@ -1,5 +1,6 @@
 package ca.jolt.injector;
 
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import ca.jolt.exceptions.BeanCreationException;
@@ -89,7 +90,6 @@ public final class JoltContainer {
     private static final JoltContainer instance = new JoltContainer();
 
     private final BeanRegistry beanRegistry = new BeanRegistry();
-    @Getter
     private final ConfigurationManager configurationManager = new ConfigurationManager();
     private final BeanScanner beanScanner = new BeanScanner(beanRegistry, configurationManager);
     private boolean isInitialized = false;
@@ -226,7 +226,16 @@ public final class JoltContainer {
      *                               initialization of the bean.
      */
     public <T> T getBean(Class<T> type) {
-        return beanRegistry.getBean(type);
+        Objects.requireNonNull(type, "Bean type cannot be null");
+        try {
+            return beanRegistry.getBean(type);
+        } catch (BeanNotFoundException e) {
+            try {
+                return configurationManager.getConfiguration(type);
+            } catch (JoltDIException e2) {
+                throw new BeanNotFoundException("No bean or configuration bean found for type: " + type.getName());
+            }
+        }
     }
 
     /**

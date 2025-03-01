@@ -5,7 +5,6 @@ import ca.jolt.core.Router;
 import ca.jolt.exceptions.ServerException;
 import ca.jolt.exceptions.handler.GlobalExceptionHandler;
 import ca.jolt.injector.JoltContainer;
-import ca.jolt.injector.type.ConfigurationType;
 import ca.jolt.server.config.ServerConfig;
 
 import org.apache.catalina.Context;
@@ -106,8 +105,7 @@ public class TomcatServer {
             Router router = JoltContainer.getInstance().getBean(Router.class);
             if (router != null) {
                 JoltDispatcherServlet dispatcher = new JoltDispatcherServlet(router,
-                        JoltContainer.getInstance().getConfigurationManager()
-                                .getConfiguration(ConfigurationType.EXCEPTION_HANDLER, GlobalExceptionHandler.class));
+                        JoltContainer.getInstance().getBean(GlobalExceptionHandler.class));
                 Tomcat.addServlet(context, "JoltServlet", dispatcher);
                 context.addServletMappingDecoded("/*", "JoltServlet");
             } else {

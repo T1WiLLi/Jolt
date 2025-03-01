@@ -18,7 +18,7 @@ import ca.jolt.injector.type.ConfigurationType;
  * applies automatic validation and registering of the configurations in the
  * correct emplacement for the injector.
  */
-public class ConfigurationManager {
+final class ConfigurationManager {
 
     private static final Logger logger = Logger.getLogger(ConfigurationManager.class.getName());
     private final Map<ConfigurationType, Object> configurations = new HashMap<>();
@@ -97,19 +97,18 @@ public class ConfigurationManager {
     /**
      * Retrieves a configuration bean by its configuration type.
      *
-     * @param type         the configuration type.
      * @param expectedType the expected class of the configuration.
      * @param <T>          the type parameter.
      * @return the configuration instance.
      * @throws JoltDIException if no configuration is registered for the given type.
      */
-    public <T> T getConfiguration(ConfigurationType type, Class<T> expectedType) {
-        Objects.requireNonNull(type, "Configuration type cannot be null");
-        Object config = configurations.get(type);
-        if (config == null) {
-            throw new JoltDIException("No configuration registered for type: " + type);
+    public <T> T getConfiguration(Class<T> expectedType) {
+        for (Object config : configurations.values()) {
+            if (expectedType.isAssignableFrom(config.getClass())) {
+                return expectedType.cast(config);
+            }
         }
-        return expectedType.cast(config);
+        throw new JoltDIException("No configuration registered for type: " + expectedType.getName());
     }
 
     /**
