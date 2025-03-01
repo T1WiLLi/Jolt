@@ -45,7 +45,7 @@ public abstract class JoltApplication {
     private static final Logger log = Logger.getLogger(JoltApplication.class.getName());
     private static JoltApplication instance;
 
-    protected final Router router = new Router();
+    protected final Router router;
     protected TomcatServer server;
 
     protected JoltApplication() {
@@ -57,6 +57,7 @@ public abstract class JoltApplication {
         LogConfigurator.configure();
         log.info("JoltApplication initialized");
         JoltContainer.getInstance().scan("ca.jolt").initialize();
+        router = JoltContainer.getInstance().getBean(Router.class);
     }
 
     /**
@@ -72,12 +73,8 @@ public abstract class JoltApplication {
                 instance = appClass.getDeclaredConstructor().newInstance();
             }
             instance.setup();
-
             ServerConfig config = ConfigurationManager.getInstance().getServerConfig();
-
             instance.server = new TomcatServer(config);
-            instance.server.setRouter(instance.router);
-
             instance.server.start();
             log.info("Server started successfully!");
         } catch (Exception e) {
@@ -152,12 +149,5 @@ public abstract class JoltApplication {
 
     protected static void delete(String path, Supplier<Object> supplier) {
         instance.router.delete(path, supplier);
-    }
-
-    /**
-     * Returns the application's Router.
-     */
-    public static Router getRouter() {
-        return instance.router;
     }
 }

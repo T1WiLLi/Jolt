@@ -10,7 +10,7 @@ import ca.jolt.routing.context.JoltHttpContext;
 import jakarta.servlet.http.HttpServletResponse;
 
 @JoltConfiguration(value = ConfigurationType.EXCEPTION_HANDLER, isDefault = true)
-final class DefaultGlobalExceptionHandler implements GlobalExceptionHandler {
+public final class DefaultGlobalExceptionHandler implements GlobalExceptionHandler {
 
     private static final Logger log = Logger.getLogger(DefaultGlobalExceptionHandler.class.getName());
 

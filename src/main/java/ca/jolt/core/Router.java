@@ -7,13 +7,19 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 
 import ca.jolt.exceptions.DuplicateRouteException;
+import ca.jolt.injector.annotation.JoltBean;
 import ca.jolt.routing.Route;
 import ca.jolt.routing.RouteHandler;
 import ca.jolt.routing.RouteMatch;
 
+@JoltBean
 public final class Router {
 
     private final List<Route> routes = new ArrayList<>();
+
+    public Router() {
+        // Empty constructor for DI.
+    }
 
     public Router get(String path, RouteHandler handler) {
         addRoute(new Route("GET", path, handler));

@@ -89,6 +89,7 @@ public final class JoltContainer {
     private static final JoltContainer instance = new JoltContainer();
 
     private final BeanRegistry beanRegistry = new BeanRegistry();
+    @Getter
     private final ConfigurationManager configurationManager = new ConfigurationManager();
     private final BeanScanner beanScanner = new BeanScanner(beanRegistry, configurationManager);
     private boolean isInitialized = false;

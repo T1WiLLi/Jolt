@@ -186,6 +186,13 @@ class BeanRegistry {
                     ". Creation chain: " + String.join(" -> ", beansInCreation));
         }
         try {
+            try {
+                beanClass.getConstructor();
+            } catch (NoSuchMethodException e) {
+                throw new BeanCreationException(
+                        "Bean " + beanClass.getName() + " must have a public no-argument constructor", e);
+            }
+
             Object instance = beanClass.getDeclaredConstructor().newInstance();
             JoltBean annotation = beanClass.getAnnotation(JoltBean.class);
             if (annotation != null && annotation.scope() == BeanScope.SINGLETON) {

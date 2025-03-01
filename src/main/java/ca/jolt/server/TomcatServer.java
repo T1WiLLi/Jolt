@@ -4,8 +4,9 @@ import ca.jolt.core.JoltDispatcherServlet;
 import ca.jolt.core.Router;
 import ca.jolt.exceptions.ServerException;
 import ca.jolt.exceptions.handler.GlobalExceptionHandler;
+import ca.jolt.injector.JoltContainer;
+import ca.jolt.injector.type.ConfigurationType;
 import ca.jolt.server.config.ServerConfig;
-import lombok.Setter;
 
 import org.apache.catalina.Context;
 import org.apache.catalina.connector.Connector;
@@ -25,16 +26,9 @@ public class TomcatServer {
 
     private final ServerConfig config;
     private Tomcat tomcat;
-    @Setter
-    private Router router;
-    private GlobalExceptionHandler exceptionHandler;
 
     public TomcatServer(ServerConfig config) {
         this.config = config;
-    }
-
-    public void setExceptionHandler(GlobalExceptionHandler exceptionHandler) {
-        this.exceptionHandler = exceptionHandler;
     }
 
     public void start() throws ServerException {
@@ -109,8 +103,11 @@ public class TomcatServer {
         String docBase = new File(config.getTempDir()).getAbsolutePath();
         try {
             Context context = tomcat.addContext("", docBase);
+            Router router = JoltContainer.getInstance().getBean(Router.class);
             if (router != null) {
-                JoltDispatcherServlet dispatcher = new JoltDispatcherServlet(router, exceptionHandler);
+                JoltDispatcherServlet dispatcher = new JoltDispatcherServlet(router,
+                        JoltContainer.getInstance().getConfigurationManager()
+                                .getConfiguration(ConfigurationType.EXCEPTION_HANDLER, GlobalExceptionHandler.class));
                 Tomcat.addServlet(context, "JoltServlet", dispatcher);
                 context.addServletMappingDecoded("/*", "JoltServlet");
             } else {
