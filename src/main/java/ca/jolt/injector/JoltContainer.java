@@ -194,6 +194,7 @@ public final class JoltContainer {
      * @throws BeanCreationException if there is an error during the creation or
      *                               initialization of the bean.
      */
+    @Deprecated
     public <T> T getBean(String name) {
         return beanRegistry.getBean(name);
     }

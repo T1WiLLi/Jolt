@@ -17,12 +17,12 @@ public final class JoltDispatcherServlet extends HttpServlet {
 
     private static final Logger log = Logger.getLogger(JoltDispatcherServlet.class.getName());
 
-    private final Router router;
-    private final GlobalExceptionHandler exceptionHandler;
+    private transient final Router router;
+    private transient final GlobalExceptionHandler exceptionHandler;
 
     public JoltDispatcherServlet(Router router, GlobalExceptionHandler exceptionHandler) {
         this.router = router;
-        this.exceptionHandler = (exceptionHandler != null) ? exceptionHandler : GlobalExceptionHandler.defaultHandler();
+        this.exceptionHandler = exceptionHandler;
 
     }
 
@@ -38,13 +38,13 @@ public final class JoltDispatcherServlet extends HttpServlet {
         if (match == null) {
             List<String> allowedMethods = router.getAllowedMethods(path);
             if (!allowedMethods.isEmpty()) {
-                log.info("HTTP method " + method + " is not allowed for path: " + path);
+                log.info(() -> "HTTP method " + method + " is not allowed for path: " + path);
                 res.setHeader("Allow", String.join(", ", allowedMethods));
                 res.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
                         "HTTP method " + method + " not allowed for " + path);
                 return;
             }
-            log.info("No route matched for path: " + path);
+            log.info(() -> "No route matched for path: " + path);
             res.sendError(HttpServletResponse.SC_NOT_FOUND, "No route found for " + path);
             return;
         }
@@ -65,10 +65,10 @@ public final class JoltDispatcherServlet extends HttpServlet {
             }
 
             long duration = System.currentTimeMillis() - start;
-            log.info(path + " handled successfully in " + duration + "ms");
+            log.info(() -> path + " handled successfully in " + duration + "ms");
 
         } catch (Exception e) {
-            log.severe("Error in route handler: " + e.getMessage());
+            log.severe(() -> "Error in route handler: " + e.getMessage());
             exceptionHandler.handle(e, res);
         }
     }

@@ -12,6 +12,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ca.jolt.exceptions.JoltBadRequestException;
+import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.http.HttpStatus;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -58,9 +59,7 @@ public final class JoltHttpContext { // Improve this so that exception actually 
 
     public Map<String, List<String>> query() {
         Map<String, List<String>> map = new HashMap<>();
-        req.getParameterMap().forEach((key, values) -> {
-            map.put(key, Arrays.asList(values));
-        });
+        req.getParameterMap().forEach((key, values) -> map.put(key, Arrays.asList(values)));
         return map;
     }
 
@@ -130,8 +129,8 @@ public final class JoltHttpContext { // Improve this so that exception actually 
         try {
             res.setContentType("text/plain;charset=UTF-8");
             res.getWriter().write(data);
-        } catch (Exception e) {
-            throw new RuntimeException(e);
+        } catch (IOException e) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing text response", e);
         }
         return this;
     }
@@ -141,7 +140,7 @@ public final class JoltHttpContext { // Improve this so that exception actually 
             res.setContentType("application/json;charset=UTF-8");
             JSON_MAPPER.writeValue(res.getWriter(), json);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing JSON response", e);
         }
         return this;
     }
@@ -151,7 +150,7 @@ public final class JoltHttpContext { // Improve this so that exception actually 
             res.setContentType("application/json;charset=UTF-8");
             JSON_MAPPER.writeValue(res.getWriter(), data);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing JSON response", e);
         }
         return this;
     }
@@ -161,7 +160,7 @@ public final class JoltHttpContext { // Improve this so that exception actually 
             res.setContentType("text/html;charset=UTF-8");
             res.getWriter().write(html);
         } catch (IOException e) {
-            throw new RuntimeException(e);
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing HTML response", e);
         }
         return this;
     }

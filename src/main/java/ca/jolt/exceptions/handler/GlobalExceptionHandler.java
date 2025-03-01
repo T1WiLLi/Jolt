@@ -27,13 +27,4 @@ public interface GlobalExceptionHandler {
      * @param response the HttpsServletResponse for the request
      */
     void handle(Throwable t, HttpServletResponse response);
-
-    /**
-     * Returns the default exception handler provided by Jolt,
-     * which logs at SEVERE level and calls sendError(...) for Tomcat’s default
-     * error pages.
-     */
-    static GlobalExceptionHandler defaultHandler() {
-        return new DefaultGlobalExceptionHandler();
-    }
 }

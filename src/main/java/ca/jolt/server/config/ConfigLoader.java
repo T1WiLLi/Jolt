@@ -16,10 +16,11 @@ public final class ConfigLoader {
             if (in != null) {
                 props.load(in);
             } else {
-                logger.warning("No configuration file found at " + DEFAULT_CONFIG_FILE + ". Using default values.");
+                logger.warning(
+                        () -> "No configuration file found at " + DEFAULT_CONFIG_FILE + ". Using default values.");
             }
         } catch (IOException e) {
-            logger.severe("Caused by: " + e.getCause().getMessage());
+            logger.severe(() -> "Caused by: " + e.getCause().getMessage());
             StringBuilder causeStackTrace = new StringBuilder();
             for (StackTraceElement element : e.getCause().getStackTrace()) {
                 causeStackTrace.append("    at ").append(element.toString()).append("\n");
@@ -27,5 +28,8 @@ public final class ConfigLoader {
             logger.severe(causeStackTrace.toString());
         }
         return props;
+    }
+
+    private ConfigLoader() {
     }
 }

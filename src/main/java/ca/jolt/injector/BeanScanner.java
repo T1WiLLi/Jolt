@@ -39,7 +39,7 @@ final class BeanScanner {
      * @throws JoltDIException if scanning fails.
      */
     public void scanPackage(String basePackage) {
-        logger.info("Scanning package: " + basePackage);
+        logger.info(() -> "Scanning package: " + basePackage);
         try {
             String path = basePackage.replace('.', '/');
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
@@ -56,21 +56,25 @@ final class BeanScanner {
                 classes.addAll(findClasses(resource, basePackage));
             }
 
-            for (Class<?> clazz : classes) {
-                if (clazz.isAnnotationPresent(JoltConfiguration.class)) {
-                    configurationManager.registerConfiguration(clazz);
-                }
-                if (clazz.isAnnotationPresent(JoltBean.class)) {
-                    beanRegistry.registerBean(clazz);
-                }
-            }
+            registerClasses(classes);
 
         } catch (Exception e) {
             throw new JoltDIException("Failed to scan package: " + basePackage, e);
         }
     }
 
-    private List<Class<?>> findClasses(URL resource, String packageName) throws IOException, URISyntaxException {
+    private void registerClasses(List<Class<?>> classes) {
+        for (Class<?> clazz : classes) {
+            if (clazz.isAnnotationPresent(JoltConfiguration.class)) {
+                configurationManager.registerConfiguration(clazz);
+            }
+            if (clazz.isAnnotationPresent(JoltBean.class)) {
+                beanRegistry.registerBean(clazz);
+            }
+        }
+    }
+
+    private List<Class<?>> findClasses(URL resource, String packageName) throws URISyntaxException {
         List<Class<?>> classes = new LinkedList<>();
         String protocol = resource.getProtocol();
 
@@ -79,7 +83,7 @@ final class BeanScanner {
         } else if ("jar".equals(protocol)) {
             classes.addAll(findClassesFromJar(resource, packageName));
         } else {
-            logger.warning("Unsupported protocol: " + protocol + " for resource: " + resource);
+            logger.warning(() -> "Unsupported protocol: " + protocol + " for resource: " + resource);
         }
 
         return classes;
@@ -102,11 +106,7 @@ final class BeanScanner {
                 classes.addAll(findClassesFromDirectory(file, packageName + "." + file.getName()));
             } else if (file.getName().endsWith(".class")) {
                 String className = packageName + "." + file.getName().substring(0, file.getName().length() - 6);
-                try {
-                    classes.add(Class.forName(className));
-                } catch (ClassNotFoundException e) {
-                    logger.warning("Failed to load class: " + className + " - " + e.getMessage());
-                }
+                loadClass(classes, className);
             }
         }
 
@@ -123,29 +123,37 @@ final class BeanScanner {
                 jarPath = jarPath.replace("%20", " ");
             }
 
-            try (JarFile jarFile = new JarFile(jarPath)) {
-                String packagePath = packageName.replace('.', '/') + "/";
+            processJarFile(classes, jarPath, packageName);
 
-                Enumeration<JarEntry> entries = jarFile.entries();
-                while (entries.hasMoreElements()) {
-                    JarEntry entry = entries.nextElement();
-
-                    if (!entry.isDirectory() && entry.getName().startsWith(packagePath)
-                            && entry.getName().endsWith(".class")) {
-                        String className = entry.getName().replace('/', '.')
-                                .substring(0, entry.getName().length() - 6);
-                        try {
-                            classes.add(Class.forName(className));
-                        } catch (ClassNotFoundException e) {
-                            logger.warning("Failed to load class: " + className + " - " + e.getMessage());
-                        }
-                    }
-                }
-            }
         } catch (IOException e) {
             logger.warning("Failed to process JAR file: " + e.getMessage());
         }
-
         return classes;
+    }
+
+    private void processJarFile(List<Class<?>> classes, String jarPath, String packageName) throws IOException {
+        try (JarFile jarFile = new JarFile(jarPath)) {
+            String packagePath = packageName.replace('.', File.separatorChar) + File.separator;
+
+            Enumeration<JarEntry> entries = jarFile.entries();
+            while (entries.hasMoreElements()) {
+                JarEntry entry = entries.nextElement();
+
+                if (!entry.isDirectory() && entry.getName().startsWith(packagePath)
+                        && entry.getName().endsWith(".class")) {
+                    String className = entry.getName().replace('/', '.')
+                            .substring(0, entry.getName().length() - 6);
+                    loadClass(classes, className);
+                }
+            }
+        }
+    }
+
+    private void loadClass(List<Class<?>> classes, String className) {
+        try {
+            classes.add(Class.forName(className));
+        } catch (ClassNotFoundException e) {
+            logger.warning("Failed to load class: " + className + " - " + e.getMessage());
+        }
     }
 }

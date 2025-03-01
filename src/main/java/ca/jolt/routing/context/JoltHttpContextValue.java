@@ -5,7 +5,7 @@ import java.util.Optional;
 public abstract class JoltHttpContextValue {
     protected final Optional<String> value;
 
-    public JoltHttpContextValue(String value) {
+    protected JoltHttpContextValue(String value) {
         this.value = Optional.ofNullable(value);
     }
 

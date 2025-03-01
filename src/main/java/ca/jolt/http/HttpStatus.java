@@ -24,7 +24,7 @@ public enum HttpStatus {
     NOT_IMPLEMENTED(501, "Not Implemented"),
     SERVICE_UNAVAILABLE(503, "Service Unavailable");
 
-    public static enum StatusCategory {
+    public enum StatusCategory {
         INFORMATIONAL,
         SUCCESS,
         REDIRECTION,

@@ -65,7 +65,7 @@ final class BeanRegistry {
             throw new JoltDIException("Duplicate bean name: " + beanName);
         }
         beanDefinitions.put(beanName, beanClass);
-        logger.info("Registered bean: " + beanName);
+        logger.info(() -> "Registered bean: " + beanName);
     }
 
     /**
@@ -87,11 +87,14 @@ final class BeanRegistry {
     /**
      * Retrieves a bean by its registered name.
      *
+     * @deprecated Use {@link #getBean(String, Class)} instead.
+     * 
      * @param name the bean name.
      * @param <T>  the expected bean type.
      * @return the bean instance.
      * @throws BeanNotFoundException if no bean is found with the given name.
      */
+    @Deprecated
     @SuppressWarnings("unchecked")
     public <T> T getBean(String name) {
         Objects.requireNonNull(name, "Bean name cannot be null");
@@ -186,13 +189,7 @@ final class BeanRegistry {
                     ". Creation chain: " + String.join(" -> ", beansInCreation));
         }
         try {
-            try {
-                beanClass.getConstructor();
-            } catch (NoSuchMethodException e) {
-                throw new BeanCreationException(
-                        "Bean " + beanClass.getName() + " must have a public no-argument constructor", e);
-            }
-
+            checkForConstructor(beanClass);
             Object instance = beanClass.getDeclaredConstructor().newInstance();
             JoltBean annotation = beanClass.getAnnotation(JoltBean.class);
             if (annotation != null && annotation.scope() == BeanScope.SINGLETON) {
@@ -206,8 +203,16 @@ final class BeanRegistry {
             return instance;
         } catch (Exception e) {
             beansInCreation.remove(beanName);
-            logger.severe("Error creating bean " + beanName + ": " + e.getMessage());
-            throw new BeanCreationException("Failed to create bean: " + beanName, e);
+            throw new BeanCreationException("Failed to create bean: " + beanName + ". caused by: " + e.getMessage(), e);
+        }
+    }
+
+    private void checkForConstructor(Class<?> beanClass) {
+        try {
+            beanClass.getConstructor();
+        } catch (NoSuchMethodException e) {
+            throw new BeanCreationException(
+                    "Bean " + beanClass.getName() + " must have a public no-argument constructor", e);
         }
     }
 
@@ -216,7 +221,6 @@ final class BeanRegistry {
         for (Field field : clazz.getDeclaredFields()) {
             if (field.isAnnotationPresent(JoltBeanInjection.class)) {
                 try {
-                    field.setAccessible(true);
                     var injection = field.getAnnotation(JoltBeanInjection.class);
                     Object dependency = !injection.value().isEmpty() ? getBean(injection.value())
                             : getBean(field.getType());
@@ -239,7 +243,6 @@ final class BeanRegistry {
         for (Method method : clazz.getDeclaredMethods()) {
             if (method.isAnnotationPresent(annotationType)) {
                 try {
-                    method.setAccessible(true);
                     method.invoke(instance);
                 } catch (Exception e) {
                     throw new JoltDIException("Failed to invoke lifecycle method on: " + clazz.getName(), e);

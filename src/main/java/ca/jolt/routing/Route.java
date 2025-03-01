@@ -37,8 +37,7 @@ public final class Route {
 
     private RoutePattern compile(String path) {
         List<String> names = new ArrayList<>();
-        Pattern pattern = Pattern.compile("\\{([a-zA-Z_][a-zA-Z0-9_]*)(?::(int|double))?\\}");
-        Matcher matcher = pattern.matcher(path);
+        Matcher matcher = Pattern.compile("\\{([a-zA-Z_][\\w]*)(?::(int|double))?\\}").matcher(path);
         StringBuffer sb = new StringBuffer();
         while (matcher.find()) {
             String paramName = matcher.group(1);
@@ -55,6 +54,6 @@ public final class Route {
             matcher.appendReplacement(sb, Matcher.quoteReplacement(replacement));
         }
         matcher.appendTail(sb);
-        return new RoutePattern(Pattern.compile(new String("^" + sb.toString() + "$")), names);
+        return new RoutePattern(Pattern.compile("^" + sb.toString() + "$"), names);
     }
 }

@@ -7,4 +7,4 @@ public enum ConfigurationType {
     EXCEPTION_HANDLER,
     SECURITY,
     SERVER
-} // TODO: Add more configuration types as needed
+}

@@ -25,17 +25,10 @@ import ca.jolt.server.config.ServerConfig;
  *     }
  * 
  *     {@literal @}Override
- *     protected void setup() {
- *         buildServer().withPort(8080);
+ *     <br>     protected void setup() {
  *         get("/", () -> "Hello, World!");
- *         // other route definitions...
+ *         get("/user/{id:int}", ctx -> "Hello , User #" + ctx.path("id"));
  *     };
- * 
- *     <br>
- *     &nbsp;{@literal @}Override
- *     protected void configureRouting(WebServer server, Router router) {
- *         server.setRouter(router);
- *     }
  * }
  * </pre>
  * </p>
@@ -52,7 +45,6 @@ public abstract class JoltApplication {
         if (instance != null) {
             throw new IllegalStateException("Only one JoltApplication instance is allowed per JVM");
         }
-        instance = this;
         StartupLog.printStartup();
         LogConfigurator.configure();
         log.info("JoltApplication initialized");
@@ -65,9 +57,8 @@ public abstract class JoltApplication {
      * calling its setup() method, and then building and starting the server.
      * 
      * @param appClass the subclass of JoltApplication to launch
-     * @param args     command-line arguments
      */
-    public static <T extends JoltApplication> void launch(Class<T> appClass, String[] args) {
+    public static <T extends JoltApplication> void launch(Class<T> appClass) {
         try {
             if (instance == null) {
                 instance = appClass.getDeclaredConstructor().newInstance();

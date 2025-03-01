@@ -50,27 +50,31 @@ public final class LogFormatter extends Formatter {
      * {@inheritDoc}
      */
     @Override
-    public String format(LogRecord record) {
+    public String format(LogRecord logRecord) {
         StringBuilder builder = new StringBuilder(128);
+        DateTimeFormatter dtf = formatter.get();
+        try {
+            builder.append("Jolt [")
+                    .append(logRecord.getLevel())
+                    .append("] - [")
+                    .append(dtf.format(LocalDateTime.now()))
+                    .append("] : ")
+                    .append(formatMessage(logRecord))
+                    .append(System.lineSeparator());
 
-        builder.append("Jolt [")
-                .append(record.getLevel())
-                .append("] - [")
-                .append(formatter.get().format(LocalDateTime.now()))
-                .append("] : ")
-                .append(formatMessage(record))
-                .append(System.lineSeparator());
-
-        return formatStackTrace(builder, record).toString();
+            return formatStackTrace(builder, logRecord).toString();
+        } finally {
+            formatter.remove();
+        }
     }
 
-    private StringBuilder formatStackTrace(StringBuilder sb, LogRecord record) {
-        if (record.getThrown() != null) {
+    private StringBuilder formatStackTrace(StringBuilder sb, LogRecord logRecord) {
+        if (logRecord.getThrown() != null) {
             try (StringWriter sw = new StringWriter(); PrintWriter pw = new PrintWriter(sw)) {
-                record.getThrown().printStackTrace(pw);
+                logRecord.getThrown().printStackTrace(pw);
                 sb.append(sw.toString());
             } catch (Exception ex) {
-                sb.append(record.getThrown()).append(System.lineSeparator());
+                sb.append(logRecord.getThrown()).append(System.lineSeparator());
             }
         }
         return sb;

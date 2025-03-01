@@ -8,6 +8,7 @@ import ca.jolt.injector.JoltContainer;
 import ca.jolt.server.config.ServerConfig;
 
 import org.apache.catalina.Context;
+import org.apache.catalina.LifecycleException;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardThreadExecutor;
 import org.apache.catalina.startup.Tomcat;
@@ -19,6 +20,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Comparator;
 import java.util.logging.Logger;
+import java.util.stream.Stream;
 
 public class TomcatServer {
     private static final Logger log = Logger.getLogger(TomcatServer.class.getName());
@@ -116,7 +118,7 @@ public class TomcatServer {
         }
     }
 
-    private void startTomcat() throws Exception {
+    private void startTomcat() throws LifecycleException {
         tomcat.start();
     }
 
@@ -155,15 +157,16 @@ public class TomcatServer {
         try {
             Path tomcatPath = Paths.get(config.getTempDir());
             if (Files.exists(tomcatPath)) {
-                Files.walk(tomcatPath)
-                        .sorted(Comparator.reverseOrder())
-                        .forEach(path -> {
-                            try {
-                                Files.delete(path);
-                            } catch (Exception e) {
-                                log.warning("Failed to delete path: " + path + " - " + e.getMessage());
-                            }
-                        });
+                try (Stream<Path> paths = Files.walk(tomcatPath)) {
+                    paths.sorted(Comparator.reverseOrder())
+                            .forEach(path -> {
+                                try {
+                                    Files.delete(path);
+                                } catch (Exception e) {
+                                    log.warning("Failed to delete path: " + path + " - " + e.getMessage());
+                                }
+                            });
+                }
             }
         } catch (Exception e) {
             log.warning("Failed to delete temp directory structure: " + e.getMessage());
