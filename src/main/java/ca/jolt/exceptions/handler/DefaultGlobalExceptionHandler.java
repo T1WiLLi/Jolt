@@ -4,13 +4,19 @@ import java.util.logging.Logger;
 
 import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.http.HttpStatus;
+import ca.jolt.injector.annotation.JoltConfiguration;
+import ca.jolt.injector.type.ConfigurationType;
 import ca.jolt.routing.context.JoltHttpContext;
 import jakarta.servlet.http.HttpServletResponse;
 
+@JoltConfiguration(value = ConfigurationType.EXCEPTION_HANDLER, isDefault = true)
 final class DefaultGlobalExceptionHandler implements GlobalExceptionHandler {
 
     private static final Logger log = Logger.getLogger(DefaultGlobalExceptionHandler.class.getName());
 
+    /**
+     * {@inheritdoc}
+     */
     @Override
     public void handle(Throwable t, HttpServletResponse res) {
         log.severe("Unhandled exception: " + t.getMessage());

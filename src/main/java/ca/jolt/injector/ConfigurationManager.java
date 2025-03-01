@@ -24,12 +24,25 @@ public class ConfigurationManager {
     private final Map<ConfigurationType, Object> configurations = new HashMap<>();
 
     /**
-     * Registers a configuration class.
+     * Registers a configuration class annotated with {@link JoltConfiguration}.
+     * <p>
+     * If a configuration for a given type already exists:
+     * <ul>
+     * <li>If both the existing and the new configuration are default, a warning is
+     * logged and the first is kept.</li>
+     * <li>If the existing configuration is default and the new one is user-provided
+     * (non-default), the new one overrides.</li>
+     * <li>If the existing configuration is non-default and the new one is default,
+     * a warning is logged and the new one is ignored.</li>
+     * <li>If both are non-default, a warning is logged and the first registered
+     * configuration is used.</li>
+     * </ul>
+     * </p>
      *
-     * @param configClass the configuration class annotated with
-     *                    {@link JoltConfiguration}.
-     * @throws JoltDIException if the configuration class is not properly annotated
-     *                         or does not meet the rules.
+     * @param configClass the configuration class to register.
+     * @throws JoltDIException if the class is not annotated with
+     *                         {@code @JoltConfiguration} or if it doesn't meet the
+     *                         required rules.
      */
     public void registerConfiguration(Class<?> configClass) {
         Objects.requireNonNull(configClass, "Configuration class cannot be null");
@@ -43,8 +56,7 @@ public class ConfigurationManager {
             throw new JoltDIException("Configuration type must be provided in @JoltConfiguration for " +
                     configClass.getName());
         }
-        // Enforce specific rules: for example, if type is EXCEPTION_HANDLER, the class
-        // must implement GlobalExceptionHandler.
+        // Specific validation for exception handler configurations.
         if (type == ConfigurationType.EXCEPTION_HANDLER) {
             if (!GlobalExceptionHandler.class.isAssignableFrom(configClass)) {
                 throw new JoltDIException(
@@ -54,8 +66,29 @@ public class ConfigurationManager {
         }
         try {
             Object configInstance = configClass.getDeclaredConstructor().newInstance();
-            configurations.put(type, configInstance);
-            logger.info("Registered configuration " + configClass.getName() + " for type " + type);
+            if (configurations.containsKey(type)) {
+                Object current = configurations.get(type);
+                boolean currentIsDefault = current.getClass()
+                        .getAnnotation(JoltConfiguration.class).isDefault();
+                boolean newIsDefault = configAnno.isDefault();
+                if (currentIsDefault && newIsDefault) {
+                    logger.warning("Duplicate default configuration detected for type " + type +
+                            ". Using the first registered configuration: " + current.getClass().getName());
+                } else if (currentIsDefault && !newIsDefault) {
+                    configurations.put(type, configInstance);
+                    logger.info("Overriding default configuration " + current.getClass().getName() +
+                            " with user provided configuration " + configClass.getName() + " for type " + type);
+                } else if (!currentIsDefault && newIsDefault) {
+                    logger.warning("Default configuration " + configClass.getName() +
+                            " ignored since a non-default configuration is already registered for type " + type);
+                } else {
+                    logger.warning("Multiple non-default configuration beans registered for type " + type +
+                            ". Using the first registered configuration: " + current.getClass().getName());
+                }
+            } else {
+                configurations.put(type, configInstance);
+                logger.info("Registered configuration " + configClass.getName() + " for type " + type);
+            }
         } catch (Exception e) {
             throw new JoltDIException("Failed to instantiate configuration: " + configClass.getName(), e);
         }

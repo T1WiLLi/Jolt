@@ -4,7 +4,6 @@ import java.lang.annotation.ElementType;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
-
 import ca.jolt.injector.type.ConfigurationType;
 
 /**
@@ -18,7 +17,13 @@ public @interface JoltConfiguration {
     /**
      * The type of configuration. For example, EXCEPTION_HANDLER, SECURITY, SERVER,
      * etc.
-     * 
      */
     ConfigurationType value();
+
+    /**
+     * Flag to indicate if this configuration is the framework's default
+     * implementation.
+     * User provided configurations should have this set to false.
+     */
+    boolean isDefault() default false;
 }

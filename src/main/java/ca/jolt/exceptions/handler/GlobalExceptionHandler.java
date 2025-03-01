@@ -19,6 +19,13 @@ public interface GlobalExceptionHandler {
      */
     void handle(Throwable t, JoltHttpContext ctx);
 
+    /**
+     * Called whenever a route handler or the framework throws an exception that
+     * isn't handled more specifically.
+     *
+     * @param t        the Throwable that was caught
+     * @param response the HttpsServletResponse for the request
+     */
     void handle(Throwable t, HttpServletResponse response);
 
     /**
