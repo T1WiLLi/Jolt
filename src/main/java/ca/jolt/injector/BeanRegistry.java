@@ -94,7 +94,7 @@ final class BeanRegistry {
      * @return the bean instance.
      * @throws BeanNotFoundException if no bean is found with the given name.
      */
-    @Deprecated
+    @Deprecated(since = "1.0", forRemoval = false)
     @SuppressWarnings("unchecked")
     public <T> T getBean(String name) {
         Objects.requireNonNull(name, "Bean name cannot be null");

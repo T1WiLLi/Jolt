@@ -18,8 +18,8 @@ public class ServerConfig {
     private static final String DEFAULT_APP_NAME = "JoltApp";
 
     // New multipart defaults
-    private static final long DEFAULT_MULTIPART_MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
-    private static final long DEFAULT_MULTIPART_MAX_REQUEST_SIZE = 50 * 1024 * 1024; // 50MB
+    private static final long DEFAULT_MULTIPART_MAX_FILE_SIZE = 15 * 1024L * 1024L; // 15MB
+    private static final long DEFAULT_MULTIPART_MAX_REQUEST_SIZE = 50 * 1024L * 1024L; // 50MB
     private static final int DEFAULT_MULTIPART_FILE_SIZE_THRESHOLD = 1024 * 1024; // 1MB
 
     // Actual fields

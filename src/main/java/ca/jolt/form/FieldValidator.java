@@ -637,23 +637,17 @@ public final class FieldValidator {
      *         {@code false} otherwise.
      */
     public boolean validate(String value, Map<String, String> allValues) {
-        // Skip validation if condition is not met
         if (condition != null && !condition.test(allValues)) {
             return true;
         }
-        // Apply transformations
         String transformedValue = value;
         for (UnaryOperator<String> transformer : transformers) {
             if (transformedValue != null) {
                 transformedValue = transformer.apply(transformedValue);
             }
         }
-        // Update form if value was modified
-        if (!transformedValue.equals(value) && transformedValue != null) {
-            form.setValue(fieldName, transformedValue);
-            allValues.put(fieldName, transformedValue);
-        }
-        // Validate with each rule
+        form.setValue(fieldName, transformedValue);
+        allValues.put(fieldName, transformedValue);
         for (Rule rule : rules) {
             if (!rule.validate(transformedValue, allValues)) {
                 form.addError(fieldName, rule.getErrorMessage());
