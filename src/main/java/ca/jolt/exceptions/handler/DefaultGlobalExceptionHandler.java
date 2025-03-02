@@ -6,7 +6,6 @@ import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.http.HttpStatus;
 import ca.jolt.injector.annotation.JoltConfiguration;
 import ca.jolt.injector.type.ConfigurationType;
-import ca.jolt.routing.context.JoltHttpContext;
 import jakarta.servlet.http.HttpServletResponse;
 
 @JoltConfiguration(value = ConfigurationType.EXCEPTION_HANDLER, isDefault = true)
@@ -19,7 +18,7 @@ public final class DefaultGlobalExceptionHandler implements GlobalExceptionHandl
      */
     @Override
     public void handle(Throwable t, HttpServletResponse res) {
-        log.severe("Unhandled exception: " + t.getMessage());
+        log.severe("Unhandled exception : " + t.getMessage());
 
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         String message = t.getMessage();
@@ -36,10 +35,5 @@ public final class DefaultGlobalExceptionHandler implements GlobalExceptionHandl
         } catch (Exception ex) {
             log.severe("Failed to write error message: " + ex.getMessage());
         }
-    }
-
-    @Override
-    public void handle(Throwable t, JoltHttpContext ctx) {
-        handle(t, ctx.getResponse());
     }
 }

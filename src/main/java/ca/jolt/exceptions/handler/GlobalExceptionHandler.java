@@ -17,7 +17,9 @@ public interface GlobalExceptionHandler {
      * @param t   the Throwable that was caught
      * @param ctx the JoltHttpContext for the request/response
      */
-    void handle(Throwable t, JoltHttpContext ctx);
+    default void handle(Throwable t, JoltHttpContext ctx) {
+        handle(t, ctx.getResponse());
+    }
 
     /**
      * Called whenever a route handler or the framework throws an exception that

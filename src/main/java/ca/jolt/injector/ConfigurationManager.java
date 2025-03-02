@@ -120,11 +120,22 @@ final class ConfigurationManager {
      * @throws JoltDIException if no configuration is registered for the given type.
      */
     public <T> T getConfiguration(Class<T> expectedType) {
+        T defaultConfig = null;
         for (Object config : configurations.values()) {
             if (expectedType.isAssignableFrom(config.getClass())) {
-                return expectedType.cast(config);
+                boolean isDefault = config.getClass().getAnnotation(JoltConfiguration.class).isDefault();
+                if (!isDefault) {
+                    return expectedType.cast(config);
+                } else {
+                    defaultConfig = expectedType.cast(config);
+                }
             }
         }
+
+        if (defaultConfig != null) {
+            return defaultConfig;
+        }
+
         throw new JoltDIException("No configuration registered for type: " + expectedType.getName());
     }
 

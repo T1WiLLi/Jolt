@@ -1,6 +1,9 @@
 package ca.jolt.core;
 
+import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.exceptions.handler.GlobalExceptionHandler;
+import ca.jolt.http.HttpStatus;
+import ca.jolt.injector.JoltContainer;
 import ca.jolt.routing.RouteHandler;
 import ca.jolt.routing.RouteMatch;
 import ca.jolt.routing.context.JoltHttpContext;
@@ -20,10 +23,9 @@ public final class JoltDispatcherServlet extends HttpServlet {
     private final transient Router router;
     private final transient GlobalExceptionHandler exceptionHandler;
 
-    public JoltDispatcherServlet(Router router, GlobalExceptionHandler exceptionHandler) {
-        this.router = router;
-        this.exceptionHandler = exceptionHandler;
-
+    public JoltDispatcherServlet() {
+        this.router = JoltContainer.getInstance().getBean(Router.class);
+        this.exceptionHandler = JoltContainer.getInstance().getBean(GlobalExceptionHandler.class);
     }
 
     @Override
@@ -35,25 +37,22 @@ public final class JoltDispatcherServlet extends HttpServlet {
         log.info(() -> String.format("Incoming %s %s", method, path));
 
         RouteMatch match = router.match(method, path);
-        if (match == null) {
-            List<String> allowedMethods = router.getAllowedMethods(path);
-            if (!allowedMethods.isEmpty()) {
-                log.info(() -> "HTTP method " + method + " is not allowed for path: " + path);
-                res.setHeader("Allow", String.join(", ", allowedMethods));
-                res.sendError(HttpServletResponse.SC_METHOD_NOT_ALLOWED,
-                        "HTTP method " + method + " not allowed for " + path);
-                return;
-            }
-            log.info(() -> "No route matched for path: " + path);
-            res.sendError(HttpServletResponse.SC_NOT_FOUND, "No route found for " + path);
-            return;
-        }
-
-        JoltHttpContext joltCtx = new JoltHttpContext(
-                req, res, match.matcher(), match.route().getParamNames());
-        RouteHandler handler = match.route().getHandler();
-
         try {
+            if (match == null) {
+                List<String> allowedMethods = router.getAllowedMethods(path);
+                if (!allowedMethods.isEmpty()) {
+                    log.info(() -> "HTTP method " + method + " is not allowed for path: " + path);
+                    throw new JoltHttpException(HttpStatus.METHOD_NOT_ALLOWED,
+                            "HTTP method " + method + " not allowed for " + path);
+                }
+                log.info(() -> "No route matched for path: " + path);
+                throw new JoltHttpException(HttpStatus.NOT_FOUND, "No route found for " + path);
+            }
+
+            JoltHttpContext joltCtx = new JoltHttpContext(
+                    req, res, match.matcher(), match.route().getParamNames());
+            RouteHandler handler = match.route().getHandler();
+
             Object result = handler.handle(joltCtx);
 
             if (!res.isCommitted() && result != null && !(result instanceof JoltHttpContext)) {
