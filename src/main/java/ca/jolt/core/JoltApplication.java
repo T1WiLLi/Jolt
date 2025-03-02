@@ -56,7 +56,7 @@ public abstract class JoltApplication {
     /**
      * The {@link Router} used to map HTTP methods and paths to handling logic.
      */
-    protected final Router router;
+    protected static Router router;
 
     /**
      * The embedded Tomcat server.
@@ -86,8 +86,6 @@ public abstract class JoltApplication {
         StartupLog.printStartup();
         LogConfigurator.configure();
         log.info("JoltApplication initialized");
-        JoltContainer.getInstance().scan("ca.jolt").initialize();
-        router = JoltContainer.getInstance().getBean(Router.class);
     }
 
     /**
@@ -103,19 +101,25 @@ public abstract class JoltApplication {
      * level and exits the JVM with status code {@code 1}.
      * </p>
      *
-     * @param <T>
-     *                 A concrete subclass of {@code JoltApplication}.
-     * @param appClass
-     *                 The class object of the application subclass to launch.
+     * @param <T>      A concrete subclass of {@code JoltApplication}.
+     * @param appClass The class object of the application subclass to launch.
+     * 
+     * @param scan     The package to scan for beans.
      * @throws IllegalStateException
      *                               if an instance of the application is already
      *                               running.
      */
-    public static <T extends JoltApplication> void launch(Class<T> appClass) {
+    public static <T extends JoltApplication> void launch(Class<T> appClass, String scan) {
         try {
             if (instance == null) {
                 instance = appClass.getDeclaredConstructor().newInstance();
             }
+            JoltContainer.getInstance().scan("ca.jolt");
+            if (!scan.equals("ca.jolt")) {
+                JoltContainer.getInstance().scan(scan);
+            }
+            JoltContainer.getInstance().initialize();
+            router = JoltContainer.getInstance().getBean(Router.class);
             instance.setup();
             ServerConfig config = ConfigurationManager.getInstance().getServerConfig();
             instance.server = new TomcatServer(config);
@@ -183,7 +187,7 @@ public abstract class JoltApplication {
      *                a response.
      */
     protected static void get(String path, RouteHandler handler) {
-        instance.router.get(path, handler);
+        router.get(path, handler);
     }
 
     /**
@@ -200,7 +204,7 @@ public abstract class JoltApplication {
      *                 response body.
      */
     protected static void get(String path, Supplier<Object> supplier) {
-        instance.router.get(path, supplier);
+        router.get(path, supplier);
     }
 
     /**
@@ -214,7 +218,7 @@ public abstract class JoltApplication {
      *                a response.
      */
     protected static void post(String path, RouteHandler handler) {
-        instance.router.post(path, handler);
+        router.post(path, handler);
     }
 
     /**
@@ -228,7 +232,7 @@ public abstract class JoltApplication {
      *                 response body.
      */
     protected static void post(String path, Supplier<Object> supplier) {
-        instance.router.post(path, supplier);
+        router.post(path, supplier);
     }
 
     /**
@@ -242,7 +246,7 @@ public abstract class JoltApplication {
      *                a response.
      */
     protected static void put(String path, RouteHandler handler) {
-        instance.router.put(path, handler);
+        router.put(path, handler);
     }
 
     /**
@@ -256,7 +260,7 @@ public abstract class JoltApplication {
      *                 response body.
      */
     protected static void put(String path, Supplier<Object> supplier) {
-        instance.router.put(path, supplier);
+        router.put(path, supplier);
     }
 
     /**
@@ -270,7 +274,7 @@ public abstract class JoltApplication {
      *                a response.
      */
     protected static void delete(String path, RouteHandler handler) {
-        instance.router.delete(path, handler);
+        router.delete(path, handler);
     }
 
     /**
@@ -284,6 +288,6 @@ public abstract class JoltApplication {
      *                 response body.
      */
     protected static void delete(String path, Supplier<Object> supplier) {
-        instance.router.delete(path, supplier);
+        router.delete(path, supplier);
     }
 }

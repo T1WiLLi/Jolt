@@ -23,7 +23,7 @@ public class Main extends JoltApplication {
         private static final Map<String, JoltFile> uploadedFiles = new ConcurrentHashMap<>();
 
         public static void main(String[] args) {
-                launch(Main.class);
+                launch(Main.class, "ca.jolt");
         }
 
         @Override
