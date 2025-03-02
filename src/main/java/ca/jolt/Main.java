@@ -77,9 +77,8 @@ public class Main extends JoltApplication {
                 StringBuilder sb = new StringBuilder();
                 sb.append("<html><head><title>Validation Error</title></head><body>");
                 sb.append("<h1>Validation Errors:</h1>");
-                form.getErrors().forEach((field, error) -> {
-                    sb.append("<p><strong>").append(field).append("</strong>: ").append(error).append("</p>");
-                });
+                form.getErrors().forEach((field, error) -> sb.append("<p><strong>").append(field).append("</strong>: ")
+                        .append(error).append("</p>"));
                 sb.append("<a href='/login'>Back to Login</a>");
                 sb.append("</body></html>");
                 return ctx.status(400).html(sb.toString());
@@ -224,9 +223,8 @@ public class Main extends JoltApplication {
                 StringBuilder sb = new StringBuilder();
                 sb.append("<html><head><title>Registration Error</title></head><body>");
                 sb.append("<h1>Registration Errors:</h1>");
-                form.getErrors().forEach((field, error) -> {
-                    sb.append("<p><strong>").append(field).append("</strong>: ").append(error).append("</p>");
-                });
+                form.getErrors().forEach((field, error) -> sb.append("<p><strong>").append(field).append("</strong>: ")
+                        .append(error).append("</p>"));
                 sb.append("<a href='/register'>Back to Registration</a>");
                 sb.append("</body></html>");
                 return ctx.status(400).html(sb.toString());

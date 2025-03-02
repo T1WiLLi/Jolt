@@ -2,6 +2,7 @@ package ca.jolt.form;
 
 import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -9,6 +10,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
+
+import ca.jolt.exceptions.FormConversionException;
 
 public final class Form {
     private static final Logger logger = Logger.getLogger(Form.class.getName());
@@ -100,18 +103,7 @@ public final class Form {
             FieldValidator validator = entry.getValue();
             String value = fieldValues.getOrDefault(fieldName, "");
 
-            for (Rule rule : validator.getRules()) {
-                if (rule instanceof AsyncRule) {
-                    AsyncRule asyncRule = (AsyncRule) rule;
-                    futures.add(asyncRule.validateAsync(value, fieldValues)
-                            .thenApply(valid -> {
-                                if (!valid) {
-                                    addError(fieldName, rule.getErrorMessage());
-                                }
-                                return valid;
-                            }));
-                }
-            }
+            addAsyncValidationFutures(futures, fieldName, validator, value);
         }
 
         boolean syncValid = verify();
@@ -132,6 +124,21 @@ public final class Form {
                     }
                     return syncValid && allValid;
                 });
+    }
+
+    private void addAsyncValidationFutures(List<CompletableFuture<Boolean>> futures, String fieldName,
+            FieldValidator validator, String value) {
+        for (Rule rule : validator.getRules()) {
+            if (rule instanceof AsyncRule asyncRule) {
+                futures.add(asyncRule.validateAsync(value, fieldValues)
+                        .thenApply(valid -> {
+                            if (!valid) {
+                                addError(fieldName, rule.getErrorMessage());
+                            }
+                            return valid;
+                        }));
+            }
+        }
     }
 
     public Map<String, String> getErrors() {
@@ -164,31 +171,36 @@ public final class Form {
     public Integer getValueAsInt(String fieldName) {
         String value = getValue(fieldName);
         if (value == null || value.isEmpty()) {
-            return null;
+            throw new FormConversionException(
+                    "The conversion of field " + fieldName + " to int failed. The field is empty.");
         }
         try {
             return Integer.parseInt(value);
         } catch (NumberFormatException e) {
-            return null;
+            throw new FormConversionException(
+                    "The conversion of field " + fieldName + " to int failed. The field is " + value + ".", e);
         }
     }
 
     public Double getValueAsDouble(String fieldName) {
         String value = getValue(fieldName);
         if (value == null || value.isEmpty()) {
-            return null;
+            throw new FormConversionException(
+                    "The conversion of field " + fieldName + " to double failed. The field is empty.");
         }
         try {
             return Double.parseDouble(value);
         } catch (NumberFormatException e) {
-            return null;
+            throw new FormConversionException(
+                    "The conversion of field " + fieldName + " to date failed. The field is " + value + ".", e);
         }
     }
 
     public Boolean getValueAsBoolean(String fieldName) {
         String value = getValue(fieldName);
         if (value == null || value.isEmpty()) {
-            return null;
+            throw new FormConversionException(
+                    "The conversion of field " + fieldName + " to boolean failed. The field is empty.");
         }
         return Boolean.parseBoolean(value);
     }
@@ -196,25 +208,29 @@ public final class Form {
     public LocalDate getValueAsDate(String fieldName) {
         String value = getValue(fieldName);
         if (value == null || value.isEmpty()) {
-            return null;
+            throw new FormConversionException(
+                    "The conversion of field " + fieldName + " to date failed. The field is empty.");
         }
         String pattern = datePatterns.getOrDefault(fieldName, "yyyy-MM-dd");
         try {
             return LocalDate.parse(value, DateTimeFormatter.ofPattern(pattern));
-        } catch (Exception e) {
-            return null;
+        } catch (DateTimeParseException e) {
+            throw new FormConversionException(
+                    "The conversion of field " + fieldName + " to date failed. The field is " + value + ".", e);
         }
     }
 
     public LocalDate getValueAsDate(String fieldName, String pattern) {
         String value = getValue(fieldName);
         if (value == null || value.isEmpty()) {
-            return null;
+            throw new FormConversionException(
+                    "The conversion of field " + fieldName + " to date failed. The field is empty.");
         }
         try {
             return LocalDate.parse(value, DateTimeFormatter.ofPattern(pattern));
-        } catch (Exception e) {
-            return null;
+        } catch (DateTimeParseException e) {
+            throw new FormConversionException(
+                    "The conversion of field " + fieldName + " to date failed. The field is " + value + ".", e);
         }
     }
 

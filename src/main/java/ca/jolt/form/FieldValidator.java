@@ -220,7 +220,7 @@ public final class FieldValidator {
                 transformedValue = transformer.apply(transformedValue);
             }
         }
-        if (transformedValue != value && transformedValue != null) {
+        if (!transformedValue.equals(value) && transformedValue != null) {
             form.setValue(fieldName, transformedValue);
             allValues.put(fieldName, transformedValue);
         }
