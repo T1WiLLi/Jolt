@@ -2,7 +2,9 @@ package ca.jolt.routing.context;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -14,12 +16,14 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ca.jolt.exceptions.JoltBadRequestException;
 import ca.jolt.exceptions.JoltHttpException;
+import ca.jolt.files.JoltFile;
 import ca.jolt.form.Form;
 import ca.jolt.http.HttpStatus;
 import ca.jolt.routing.builder.CookieBuilder;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import jakarta.servlet.http.Part;
 
 /**
  * Provides an HTTP context object that encapsulates request and response
@@ -249,6 +253,39 @@ public final class JoltHttpContext {
         } catch (IOException e) {
             throw new JoltBadRequestException("Failed to parse JSON body: " + e.getMessage());
         }
+    }
+
+    /**
+     * Returns a list of all uploaded files as JoltFile objects, storing file data
+     * in memory. It also automatically filters out empty files.
+     * If the request isn't multipart, returns an empty list or throws an exception
+     * as needed.
+     * 
+     * @return List<JoltFile> of JoltFile objects.
+     */
+    public List<JoltFile> getFiles() {
+        List<JoltFile> files = new ArrayList<>();
+        try {
+            Collection<Part> parts = req.getParts();
+            if (parts != null) {
+                for (Part part : parts) {
+                    String submittedFileName = part.getSubmittedFileName();
+                    if (submittedFileName != null && !submittedFileName.trim().isEmpty()) {
+                        byte[] data = part.getInputStream().readAllBytes();
+                        if (data.length > 0) {
+                            files.add(new JoltFile(
+                                    submittedFileName,
+                                    part.getContentType(),
+                                    data.length,
+                                    data));
+                        }
+                    }
+                }
+            }
+        } catch (Exception e) {
+            throw new JoltBadRequestException("Failed to retrieve uploaded files: " + e.getMessage());
+        }
+        return files;
     }
 
     /**

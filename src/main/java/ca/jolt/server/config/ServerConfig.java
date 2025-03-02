@@ -3,7 +3,6 @@ package ca.jolt.server.config;
 import java.util.Properties;
 
 public class ServerConfig {
-
     // Default constants
     private static final int DEFAULT_PORT = 8080;
     private static final String DEFAULT_TEMP_DIR = "tmp/tomcat";
@@ -18,7 +17,12 @@ public class ServerConfig {
     private static final boolean DEFAULT_DAEMON = false;
     private static final String DEFAULT_APP_NAME = "JoltApp";
 
-    // Configuration fields
+    // New multipart defaults
+    private static final long DEFAULT_MULTIPART_MAX_FILE_SIZE = 15 * 1024 * 1024; // 15MB
+    private static final long DEFAULT_MULTIPART_MAX_REQUEST_SIZE = 50 * 1024 * 1024; // 50MB
+    private static final int DEFAULT_MULTIPART_FILE_SIZE_THRESHOLD = 1024 * 1024; // 1MB
+
+    // Actual fields
     private final int port;
     private final String tempDir;
     private final boolean sslEnabled;
@@ -31,8 +35,10 @@ public class ServerConfig {
     private final long threadsTimeout;
     private final boolean daemon;
     private final String appName;
+    private final long multipartMaxFileSize;
+    private final long multipartMaxRequestSize;
+    private final int multipartFileSizeThreshold;
 
-    // Private constructor that accepts a Builder instance.
     private ServerConfig(Builder builder) {
         this.port = builder.port;
         this.tempDir = builder.tempDir;
@@ -46,9 +52,12 @@ public class ServerConfig {
         this.threadsTimeout = builder.threadsTimeout;
         this.daemon = builder.daemon;
         this.appName = builder.appName;
+        this.multipartMaxFileSize = builder.multipartMaxFileSize;
+        this.multipartMaxRequestSize = builder.multipartMaxRequestSize;
+        this.multipartFileSizeThreshold = builder.multipartFileSizeThreshold;
     }
 
-    // Getters (unchanged)
+    // Getters...
     public int getPort() {
         return port;
     }
@@ -97,7 +106,18 @@ public class ServerConfig {
         return appName;
     }
 
-    // Builder class to set configuration values
+    public long getMultipartMaxFileSize() {
+        return multipartMaxFileSize;
+    }
+
+    public long getMultipartMaxRequestSize() {
+        return multipartMaxRequestSize;
+    }
+
+    public int getMultipartFileSizeThreshold() {
+        return multipartFileSizeThreshold;
+    }
+
     public static class Builder {
         private int port = DEFAULT_PORT;
         private String tempDir = DEFAULT_TEMP_DIR;
@@ -111,6 +131,9 @@ public class ServerConfig {
         private long threadsTimeout = DEFAULT_THREADS_TIMEOUT;
         private boolean daemon = DEFAULT_DAEMON;
         private String appName = DEFAULT_APP_NAME;
+        private long multipartMaxFileSize = DEFAULT_MULTIPART_MAX_FILE_SIZE;
+        private long multipartMaxRequestSize = DEFAULT_MULTIPART_MAX_REQUEST_SIZE;
+        private int multipartFileSizeThreshold = DEFAULT_MULTIPART_FILE_SIZE_THRESHOLD;
 
         public Builder port(int port) {
             this.port = port;
@@ -172,12 +195,26 @@ public class ServerConfig {
             return this;
         }
 
+        public Builder multipartMaxFileSize(long size) {
+            this.multipartMaxFileSize = size;
+            return this;
+        }
+
+        public Builder multipartMaxRequestSize(long size) {
+            this.multipartMaxRequestSize = size;
+            return this;
+        }
+
+        public Builder multipartFileSizeThreshold(int threshold) {
+            this.multipartFileSizeThreshold = threshold;
+            return this;
+        }
+
         public ServerConfig build() {
             return new ServerConfig(this);
         }
     }
 
-    // Factory method that creates a ServerConfig from Properties using the Builder.
     public static ServerConfig fromProperties(Properties props) {
         Builder builder = new Builder();
         builder.port(Integer.parseInt(props.getProperty("server.port", String.valueOf(DEFAULT_PORT))));
@@ -196,6 +233,12 @@ public class ServerConfig {
                 Long.parseLong(props.getProperty("server.threads.timeout", String.valueOf(DEFAULT_THREADS_TIMEOUT))));
         builder.daemon(Boolean.parseBoolean(props.getProperty("server.daemon", String.valueOf(DEFAULT_DAEMON))));
         builder.appName(props.getProperty("server.appName", DEFAULT_APP_NAME));
+        builder.multipartMaxFileSize(Long.parseLong(
+                props.getProperty("server.multipart.maxFileSize", String.valueOf(DEFAULT_MULTIPART_MAX_FILE_SIZE))));
+        builder.multipartMaxRequestSize(Long.parseLong(props.getProperty("server.multipart.maxRequestSize",
+                String.valueOf(DEFAULT_MULTIPART_MAX_REQUEST_SIZE))));
+        builder.multipartFileSizeThreshold(Integer.parseInt(props.getProperty("server.multipart.fileSizeThreshold",
+                String.valueOf(DEFAULT_MULTIPART_FILE_SIZE_THRESHOLD))));
         return builder.build();
     }
 }

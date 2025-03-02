@@ -5,9 +5,11 @@ import ca.jolt.core.Router;
 import ca.jolt.exceptions.ServerException;
 import ca.jolt.injector.JoltContainer;
 import ca.jolt.server.config.ServerConfig;
+import jakarta.servlet.MultipartConfigElement;
 
 import org.apache.catalina.Context;
 import org.apache.catalina.LifecycleException;
+import org.apache.catalina.Wrapper;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardThreadExecutor;
 import org.apache.catalina.startup.Tomcat;
@@ -81,7 +83,8 @@ public class TomcatServer {
     private void initializeTomcat() {
         tomcat = new Tomcat();
         tomcat.setPort(config.getPort());
-        tomcat.setBaseDir(config.getTempDir());
+        String absoluteTempDir = new File(config.getTempDir()).getAbsolutePath();
+        tomcat.setBaseDir(absoluteTempDir);
     }
 
     private Connector createAndConfigureConnector() throws ServerException {
@@ -114,10 +117,19 @@ public class TomcatServer {
         String docBase = new File(config.getTempDir()).getAbsolutePath();
         try {
             Context context = tomcat.addContext("", docBase);
+
+            MultipartConfigElement multipartConfig = new MultipartConfigElement(
+                    new File(config.getTempDir()).getAbsolutePath(),
+                    config.getMultipartMaxFileSize(),
+                    config.getMultipartMaxRequestSize(),
+                    config.getMultipartFileSizeThreshold());
+
             Router router = JoltContainer.getInstance().getBean(Router.class);
             if (router != null) {
                 JoltDispatcherServlet dispatcher = new JoltDispatcherServlet();
-                Tomcat.addServlet(context, "JoltServlet", dispatcher);
+                Wrapper servletWrapper = Tomcat.addServlet(context, "JoltServlet", dispatcher);
+
+                servletWrapper.setMultipartConfigElement(multipartConfig);
                 context.addServletMappingDecoded("/*", "JoltServlet");
             } else {
                 log.warning("No router set for TomcatServer; no routes will be handled.");

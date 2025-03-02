@@ -1,10 +1,14 @@
 package ca.jolt;
 
 import ca.jolt.core.JoltApplication;
+import ca.jolt.files.JoltFile;
 import ca.jolt.form.Form;
 import ca.jolt.form.Rule;
+import ca.jolt.http.HttpStatus;
 
+import java.io.IOException;
 import java.time.LocalDate;
+import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -15,6 +19,8 @@ public class Main extends JoltApplication {
         private static final Map<String, String> sessions = new ConcurrentHashMap<>();
         // In-memory storage for registered users, keyed by email (stored in lowercase).
         private static final Map<String, RegisteredUser> registeredUsers = new ConcurrentHashMap<>();
+
+        private static final Map<String, JoltFile> uploadedFiles = new ConcurrentHashMap<>();
 
         public static void main(String[] args) {
                 launch(Main.class);
@@ -27,7 +33,8 @@ public class Main extends JoltApplication {
                 // Example route with typed path parameters.
                 get("/hello/{age:int}", ctx -> ctx.html(
                                 "Hello " + ctx.query("name").orDefault("little one") + ", you are "
-                                                + ctx.path("age").asInt() + " years old!"));
+                                                + ctx.path("age").asInt() + " years old!")
+                                .status(HttpStatus.OK));
 
                 // Simple POST endpoint to echo a User JSON object.
                 post("/user", ctx -> {
@@ -41,6 +48,7 @@ public class Main extends JoltApplication {
                 // Define login and registration routes.
                 defineLoginRoutes();
                 defineRegistrationRoutes();
+                defineUploadRoutes();
         }
 
         private void defineLoginRoutes() {
@@ -256,7 +264,8 @@ public class Main extends JoltApplication {
                                                         "    <p>Your registered email: " + email + "</p>" +
                                                         "    <a href='/login'>Go to Login</a>" +
                                                         "  </body>" +
-                                                        "</html>");
+                                                        "</html>")
+                                        .status(HttpStatus.CREATED);
                 });
 
                 get("/registered", ctx -> {
@@ -272,6 +281,168 @@ public class Main extends JoltApplication {
                         }
                         sb.append("<a href='/register'>Register another user</a>");
                         sb.append("</body></html>");
+                        return ctx.html(sb.toString());
+                });
+        }
+
+        private static void defineUploadRoutes() {
+
+                // GET /upload: Display the file upload form
+                get("/upload", ctx -> ctx.html(
+                                "<html>" +
+                                                "  <head><title>File Upload</title></head>" +
+                                                "  <body>" +
+                                                "    <h1>Upload an Image</h1>" +
+                                                "    <form method='post' action='/upload' enctype='multipart/form-data'>"
+                                                +
+                                                "      <input type='file' name='imageFile'><br/><br/>"
+                                                +
+                                                "      <input type='submit' value='Upload'>" +
+                                                "    </form>" +
+                                                "  </body>" +
+                                                "</html>"));
+
+                // POST /upload: Handle the file upload
+                post("/upload", ctx -> {
+                        // Retrieve uploaded files using the updated getFiles() in the JoltHttpContext
+                        var files = ctx.getFiles();
+                        if (files.isEmpty()) {
+                                return ctx.status(HttpStatus.BAD_REQUEST).html(
+                                                "<html>" +
+                                                                "  <head><title>Upload Failed</title></head>" +
+                                                                "  <body>" +
+                                                                "    <h1>No file was uploaded</h1>" +
+                                                                "    <a href='/upload'>Try again</a>" +
+                                                                "  </body>" +
+                                                                "</html>");
+                        }
+
+                        // We'll assume a single file for this example
+                        JoltFile file = files.get(0);
+
+                        // Generate a unique ID for the file
+                        String fileId = UUID.randomUUID().toString();
+
+                        // Store the file in memory for later retrieval
+                        byte[] fileData = file.getData();
+                        String contentType = file.getContentType();
+                        String fileName = file.getFileName();
+
+                        uploadedFiles.put(fileId, file);
+
+                        // Return a success page
+                        return ctx.html(
+                                        "<html>" +
+                                                        "  <head><title>Upload Successful</title></head>" +
+                                                        "  <body>" +
+                                                        "    <h1>File Uploaded Successfully</h1>" +
+                                                        "    <p>File: " + fileName + "</p>" +
+                                                        "    <p>Type: " + contentType + "</p>" +
+                                                        "    <p>Size: " + fileData.length + " bytes</p>" +
+                                                        "    <p>ID: " + fileId + "</p>" +
+                                                        "    <p><a href='/view/" + fileId + "'>View the file</a></p>" +
+                                                        "    <p><a href='/image/" + fileId
+                                                        + "'>Direct image link</a></p>" +
+                                                        "    <p><a href='/upload'>Upload another file</a></p>" +
+                                                        "  </body>" +
+                                                        "</html>");
+                });
+
+                // GET /view/{fileId}: View the file in an HTML page
+                get("/view/{fileId}", ctx -> {
+                        String fileId = ctx.path("fileId").get();
+                        JoltFile file = uploadedFiles.get(fileId);
+                        if (file == null) {
+                                return ctx.status(HttpStatus.NOT_FOUND).html(
+                                                "<html>" +
+                                                                "  <head><title>File Not Found</title></head>" +
+                                                                "  <body>" +
+                                                                "    <h1>File Not Found</h1>" +
+                                                                "    <p>The requested file does not exist or has been removed.</p>"
+                                                                +
+                                                                "    <a href='/upload'>Upload a new file</a>" +
+                                                                "  </body>" +
+                                                                "</html>");
+                        }
+
+                        // If it's an image, embed it inline
+                        if (file.getContentType().startsWith("image/")) {
+                                String base64 = Base64.getEncoder().encodeToString(file.getData());
+                                return ctx.html(
+                                                "<html>" +
+                                                                "  <head><title>View Image</title></head>" +
+                                                                "  <body>" +
+                                                                "    <h1>Image: " + file.getFileName() + "</h1>" +
+                                                                "    <img src='data:" + file.getContentType()
+                                                                + ";base64,"
+                                                                + base64
+                                                                + "' alt='" + file.getFileName() + "' />" +
+                                                                "    <p><a href='/upload'>Upload another file</a></p>" +
+                                                                "  </body>" +
+                                                                "</html>");
+                        } else {
+                                // For non-image files, show some info and link to direct download
+                                return ctx.html(
+                                                "<html>" +
+                                                                "  <head><title>File Details</title></head>" +
+                                                                "  <body>" +
+                                                                "    <h1>File: " + file.getFileName() + "</h1>" +
+                                                                "    <p>Type: " + file.getContentType() + "</p>" +
+                                                                "    <p>Size: " + file.getData().length + " bytes</p>" +
+                                                                "    <p><a href='/image/" + fileId
+                                                                + "'>Download file</a></p>" +
+                                                                "    <p><a href='/upload'>Upload another file</a></p>" +
+                                                                "  </body>" +
+                                                                "</html>");
+                        }
+                });
+
+                // GET /image/{fileId}: Serve the raw file with correct content type
+                get("/image/{fileId}", ctx -> {
+                        String fileId = ctx.path("fileId").get();
+                        JoltFile file = uploadedFiles.get(fileId);
+                        if (file == null) {
+                                return ctx.status(HttpStatus.NOT_FOUND).text("File not found");
+                        }
+
+                        ctx.header("Content-Type", file.getContentType());
+                        ctx.header("Content-Disposition", "inline; filename=\"" + file.getFileName() + "\"");
+                        try {
+                                ctx.getResponse().getOutputStream().write(file.getData());
+                                return ctx;
+                        } catch (IOException e) {
+                                return ctx.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                                                .text("Error serving file: " + e.getMessage());
+                        }
+                });
+
+                // GET /files: List all uploaded files
+                get("/files", ctx -> {
+                        StringBuilder sb = new StringBuilder();
+                        sb.append("<html><head><title>Uploaded Files</title></head><body>");
+                        sb.append("<h1>Uploaded Files</h1>");
+
+                        if (uploadedFiles.isEmpty()) {
+                                sb.append("<p>No files have been uploaded yet.</p>");
+                        } else {
+                                sb.append("<ul>");
+                                uploadedFiles.forEach((id, file) -> {
+                                        sb.append("<li>")
+                                                        .append("<strong>").append(file.getFileName())
+                                                        .append("</strong> ")
+                                                        .append("(").append(file.getContentType()).append(", ")
+                                                        .append(file.getData().length).append(" bytes) - ")
+                                                        .append("<a href='/view/").append(id).append("'>View</a> | ")
+                                                        .append("<a href='/image/").append(id)
+                                                        .append("'>Direct Link</a>")
+                                                        .append("</li>");
+                                });
+                                sb.append("</ul>");
+                        }
+
+                        sb.append("<p><a href='/upload'>Upload a new file</a></p>");
+                        sb.append("</body></html>");
+
                         return ctx.html(sb.toString());
                 });
         }

@@ -80,8 +80,6 @@ Start implementing Security !
 
 
 
-Application.properties example : 
-
 # =========================
 #  Basic server properties
 # =========================
@@ -121,6 +119,20 @@ server.daemon=false
 
 # Application name (used for logging, etc.).
 server.appName=MyJoltApp
+
+
+# =========================
+#  Multipart file support
+# =========================
+
+# Maximum size (in bytes) of a single uploaded file (default: 5 MB).
+server.multipart.maxFileSize=10485760
+
+# Maximum size (in bytes) of the entire multipart request (default: 20 MB).
+server.multipart.maxRequestSize=20971520
+
+# File size threshold (in bytes) after which uploads are written to disk (default: 1 MB).
+server.multipart.fileSizeThreshold=1048576
 
 
 # =========================
