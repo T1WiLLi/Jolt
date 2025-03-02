@@ -1,5 +1,7 @@
 package ca.jolt.form;
 
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
 import java.util.regex.Pattern;
 
 final class BaseRules {
@@ -50,10 +52,11 @@ final class BaseRules {
 
     static Rule date(String errorMessage) {
         return Rule.custom((data, allValues) -> {
-            if (data == null || data.isEmpty())
+            if (data == null || data.isEmpty()) {
                 return false;
+            }
             try {
-                java.time.LocalDate.parse(data, java.time.format.DateTimeFormatter.ISO_LOCAL_DATE);
+                LocalDate.parse(data, DateTimeFormatter.ISO_LOCAL_DATE);
                 return true;
             } catch (Exception e) {
                 return false;
@@ -63,10 +66,11 @@ final class BaseRules {
 
     static Rule date(String pattern, String errorMessage) {
         return Rule.custom((data, allValues) -> {
-            if (data == null || data.isEmpty())
+            if (data == null || data.isEmpty()) {
                 return false;
+            }
             try {
-                java.time.LocalDate.parse(data, java.time.format.DateTimeFormatter.ofPattern(pattern));
+                LocalDate.parse(data, DateTimeFormatter.ofPattern(pattern));
                 return true;
             } catch (Exception e) {
                 return false;

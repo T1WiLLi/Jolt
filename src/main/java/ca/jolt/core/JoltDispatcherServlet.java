@@ -67,7 +67,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
             log.info(() -> path + " handled successfully in " + duration + "ms");
 
         } catch (Exception e) {
-            log.severe(() -> "Error in route handler: " + e.getMessage());
+            log.warning(() -> "Error in route handler: " + e.getMessage());
             exceptionHandler.handle(e, res);
         }
     }
