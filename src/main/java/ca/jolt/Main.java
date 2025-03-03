@@ -95,6 +95,8 @@ public class Main extends JoltApplication {
                                         .required("Password is required.")
                                         .minLength(6, "Password must be at least 6 characters long.");
 
+                        boolean isUsernameValid = form.field("username").verify();
+
                         if (!form.verify()) {
                                 StringBuilder sb = new StringBuilder();
                                 sb.append("<html><head><title>Validation Error</title></head><body>");
@@ -217,7 +219,7 @@ public class Main extends JoltApplication {
                                         // Prevent duplicate names (case-insensitive).
                                         .addRules(
                                                         Rule.custom(
-                                                                        (data, allValues) -> registeredUsers.values()
+                                                                        (data) -> registeredUsers.values()
                                                                                         .stream()
                                                                                         .noneMatch(u -> u.name()
                                                                                                         .equalsIgnoreCase(
@@ -244,7 +246,7 @@ public class Main extends JoltApplication {
                                         // Prevent duplicate emails.
                                         .addRules(
                                                         Rule.custom(
-                                                                        (data, allValues) -> !registeredUsers
+                                                                        (data) -> !registeredUsers
                                                                                         .containsKey(data),
                                                                         "This email is already registered."));
 

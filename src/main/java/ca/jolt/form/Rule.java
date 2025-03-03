@@ -2,6 +2,7 @@ package ca.jolt.form;
 
 import java.util.Map;
 import java.util.function.BiPredicate;
+import java.util.function.Predicate;
 
 /**
  * Represents a general validation rule for form fields. Classes implementing
@@ -37,7 +38,7 @@ public interface Rule {
      *         {@code true} if the field value passes validation;
      *         {@code false} otherwise.
      */
-    boolean validate(String data, Map<String, String> allValues);
+    boolean validate(String data);
 
     /**
      * Returns a human-readable error message indicating why the validation
@@ -70,11 +71,11 @@ public interface Rule {
      *         A new {@code Rule} instance wrapping the given predicate and error
      *         message.
      */
-    static Rule custom(BiPredicate<String, Map<String, String>> predicate, String errorMessage) {
+    static Rule custom(Predicate<String> predicate, String errorMessage) {
         return new Rule() {
             @Override
-            public boolean validate(String data, Map<String, String> allValues) {
-                return predicate.test(data, allValues);
+            public boolean validate(String data) {
+                return predicate.test(data);
             }
 
             @Override

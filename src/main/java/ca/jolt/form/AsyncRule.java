@@ -79,7 +79,7 @@ public class AsyncRule implements Rule {
      *         Always {@code true}.
      */
     @Override
-    public boolean validate(String data, Map<String, String> allValues) {
+    public boolean validate(String data) {
         return true;
     }
 
@@ -96,7 +96,7 @@ public class AsyncRule implements Rule {
      *         or
      *         {@code false} otherwise.
      */
-    public CompletableFuture<Boolean> validateAsync(String data, Map<String, String> allValues) {
+    public CompletableFuture<Boolean> validateAsync(String data) {
         return asyncValidator.apply(data);
     }
 

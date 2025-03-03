@@ -635,47 +635,28 @@ public final class FieldValidator {
     }
 
     /**
-     * Executes validation on the supplied field value and the parent form's other
-     * values.
+     * Verifies the current field's value against its own rules.
      * <p>
-     * <ol>
-     * <li>Checks the optional {@link #condition} to see if validation should run at
-     * all.
-     * If {@code condition} is set and returns false, validation is skipped.</li>
-     * <li>Applies all transformations to the field value in order.</li>
-     * <li>If the transformed value differs from the original, updates both the
-     * form's
-     * internal record and {@code allValues} so subsequent rules see the changed
-     * value.</li>
-     * <li>Runs each {@link Rule} in sequence. If any rule fails, adds an error to
-     * the
-     * form and returns {@code false} immediately.</li>
-     * </ol>
+     * This method applies any registered transformers to the field value,
+     * updates the value in the parent form, and then runs each attached rule.
+     * If any rule fails, an error is added to the parent form and {@code false}
+     * is returned; otherwise, {@code true} is returned.
      * </p>
-     * 
-     * @param value
-     *                  The current raw value of the field.
-     * @param allValues
-     *                  A map of all fields in the parent form; may be used for
-     *                  cross-field checks.
-     * @return
-     *         {@code true} if all rules pass or if validation is skipped;
-     *         {@code false} otherwise.
+     *
+     * @return true if the field passes all validations; false otherwise.
      */
-    public boolean validate(String value, Map<String, String> allValues) {
-        if (condition != null && !condition.test(allValues)) {
-            return true;
-        }
+    public boolean verify() {
+        String value = form.getValue(fieldName);
         String transformedValue = value;
         for (UnaryOperator<String> transformer : transformers) {
             if (transformedValue != null) {
                 transformedValue = transformer.apply(transformedValue);
             }
         }
+
         form.setValue(fieldName, transformedValue);
-        allValues.put(fieldName, transformedValue);
         for (Rule rule : rules) {
-            if (!rule.validate(transformedValue, allValues)) {
+            if (!rule.validate(transformedValue)) {
                 form.addError(fieldName, rule.getErrorMessage());
                 return false;
             }

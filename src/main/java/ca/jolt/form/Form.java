@@ -156,29 +156,27 @@ public final class Form {
     public boolean verify() {
         errors.clear();
         boolean isValid = true;
-
-        for (var entry : fieldValidators.entrySet()) {
-            String fieldName = entry.getKey();
-            FieldValidator validator = entry.getValue();
-            String value = fieldValues.getOrDefault(fieldName, "");
-
-            if (!validator.validate(value, fieldValues)) {
+        for (FieldValidator validator : fieldValidators.values()) {
+            if (!validator.verify()) {
                 isValid = false;
             }
         }
 
-        String logMessage = "Form verification " + buildVerificationLog();
-        logger.info(() -> logMessage);
-
-        if (!isValid) {
-            logger.info(() -> "Form validation failed with errors: " + errors.toString());
-        }
+        verifyLog(isValid);
 
         if (isValid && successCallback != null) {
             successCallback.run();
         }
 
         return isValid;
+    }
+
+    private void verifyLog(boolean isValid) {
+        String logMessage = "Form verification " + buildVerificationLog();
+        logger.info(() -> logMessage);
+        if (!isValid) {
+            logger.info(() -> "Form validation failed with errors: " + errors.toString());
+        }
     }
 
     /**
@@ -270,7 +268,7 @@ public final class Form {
             FieldValidator validator, String value) {
         for (Rule rule : validator.getRules()) {
             if (rule instanceof AsyncRule asyncRule) {
-                futures.add(asyncRule.validateAsync(value, fieldValues)
+                futures.add(asyncRule.validateAsync(value)
                         .thenApply(valid -> {
                             if (!valid) {
                                 addError(fieldName, rule.getErrorMessage());
