@@ -126,7 +126,8 @@ public final class JoltDispatcherServlet extends HttpServlet {
             // Construct context and invoke handler.
             JoltHttpContext joltCtx = new JoltHttpContext(req, res, match.matcher(), match.route().getParamNames());
             RouteHandler handler = match.route().getHandler();
-            Object result = handler.handle(joltCtx);
+            Object result = handler.handle(joltCtx); // Instead of Typing result as Object, we should try to either use
+                                                     // HttpServletResponse, or, something of our own design.
 
             // If the response isn't committed and the handler returned data, write it out.
             if (!res.isCommitted() && result != null && !(result instanceof JoltHttpContext)) {

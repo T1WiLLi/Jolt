@@ -1,9 +1,7 @@
 package ca.jolt.server;
 
 import ca.jolt.core.JoltDispatcherServlet;
-import ca.jolt.core.Router;
 import ca.jolt.exceptions.ServerException;
-import ca.jolt.injector.JoltContainer;
 import ca.jolt.server.config.ServerConfig;
 import jakarta.servlet.MultipartConfigElement;
 
@@ -124,16 +122,11 @@ public class TomcatServer {
                     config.getMultipartMaxRequestSize(),
                     config.getMultipartFileSizeThreshold());
 
-            Router router = JoltContainer.getInstance().getBean(Router.class);
-            if (router != null) {
-                JoltDispatcherServlet dispatcher = new JoltDispatcherServlet();
-                Wrapper servletWrapper = Tomcat.addServlet(context, "JoltServlet", dispatcher);
+            JoltDispatcherServlet dispatcher = new JoltDispatcherServlet();
+            Wrapper servletWrapper = Tomcat.addServlet(context, "JoltServlet", dispatcher);
 
-                servletWrapper.setMultipartConfigElement(multipartConfig);
-                context.addServletMappingDecoded("/*", "JoltServlet");
-            } else {
-                log.warning("No router set for TomcatServer; no routes will be handled.");
-            }
+            servletWrapper.setMultipartConfigElement(multipartConfig);
+            context.addServletMappingDecoded("/*", "JoltServlet");
         } catch (Exception e) {
             throw new ServerException("Failed to configure context", e);
         }

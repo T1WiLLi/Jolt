@@ -41,7 +41,7 @@ public class Main extends JoltApplication {
                         get("/test", () -> "Hello Test");
                 });
 
-                get("/", ctx -> "Hello, World!");
+                get("/", () -> "Hello World");
 
                 // Example route with typed path parameters.
                 get("/hello/{age:int}", ctx -> ctx.html(
@@ -81,7 +81,7 @@ public class Main extends JoltApplication {
 
                 post("/login", ctx -> {
                         // Build a Form from query parameters (or form-encoded body)
-                        Form form = ctx.queryToForm();
+                        Form form = ctx.buildForm();
 
                         form.field("username")
                                         .trim().toLowerCase()
@@ -208,7 +208,7 @@ public class Main extends JoltApplication {
 
                 post("/register", ctx -> {
                         // Build a form from request body (JSON or form-encoded).
-                        Form form = ctx.bodyToForm();
+                        Form form = ctx.buildForm();
 
                         // Fluent rule chaining for registration fields.
                         form.field("name")

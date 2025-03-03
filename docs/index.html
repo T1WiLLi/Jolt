@@ -16,88 +16,186 @@
     <link rel="stylesheet" href="style.css" />
 </head>
 
-<body class="bg-gray-900 text-gray-100">
-    <header class="py-6 border-b border-gray-700">
-        <div class="container mx-auto px-4">
-            <h1 class="text-4xl font-bold">Jolt Framework Documentation</h1>
-        </div>
-    </header>
+<style>
+    section {
+        padding-top: 10px;
+        padding-bottom: 10px;
+    }
+</style>
 
-    <nav class="container mx-auto px-4 mt-8">
-        <h2 class="text-2xl font-semibold mb-4">Table of Contents</h2>
-        <ul class="list-decimal list-inside">
-            <li><a href="#overview" class="text-blue-400 hover:underline">Overview</a></li>
-            <li><a href="#getting-started" class="text-blue-400 hover:underline">Getting Started</a></li>
-            <li><a href="#application-properties" class="text-blue-400 hover:underline">Application.properties</a></li>
-            <li><a href="#configuration" class="text-blue-400 hover:underline">Configuration</a></li>
-            <li><a href="#dependency-injection" class="text-blue-400 hover:underline">Dependency Injection</a></li>
-            <li><a href="#routing" class="text-blue-400 hover:underline">Routing</a></li>
-            <li><a href="#logging" class="text-blue-400 hover:underline">Logging</a></li>
-            <li><a href="#joltcontext" class="text-blue-400 hover:underline">JoltContext (ctx)</a></li>
-        </ul>
-    </nav>
+<body class="bg-gray-900 text-gray-200">
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <aside class="w-64 fixed left-0 top-0 h-screen bg-gray-800 p-4 overflow-y-auto">
+            <div>
+                <h1 class="text-xl font-bold text-white mb-4">Jolt Docs - V1</h1>
+                <nav>
+                    <ul class="space-y-2">
+                        <li class="text-gray-400 uppercase text-sm">Getting Started</li>
+                        <li><a href="#introduction" class="block p-1 hover:bg-gray-700 rounded">Introduction</a></li>
+                        <li><a href="#installation" class="block p-1 hover:bg-gray-700 rounded">Installation</a></li>
+                        <li><a href="#configuration" class="block p-1 hover:bg-gray-700 rounded">Configuration</a></li>
 
-    <main class="container mx-auto px-4 mt-10">
-        <!-- Overview Section -->
-        <section id="overview" class="mb-16">
-            <h2 class="text-3xl font-bold mb-4">Overview</h2>
-            <p class="mb-4">
-                Jolt is a lightweight, modular Java web framework designed to simplify high-performance web application
-                development.
-                It includes features for application bootstrapping, configuration management, dependency injection,
-                routing, logging,
-                and a comprehensive HTTP context API.
-            </p>
-            <p>
-                This documentation provides an in-depth guide to each of these components, with code examples and
-                configuration details
-                to help you build and maintain your application with ease.
-            </p>
-        </section>
+                        <li class="mt-4 text-gray-400 uppercase text-sm">Core Concepts</li>
+                        <li><a href="#" class="block p-1 hover:bg-gray-700 rounded">JoltApplication</a></li>
+                        <li><a href="#" class="block p-1 hover:bg-gray-700 rounded">Routes</a></li>
+                        <li><a href="#" class="block p-1 hover:bg-gray-700 rounded">JoltHttpContext</a></li>
+                        <li><a href="#" class="block p-1 hover:bg-gray-700 rounded">Dependency Injection</a></li>
 
-        <!-- Getting Started Section -->
-        <section id="getting-started" class="mb-16">
-            <h2 class="text-3xl font-bold mb-4">Getting Started</h2>
-            <p class="mb-4">
-                To begin using Jolt, add the required libraries to your project via your preferred build tool (Maven,
-                Gradle, etc.).
-                Then, create an application class by extending <code>JoltApplication</code> and implementing the
-                <code>setup()</code> method.
-            </p>
-            <pre class="language-java line-numbers"><code>package com.example;
+                        <li class="mt-4 text-gray-400 uppercase text-sm">Framework Components</li>
+                        <li><a href="#" class="block p-1 hover:bg-gray-700 rounded">Logging</a></li>
+                        <li><a href="#" class="block p-1 hover:bg-gray-700 rounded">Server</a></li>
+                        <li><a href="#" class="block p-1 hover:bg-gray-700 rounded">Cookie Handling</a></li>
+                        <li><a href="#" class="block p-1 hover:bg-gray-700 rounded">Form Validation</a></li>
+                        <li><a href="#" class="block p-1 hover:bg-gray-700 rounded">File Uploads</a></li>
+                        <li><a href="#" class="block p-1 hover:bg-gray-700 rounded">External API Requests</a></li>
 
-import ca.jolt.core.JoltApplication;
+                        <li class="mt-4 text-gray-400 uppercase text-sm">Deployment</li>
+                        <li><a href="#" class="block p-1 hover:bg-gray-700 rounded">Running in Production</a></li>
+                    </ul>
+                </nav>
+            </div>
 
-public class MyApp extends JoltApplication {
+            <!-- Sidebar Footer -->
+            <div class="border-t border-gray-700 mt-[130px] pt-4">
+                <p class="text-sm text-gray-500 mb-2">Need a project template?</p>
+                <a href="#"
+                    class="block bg-blue-600 hover:bg-blue-500 text-white text-center font-semibold py-2 rounded">
+                    Generate a Jolt Project
+                </a>
+            </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="flex-grow p-8 ml-64">
+            <section id="introduction">
+                <h2 class="text-3xl font-bold">Introduction</h2>
+                <p class="mt-4 text-gray-400">
+                    Jolt is a lightweight Java web framework designed for building fast, modular, and maintainable REST
+                    applications.
+                    It follows clean architecture principles, emphasizes S.O.L.I.D. design, and provides an intuitive
+                    API for handling
+                    routing, request processing, form validation, and file uploads.
+                </p>
+
+                <h3 class="text-2xl font-semibold mt-6">Why Choose Jolt?</h3>
+                <ul class="list-disc list-inside mt-2 text-gray-300">
+                    <li>🚀 <strong>Lightweight & Fast:</strong> Minimal overhead, built on Jakarta EE (Servlet API) and
+                        Tomcat.</li>
+                    <li>🏗️ <strong>Modular & Clean Architecture:</strong> Designed for maintainability and scalability.
+                    </li>
+                    <li>⚡ <strong>Simple Routing System:</strong> Define routes with intuitive syntax.</li>
+                    <li>🔄 <strong>Built-in Request & Response Handling:</strong> JSON, form data, file uploads, and
+                        cookies.</li>
+                    <li>📄 <strong>Minimal Configuration:</strong> Uses sane defaults but allows full customization.
+                    </li>
+                </ul>
+
+                <h3 class="text-2xl font-semibold mt-6">Hello World with Jolt</h3>
+                <p class="mt-2 text-gray-400">
+                    Here’s a minimal example of a Jolt application:
+                </p>
+                <pre class="bg-gray-800 p-4 rounded mt-2"><code class="language-java">import ca.jolt.core.JoltApplication;
+
+public class Main extends JoltApplication {
     public static void main(String[] args) {
-        launch(MyApp.class, args);
+        launch(Main.class, "ca.jolt");
     }
-    
-    @Override
-    protected void setup() {
-        get("/", () -> "Hello, World!");
-        get("/user/{id:int}", ctx -> "Hello, User #" + ctx.path("id"));
-    }
-}
-</code></pre>
-            <p>
-                The <code>setup()</code> method is used to define your routes and initialize resources.
-            </p>
-        </section>
 
-        <!-- Application.properties Section -->
-        <section id="application-properties" class="mb-16">
-            <h2 class="text-3xl font-bold mb-4">Application.properties</h2>
-            <p class="mb-4">
-                The <code>application.properties</code> file, located in the <code>META-INF</code> directory, is the
-                central configuration file for Jolt.
-                It defines key settings for both the server and the database.
-            </p>
-            <p class="mb-4">
-                Below is an example of a complete <code>application.properties</code> file with all available
-                configuration options:
-            </p>
-            <pre class="language-properties line-numbers"><code># =========================
+    @Override
+    public void setup() {
+        get("/", ctx -> ctx.html("Hello, Jolt!"));
+    }
+}</code></pre>
+
+                <h3 class="text-2xl font-semibold mt-6">How it Works</h3>
+                <ul class="list-disc list-inside mt-2 text-gray-300">
+                    <li><strong>Extend `JoltApplication`</strong> → This acts as the entry point.</li>
+                    <li><strong>Override `setup()`</strong> → Define your routes.</li>
+                    <li><strong>Use `get()` for routing</strong> → Responds with `"Hello, Jolt!"` when accessing `/`.
+                    </li>
+                </ul>
+            </section>
+
+            <hr class="border-gray-700 my-8">
+
+            <section id="installation">
+                <h2 class="text-3xl font-bold">Installation & Requirements</h2>
+
+                <h3 class="text-2xl font-semibold mt-6">First Steps</h3>
+
+                <h4 class="text-xl font-semibold mt-4">System Requirements</h4>
+                <ul class="list-disc list-inside mt-2 text-gray-300">
+                    <li>⚙️ <strong>Maven:</strong> 3.6.3 or later (recommended)</li>
+                    <li>❌ <strong>Gradle:</strong> Not supported</li>
+                </ul>
+
+                <h4 class="text-xl font-semibold mt-4">Servlet Containers</h4>
+                <ul class="list-disc list-inside mt-2 text-gray-300">
+                    <li>☕ <strong>Jolt supports only Tomcat 10.1+</strong> (out-of-the-box integration).</li>
+                    <li class="italic text-gray-400">“We don't intend on adding explicit support for others.”</li>
+                </ul>
+
+                <h4 class="text-xl font-semibold mt-4">Java Version</h4>
+                <ul class="list-disc list-inside mt-2 text-gray-300">
+                    <li>✅ <strong>Recommended:</strong> Java 21 (current LTS)</li>
+                    <li>⚠️ <strong>Minimum:</strong> Java 21</li>
+                </ul>
+
+                <h3 class="text-2xl font-semibold mt-6">Installation</h3>
+                <p class="mt-2 text-gray-400">
+                    You can manually create your Maven project and configure dependencies, but we strongly
+                    recommend using our online tool to generate a ready-to-go project with a minimal example.
+                </p>
+
+                <div class="mt-4">
+                    <a href="@LinkToGenerator"
+                        class="bg-blue-600 hover:bg-blue-500 text-white px-4 py-2 rounded font-semibold">
+                        Generate a Jolt Project
+                    </a>
+                </div>
+
+                <h4 class="text-xl font-semibold mt-4">3. Basic Project Structure</h4>
+                <pre class="bg-gray-800 p-4 rounded mt-2"><code class="language-bash">my-jolt-app/
+├── src/
+│   ├── main/
+│   │   ├── java/com/example/
+│   │   │   ├── Main.java
+│   │   │   ├── controllers/
+│   │   │   ├── services/
+│   │   │   ├── models/
+│   ├── resources/
+│   │   ├── META-INF/
+│   │   │   ├── application.properties
+├── pom.xml</code></pre>
+
+                <h4 class="text-xl font-semibold mt-4">4. Running the Application</h4>
+                <p class="mt-2 text-gray-400">
+                    Run the project using Maven:
+                </p>
+                <pre class="bg-gray-800 p-4 rounded mt-2"><code class="language-bash">
+mvn clean package && java -jar target/my-jolt-app.jar
+                </code></pre>
+                <p class="italic text-gray-400">Of course, you can use your IDE integrated <strong>launch</strong>
+                    button.</p>
+            </section>
+
+            <hr class="border-gray-700 my-8">
+
+            <section id="configuration">
+                <h2 class="text-3xl font-bold">Configuration</h2>
+
+                <p class="mt-4 text-gray-400">
+                    You can configure the application by modifying the
+                    <code class="text-blue-400">META-INF/application.properties</code> file inside the
+                    <code class="text-blue-400">src/main/resources/</code> folder.
+                </p>
+
+                <h3 class="text-2xl font-semibold text-blue-400 mt-6">Available Configuration Options</h3>
+
+                <section class="mt-6">
+                    <h4 class="text-xl font-semibold">Basic Server Properties</h4>
+                    <pre class="bg-gray-800 text-gray-300 p-4 rounded-md"><code class="language-properties"># =========================
 #  Basic server properties
 # =========================
 
@@ -135,10 +233,28 @@ server.threads.timeout=60000
 server.daemon=false
 
 # Application name (used for logging, etc.).
-server.appName=MyJoltApp
+server.appName=MyJoltApp</code></pre>
+                </section>
 
-
+                <section class="mt-6">
+                    <h4 class="text-xl font-semibold">Multipart File Support</h4>
+                    <pre class="bg-gray-800 text-gray-300 p-4 rounded-md"><code class="language-properties"># =========================
+#  Multipart file support
 # =========================
+
+# Maximum size (in bytes) of a single uploaded file (default: 15 MB).
+server.multipart.maxFileSize=15728640
+
+# Maximum size (in bytes) of the entire multipart request (default: 50 MB).
+server.multipart.maxRequestSize=52428800
+
+# File size threshold (in bytes) after which uploads are written to disk (default: 1 MB).
+server.multipart.fileSizeThreshold=1048576</code></pre>
+                </section>
+
+                <section class="mt-6">
+                    <h4 class="text-xl font-semibold">Database Configuration</h4>
+                    <pre class="bg-gray-800 text-gray-300 p-4 rounded-md"><code class="language-properties"># =========================
 #  Database properties
 # =========================
 
@@ -152,103 +268,21 @@ db.username=root
 db.password=secret
 
 # JDBC driver class name.
-db.driver=com.mysql.cj.jdbc.Driver
-</code></pre>
-        </section>
+db.driver=com.mysql.cj.jdbc.Driver</code></pre>
+                </section>
 
-        <!-- Configuration Section -->
-        <section id="configuration" class="mb-16">
-            <h2 class="text-3xl font-bold mb-4">Configuration</h2>
-            <p class="mb-4">
-                Jolt’s configuration is managed by the <code>ConfigurationManager</code>, which loads the
-                <code>application.properties</code> file
-                and instantiates typed configuration objects (e.g., <code>ServerConfig</code> and
-                <code>DatabaseConfig</code>).
-            </p>
-            <p>
-                Currently, you can configure a <strong>GlobalExceptionHandler</strong> to centrally manage errors
-                throughout your application.
-            </p>
-        </section>
-
-        <!-- Dependency Injection Section -->
-        <section id="dependency-injection" class="mb-16">
-            <h2 class="text-3xl font-bold mb-4">Dependency Injection</h2>
-            <p class="mb-4">
-                Jolt features a built-in dependency injection container. Annotate your classes with
-                <code>@JoltBean</code> to register them as beans,
-                and use <code>@JoltBeanInjection</code> on fields where dependencies should be injected.
-            </p>
-            <p>
-                The DI container scans for beans, resolves dependencies (ensuring no circular dependencies exist), and
-                invokes lifecycle methods
-                (e.g., those annotated with <code>@PostConstruct</code>).
-            </p>
-        </section>
-
-        <!-- Routing Section -->
-        <section id="routing" class="mb-16">
-            <h2 class="text-3xl font-bold mb-4">Routing</h2>
-            <p class="mb-4">
-                The routing system in Jolt is built around a simple, expressive DSL. It allows you to define endpoints
-                for various HTTP methods.
-                Routes can include typed parameters—for example, <code>"/user/{age:int}"</code> guarantees that the
-                <code>age</code> parameter is an integer.
-            </p>
-            <pre class="language-java line-numbers"><code>// Example route with a typed parameter
-get("/user/{age:int}", ctx -> {
-    return "User age: " + ctx.path("age").asInt();
-});
-</code></pre>
-        </section>
-
-        <!-- Logging Section -->
-        <section id="logging" class="mb-16">
-            <h2 class="text-3xl font-bold mb-4">Logging</h2>
-            <p class="mb-4">
-                Jolt includes a custom logging framework that ensures consistent, well-formatted log output.
-                The logging subsystem features a custom formatter and configurable logging levels, making it easy to
-                track and troubleshoot
-                application behavior.
-            </p>
-            <p>
-                Logging is configured during startup via the <code>LogConfigurator</code> and enhanced with the
-                <code>StartupLog</code> messages.
-            </p>
-        </section>
-
-        <!-- JoltContext Section -->
-        <section id="joltcontext" class="mb-16">
-            <h2 class="text-3xl font-bold mb-4">JoltContext (ctx)</h2>
-            <p class="mb-4">
-                The <code>JoltContext</code> (commonly referred to as <code>ctx</code>) is the primary interface for
-                handling HTTP requests and responses.
-                It provides a range of methods for accessing request data:
-            </p>
-            <ul class="list-disc list-inside mb-4">
-                <li><strong>Path Parameters:</strong> <code>ctx.path("key")</code> retrieves a parameter from the URL
-                    path.</li>
-                <li><strong>Query Parameters:</strong> <code>ctx.query("key")</code> fetches a value from the query
-                    string.</li>
-                <li><strong>Headers:</strong> <code>ctx.header("key")</code> returns the value of a specified HTTP
-                    header.</li>
-                <li><strong>Request Body:</strong> <code>ctx.body()</code> returns the content of the request body.</li>
-                <li><strong>HTTP Method:</strong> <code>ctx.method()</code> provides the HTTP method used for the
-                    request.</li>
-            </ul>
-            <p>
-                These methods allow you to easily extract and manipulate request data to build dynamic responses.
-            </p>
-        </section>
-    </main>
-
-    <footer class="container mx-auto px-4 py-6 border-t border-gray-700 mt-12">
-        <p class="text-center text-sm text-gray-500">&copy;
-            <script>new Date().getFullYear()</script> Jolt Framework. All rights reserved.
-        </p>
-    </footer>
-
-    <script src="main.js"></script>
+                <section class="mt-6">
+                    <h3 class="text-2xl font-semibold text-blue-400">Applying Configuration Changes</h3>
+                    <p class="text-gray-400">
+                        Once you modify the configuration file, restart your application to apply the changes:
+                    </p>
+                    <pre class="bg-gray-800 text-gray-300 p-4 rounded-md"><code class="language-bash">mvn clean package
+java -jar target/my-jolt-app.jar</code></pre>
+                    <p class="italic text-gray-400">Of course, you can use your IDE integrated <strong>launch</strong>
+                        button.</p>
+                </section>
+        </main>
+    </div>
 </body>
 
 </html>

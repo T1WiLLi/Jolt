@@ -1,12 +1,31 @@
-Make it possible to group routes : 
+Change the way we built form so that it automatically support whatever is passed through, so basically we can simply now do : 
 
-    group("/api", () -> {
-        get("/users", UserController::getAll);
-        post("/users", UserController::create);
-    });
+Form form = ctx.buildForm(); // It will automatically add whatever field, whether it's in the query string, body, path param, etc. 
+Making it easier to build forms and reducing the need for boilerplate code.
 
-To do that is simple, Update in Router and JoltApplication to expose group(String base, List<Consumer<Route>>);
+Add a support to verify a single field of a form based off his rules : 
 
+boolean verify = form.field("username").verify();
+
+
+In JoltDispatcherServlet, do the following : Object result = handler.handle(joltCtx); // Instead of Typing result as Object, we should try to either use
+                                                     // HttpServletResponse, or, something of our own design. like a Handler.class
+
+In the CTX, we should have function to directly abort, such as ctx.abort(HttpStatus status, String message); 
+& ctx.abortBadRequest(String message) 
+& ctx.abortNotFound(String message)
+& ctx.abortInternalServerError(String message)
+& ctx.abortUnauthorized(String message)
+& ctx.abortForbidden(String message)
+
+Add quick cookie utils creation such as : 
+ctx.addCookie().sessionCookie(String name, Object value); // Sets a cookie, secure, http only, as a session ect.
+ctx.addCookie().jwtCookie(String value, int maxAge); // Sets a JWT cookie, with max age, secure, http only, etc
+ctx.addCookie().unsecureCookie(String name, Object value); // Sets a cookie, but not secure, not http only, etc.
+
+CLI to generate basic project.
+
+Package to easily integrate docker (and potentially later docker-compose to have a more complex setup).
 
 Rewrite the documentation.
 

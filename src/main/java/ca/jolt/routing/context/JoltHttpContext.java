@@ -517,73 +517,55 @@ public final class JoltHttpContext {
     }
 
     /**
-     * Creates a new {@link Form} object by populating fields from query parameters.
-     * <p>
-     * Optionally, you can exclude specific parameter names if needed.
-     * </p>
-     *
-     * @param excludes
-     *                 Field names to exclude from the form.
-     * @return
-     *         A new {@link Form} populated with query parameter values.
+     * Builds a new {@link Form} by aggregating data from all available sources:
+     * <ul>
+     * <li>Query parameters (or form-encoded parameters)</li>
+     * <li>JSON request body (if the Content-Type is "application/json")</li>
+     * <li>Path parameters extracted from the URL</li>
+     * </ul>
+     * 
+     * In case of duplicate keys, the values from later sources (e.g. JSON body or
+     * path parameters)
+     * will override those from earlier sources.
+     * 
+     * @param String... excludes The name of the fields to exclude from the form.
+     * 
+     * @return A new {@link Form} instance populated with all available input data.
+     * @throws JoltBadRequestException If JSON parsing fails.
      */
-    public Form queryToForm(String... excludes) {
+    public Form buildForm(String... excludes) {
         Map<String, String> formData = new HashMap<>();
+
+        // 1. Query parameters (or form-encoded parameters)
         req.getParameterMap().forEach((key, values) -> {
-            if (!shouldExclude(key, excludes) && values.length > 0) {
-                formData.put(key, values[0]);
+            if (values != null && values.length > 0) {
+                if (!shouldExclude(key, excludes) && values.length > 0) {
+                    formData.put(key, values[0]);
+                }
             }
         });
-        return new Form(formData);
-    }
 
-    /**
-     * Creates a new {@link Form} object by reading and parsing the request body.
-     * <ul>
-     * <li>If {@code contentType} is JSON, reads the body as JSON into key/value
-     * pairs.</li>
-     * <li>Otherwise, reads from normal form parameters.</li>
-     * </ul>
-     * <p>
-     * Any excluded field names are not added to the resulting form.
-     * </p>
-     *
-     * @param excludes
-     *                 Field names to exclude from the form.
-     * @return
-     *         A new {@link Form} populated with data from the request body.
-     * @throws JoltBadRequestException
-     *                                 If JSON parsing fails.
-     */
-    public Form bodyToForm(String... excludes) {
-        Map<String, String> formData = new HashMap<>();
         String contentType = req.getContentType();
-
-        if (contentType != null && contentType.contains("application/json")) {
+        if (contentType != null && contentType.startsWith("application/json")) {
             String raw = bodyRaw();
             if (!raw.isEmpty()) {
                 try {
                     Map<String, Object> parsed = JSON_MAPPER.readValue(raw, new TypeReference<Map<String, Object>>() {
                     });
-                    for (Map.Entry<String, Object> entry : parsed.entrySet()) {
-                        String key = entry.getKey();
+
+                    parsed.forEach((key, object) -> {
                         if (!shouldExclude(key, excludes)) {
-                            Object valueObj = entry.getValue();
-                            String valueStr = (valueObj == null) ? "" : valueObj.toString();
+                            String valueStr = (object == null) ? "" : object.toString();
                             formData.put(key, valueStr);
                         }
-                    }
+                    });
                 } catch (IOException e) {
-                    throw new JoltBadRequestException("Failed to parse JSON body: " + e.getMessage());
+                    throw new JoltBadRequestException("Failed to parse JSON body : " + e.getMessage());
                 }
             }
-        } else {
-            req.getParameterMap().forEach((key, values) -> {
-                if (!shouldExclude(key, excludes) && values.length > 0) {
-                    formData.put(key, values[0]);
-                }
-            });
         }
+
+        formData.putAll(pathParams);
         return new Form(formData);
     }
 
