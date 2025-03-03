@@ -4,7 +4,9 @@ import ca.jolt.core.JoltApplication;
 import ca.jolt.files.JoltFile;
 import ca.jolt.form.Form;
 import ca.jolt.form.Rule;
+import ca.jolt.http.Http;
 import ca.jolt.http.HttpStatus;
+import ca.jolt.http.Response;
 
 import java.io.IOException;
 import java.time.LocalDate;
@@ -12,6 +14,11 @@ import java.util.Base64;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.JsonNode;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
 
 public class Main extends JoltApplication {
 
@@ -21,6 +28,8 @@ public class Main extends JoltApplication {
         private static final Map<String, RegisteredUser> registeredUsers = new ConcurrentHashMap<>();
 
         private static final Map<String, JoltFile> uploadedFiles = new ConcurrentHashMap<>();
+
+        private static final String WEATHER_API_URL = "wttr.in";
 
         public static void main(String[] args) {
                 launch(Main.class, "ca.jolt");
@@ -49,6 +58,7 @@ public class Main extends JoltApplication {
                 defineLoginRoutes();
                 defineRegistrationRoutes();
                 defineUploadRoutes();
+                defineWeatherRoutes();
         }
 
         private void defineLoginRoutes() {
@@ -213,7 +223,7 @@ public class Main extends JoltApplication {
                         form.field("age")
                                         .trim()
                                         .required("Age is required.")
-                                        .asInt()
+                                        .min(0, "Age must be a non-negative integer.")
                                         .min(18, "You must be at least 18 years old.");
 
                         // Combine type conversion and validation into one call.
@@ -445,6 +455,147 @@ public class Main extends JoltApplication {
 
                         return ctx.html(sb.toString());
                 });
+        }
+
+        private void defineWeatherRoutes() {
+                // Basic route that returns weather for a city in JSON format
+                get("/weather", ctx -> {
+                        String city = ctx.query("city").orDefault("London");
+                        try {
+                                Response response = Http.get(WEATHER_API_URL + "/" + city)
+                                                .secure(true)
+                                                .header("Accept", "application/json")
+                                                .header("User-Agent", "Jolt Weather Service")
+                                                .query("format", "j1") // Request JSON format
+                                                .execute();
+
+                                if (response.isSuccessful()) {
+                                        return ctx.json(response.text());
+                                } else {
+                                        return ctx.json(createErrorResponse(response))
+                                                        .status(response.status());
+                                }
+                        } catch (Exception e) {
+                                return ctx.json(createExceptionResponse(e))
+                                                .status(500);
+                        }
+                });
+
+                // Enhanced route with path parameter and more detailed response formatting
+                get("/weather/{city}", ctx -> {
+                        String city = ctx.path("city").get();
+
+                        try {
+                                Response response = Http.get(WEATHER_API_URL + "/" + city)
+                                                .secure(true)
+                                                .query("format", "j1") // Request JSON format
+                                                .execute();
+
+                                if (response.isSuccessful()) {
+                                        // Format a cleaner, more user-friendly response
+                                        return ctx.json(formatWeatherResponse(response))
+                                                        .status(200);
+                                } else {
+                                        // Create user-friendly error message
+                                        ObjectMapper mapper = new ObjectMapper();
+                                        ObjectNode errorNode = mapper.createObjectNode();
+
+                                        errorNode.put("error", "Weather service error");
+                                        errorNode.put("message", "Failed to get weather for '" + city + "'");
+                                        errorNode.put("status", response.status());
+
+                                        return ctx.json(errorNode.toString())
+                                                        .status(response.status());
+                                }
+                        } catch (Exception e) {
+                                // Handle exceptions
+                                return ctx.json(createExceptionResponse(e))
+                                                .status(500);
+                        }
+                });
+        }
+
+        /**
+         * Formats the weather API response into a more user-friendly format.
+         */
+        private static String formatWeatherResponse(Response response) throws IOException {
+                ObjectMapper mapper = new ObjectMapper();
+                JsonNode weatherData = mapper.readTree(response.text());
+
+                ObjectNode formattedResponse = mapper.createObjectNode();
+
+                // Extract location information
+                String locationName = weatherData.path("nearest_area").path(0).path("areaName").path(0).path("value")
+                                .asText();
+                String country = weatherData.path("nearest_area").path(0).path("country").path(0).path("value")
+                                .asText();
+                formattedResponse.put("location", locationName);
+                formattedResponse.put("country", country);
+
+                // Current weather conditions
+                JsonNode current = weatherData.path("current_condition").path(0);
+                ObjectNode currentWeather = formattedResponse.putObject("current");
+                currentWeather.put("temperature_c", current.path("temp_C").asInt());
+                currentWeather.put("temperature_f", current.path("temp_F").asInt());
+                currentWeather.put("description", current.path("weatherDesc").path(0).path("value").asText());
+                currentWeather.put("humidity", current.path("humidity").asInt());
+                currentWeather.put("wind_speed_kmph", current.path("windspeedKmph").asInt());
+                currentWeather.put("wind_direction", current.path("winddir16Point").asText());
+                currentWeather.put("feels_like_c", current.path("FeelsLikeC").asInt());
+
+                // Get forecast for next few days
+                ObjectNode forecast = formattedResponse.putObject("forecast");
+                JsonNode weatherForecast = weatherData.path("weather");
+
+                for (int i = 0; i < weatherForecast.size(); i++) {
+                        JsonNode day = weatherForecast.path(i);
+                        String date = day.path("date").asText();
+
+                        ObjectNode dayForecast = forecast.putObject(date);
+                        dayForecast.put("max_temp_c", day.path("maxtempC").asInt());
+                        dayForecast.put("min_temp_c", day.path("mintempC").asInt());
+                        dayForecast.put("sunrise", day.path("astronomy").path(0).path("sunrise").asText());
+                        dayForecast.put("sunset", day.path("astronomy").path(0).path("sunset").asText());
+
+                        // Add hourly forecast summary (just one point for simplicity)
+                        JsonNode hourly = day.path("hourly").path(1); // Midday forecast
+                        dayForecast.put("description", hourly.path("weatherDesc").path(0).path("value").asText());
+                        dayForecast.put("chance_of_rain", hourly.path("chanceofrain").asText() + "%");
+                }
+
+                return mapper.writeValueAsString(formattedResponse);
+        }
+
+        /**
+         * Creates an error response from an HTTP response.
+         */
+        private static String createErrorResponse(Response response) throws IOException {
+                ObjectMapper mapper = new ObjectMapper();
+                ObjectNode errorNode = mapper.createObjectNode();
+
+                errorNode.put("error", "Weather service error");
+                errorNode.put("status", response.status());
+                errorNode.put("message", response.text());
+
+                return mapper.writeValueAsString(errorNode);
+        }
+
+        /**
+         * Creates an error response from an exception.
+         */
+        private static String createExceptionResponse(Exception e) {
+                ObjectMapper mapper = new ObjectMapper();
+                ObjectNode errorNode = mapper.createObjectNode();
+
+                errorNode.put("error", "Internal server error");
+                errorNode.put("message", e.getMessage());
+
+                try {
+                        return mapper.writeValueAsString(errorNode);
+                } catch (JsonProcessingException e1) {
+                        // If we can't serialize the error, just return a plain string
+                }
+                return "";
         }
 
         // Example record for JSON deserialization in /user endpoint.

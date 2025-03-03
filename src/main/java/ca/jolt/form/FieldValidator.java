@@ -503,6 +503,32 @@ public final class FieldValidator {
     }
 
     /**
+     * Clamps the value to be within the specified minimum and maximum range.
+     * 
+     * @param min the minimum value allowed
+     * @param max the maximum value allowed
+     * @return the current instance of FieldValidator for method chaining
+     */
+    public FieldValidator clamp(int min, int max) {
+        clamp(min, max, fieldName);
+        return this;
+    }
+
+    /**
+     * Clamps the value to be within the specified minimum and maximum range.
+     * 
+     * @param min          the minimum value allowed
+     * @param max          the maximum value allowed
+     * @param errorMessage A custom error message upon validation failure.
+     * @return the current instance of FieldValidator for method chaining
+     */
+    public FieldValidator clamp(int min, int max, String errorMessage) {
+        asInt();
+        addRule(BaseRules.clamp(min, max, errorMessage));
+        return this;
+    }
+
+    /**
      * Specifies that the field must be greater than or equal to a given minimum
      * value,
      * interpreting the field as a number.

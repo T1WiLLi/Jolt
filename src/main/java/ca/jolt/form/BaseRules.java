@@ -267,6 +267,17 @@ final class BaseRules {
         }, errorMessage);
     }
 
+    static Rule clamp(Number min, Number max, String errorMessage) {
+        return Rule.custom((data, allValues) -> {
+            try {
+                double value = Double.parseDouble(data);
+                return value >= min.doubleValue() && value <= max.doubleValue();
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }, errorMessage);
+    }
+
     /**
      * Produces a rule verifying the field matches a specified regular expression.
      *

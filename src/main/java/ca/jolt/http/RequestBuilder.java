@@ -2,11 +2,15 @@ package ca.jolt.http;
 
 import java.io.IOException;
 import java.net.URI;
+import java.net.URLEncoder;
 import java.net.http.HttpClient;
 import java.net.http.HttpRequest;
 import java.net.http.HttpResponse;
+import java.nio.charset.StandardCharsets;
 import java.time.Duration;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Consumer;
@@ -16,10 +20,11 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import ca.jolt.exceptions.FailedToBuildBodyException;
 import ca.jolt.files.JoltFile;
 
-final class RequestBuilder {
+public final class RequestBuilder {
     private final HttpMethod method;
     private final String url;
     private final Map<String, String> headers = new HashMap<>();
+    private final List<QueryParam> queryParams = new ArrayList<>();
 
     private Object body;
     private Duration timeout = Duration.ofSeconds(10);
@@ -38,6 +43,11 @@ final class RequestBuilder {
 
     public RequestBuilder headers(Map<String, String> headers) {
         this.headers.putAll(headers);
+        return this;
+    }
+
+    public RequestBuilder query(String name, String value) {
+        queryParams.add(new QueryParam(name, value));
         return this;
     }
 
@@ -106,8 +116,26 @@ final class RequestBuilder {
             protocol = "";
         }
 
+        String fullUrl = protocol + url;
+        if (!queryParams.isEmpty()) {
+            StringBuilder urlWithQuery = new StringBuilder(fullUrl);
+            urlWithQuery.append(fullUrl.contains("?") ? "&" : "?");
+
+            for (int i = 0; i < queryParams.size(); i++) {
+                QueryParam param = queryParams.get(i);
+                if (i > 0) {
+                    urlWithQuery.append("&");
+                }
+                urlWithQuery.append(encodeParam(param.name))
+                        .append("=")
+                        .append(encodeParam(param.value));
+            }
+
+            fullUrl = urlWithQuery.toString();
+        }
+
         HttpRequest.Builder requestBuilder = HttpRequest.newBuilder()
-                .uri(URI.create(protocol + url))
+                .uri(URI.create(fullUrl))
                 .timeout(timeout);
 
         headers.forEach(requestBuilder::header);
@@ -165,4 +193,12 @@ final class RequestBuilder {
             throw new FailedToBuildBodyException("Failed to build request body", e);
         }
     }
+
+    private String encodeParam(String value) {
+        return URLEncoder.encode(value, StandardCharsets.UTF_8);
+    }
+
+    private static record QueryParam(String name, String value) {
+    }
+
 }
