@@ -4,6 +4,7 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -147,13 +148,20 @@ public final class Form {
     }
 
     /**
-     * Runs synchronous validation on all fields in the form, in the order they were
-     * added.
+     * Verifies all fields in this form, except those specified in the
+     * {@code excludedFields} array.
+     * <p>
+     * Any fields whose names are included in {@code excludedFields} will be
+     * skipped and assumed valid. The method logs the verification results and,
+     * if validation passes and a success callback is registered, it executes the
+     * callback.
+     * </p>
      *
-     * @return
-     *         {@code true} if all fields pass validation; {@code false} otherwise.
+     * @param excludedFields Field names to skip during validation.
+     * @return {@code true} if all non-excluded fields pass validation;
+     *         {@code false} otherwise.
      */
-    public boolean verify() {
+    public boolean verify(String... excludedFields) {
         errors.clear();
         boolean isValid = true;
         for (FieldValidator validator : fieldValidators.values()) {
@@ -204,46 +212,42 @@ public final class Form {
     }
 
     /**
-     * Runs asynchronous validation to support any {@link AsyncRule} objects.
+     * Runs asynchronous validation on all fields (except those excluded)
+     * to support any {@link AsyncRule} objects.
      * <p>
-     * Internally, this method:
+     * This method:
      * <ul>
      * <li>Clears any existing errors.</li>
-     * <li>Collects all {@link AsyncRule} validations into {@link CompletableFuture}
-     * tasks.</li>
-     * <li>Performs standard (synchronous) {@link #verify()} as well.</li>
-     * <li>Returns a single {@link CompletableFuture} that completes when all
-     * asynchronous checks have finished, containing {@code true} only if
-     * both synchronous and asynchronous checks pass.</li>
+     * <li>Collects asynchronous validations only for fields not listed in
+     * {@code excludedFields}.</li>
+     * <li>Runs synchronous validation on non‑excluded fields.</li>
+     * <li>Logs the process and returns a CompletableFuture that resolves to true
+     * only if both sync and async validations pass.</li>
      * </ul>
      * </p>
      *
-     * @return
-     *         A {@link CompletableFuture} that resolves to {@code true} if all
-     *         validations succeed, or {@code false} otherwise.
+     * @param excludedFields Field names to skip during validation.
+     * @return A CompletableFuture that resolves to true if all validations pass;
+     *         false otherwise.
      */
-    public CompletableFuture<Boolean> verifyAsync() {
+    public CompletableFuture<Boolean> verifyAsync(String... excludedFields) {
         errors.clear();
         List<CompletableFuture<Boolean>> futures = new ArrayList<>();
+        List<String> excluded = Arrays.asList(excludedFields);
 
-        // Collect async rules
         for (var entry : fieldValidators.entrySet()) {
             String fieldName = entry.getKey();
+            if (excluded.contains(fieldName)) {
+                continue;
+            }
             FieldValidator validator = entry.getValue();
             String value = fieldValues.getOrDefault(fieldName, "");
-
             addAsyncValidationFutures(futures, fieldName, validator, value);
         }
 
-        // First run synchronous rules
-        boolean syncValid = verify();
+        boolean syncValid = verify(excludedFields);
+        verifyLog(syncValid);
 
-        // If no async rules exist, we're done
-        if (futures.isEmpty()) {
-            return CompletableFuture.completedFuture(syncValid);
-        }
-
-        // Await all async futures
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
                 .thenApply(v -> {
                     boolean allValid = true;
@@ -254,9 +258,11 @@ public final class Form {
                             }
                         } catch (Exception e) {
                             allValid = false;
+                            logger.warning("Async validation exception: " + e.getMessage());
                         }
                     }
-                    return syncValid && allValid;
+                    boolean finalResult = syncValid && allValid;
+                    return finalResult;
                 });
     }
 

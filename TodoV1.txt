@@ -1,13 +1,3 @@
-Change the way we built form so that it automatically support whatever is passed through, so basically we can simply now do : 
-
-Form form = ctx.buildForm(); // It will automatically add whatever field, whether it's in the query string, body, path param, etc. 
-Making it easier to build forms and reducing the need for boilerplate code.
-
-Add a support to verify a single field of a form based off his rules : 
-
-boolean verify = form.field("username").verify();
-
-
 In JoltDispatcherServlet, do the following : Object result = handler.handle(joltCtx); // Instead of Typing result as Object, we should try to either use
                                                      // HttpServletResponse, or, something of our own design. like a Handler.class
 
