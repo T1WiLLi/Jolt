@@ -37,6 +37,10 @@ public class Main extends JoltApplication {
 
         @Override
         protected void setup() {
+                group("/api", () -> {
+                        get("/test", () -> "Hello Test");
+                });
+
                 get("/", ctx -> "Hello, World!");
 
                 // Example route with typed path parameters.

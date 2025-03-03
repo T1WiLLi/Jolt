@@ -290,4 +290,15 @@ public abstract class JoltApplication {
     protected static void delete(String path, Supplier<Object> supplier) {
         router.delete(path, supplier);
     }
+
+    /**
+     * Defines a group of routes that share a common prefix path. The group is
+     * defined through a Runnable that is executed when the group is created.
+     * 
+     * @param base  The base path for the group of routes.
+     * @param block The Runnable that defines the group of routes.
+     */
+    protected static void group(String base, Runnable block) {
+        router.group(base, block);
+    }
 }

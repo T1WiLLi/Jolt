@@ -3,6 +3,7 @@ package ca.jolt.core;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Locale;
+import java.util.Stack;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.logging.Logger;
@@ -19,7 +20,8 @@ import ca.jolt.routing.RouteMatch;
  * supports the standard HTTP verbs ({@code GET}, {@code POST},
  * {@code PUT}, {@code DELETE}) and allows registering both
  * {@link RouteHandler} instances and {@link Supplier} objects as
- * route handlers.
+ * route handlers. The router also allow for grouping via {@link #group(String)}
+ * method for better organization.
  * 
  * <p>
  * Routes are stored in an internal list, and this class provides
@@ -48,6 +50,11 @@ public final class Router {
     private final List<Route> routes = new ArrayList<>();
 
     /**
+     * Prefix for grouped routes.
+     */
+    private Stack<String> prefixes = new Stack<>();
+
+    /**
      * Constructs a new {@code Router} with an empty list of routes.
      * <p>
      * Primarily used by the dependency injection mechanism.
@@ -72,7 +79,7 @@ public final class Router {
      *                                 and path is already registered.
      */
     public Router get(String path, RouteHandler handler) {
-        addRoute(new Route("GET", path, handler));
+        addRoute(new Route("GET", fullPath(path), handler));
         return this;
     }
 
@@ -109,7 +116,7 @@ public final class Router {
      *                                 and path is already registered.
      */
     public Router post(String path, RouteHandler handler) {
-        addRoute(new Route("POST", path, handler));
+        addRoute(new Route("POST", fullPath(path), handler));
         return this;
     }
 
@@ -146,7 +153,7 @@ public final class Router {
      *                                 and path is already registered.
      */
     public Router put(String path, RouteHandler handler) {
-        addRoute(new Route("PUT", path, handler));
+        addRoute(new Route("PUT", fullPath(path), handler));
         return this;
     }
 
@@ -183,7 +190,7 @@ public final class Router {
      *                                 and path is already registered.
      */
     public Router delete(String path, RouteHandler handler) {
-        addRoute(new Route("DELETE", path, handler));
+        addRoute(new Route("DELETE", fullPath(path), handler));
         return this;
     }
 
@@ -203,6 +210,36 @@ public final class Router {
      */
     public Router delete(String path, Supplier<Object> supplier) {
         return delete(path, RouteHandler.fromSupplier(supplier));
+    }
+
+    /**
+     * Groups multiple routes under a common path prefix.
+     * 
+     * Example usage:
+     * 
+     * <pre>{@code
+     * group("/api", () -> {
+     *     get("/users", UserController::getAll);
+     *     post("/users", UserController::create);
+     * 
+     *     group("/admin", () -> {
+     *         get("/dashboard", AdminController::dashboard);
+     *     });
+     * });
+     * }</pre>
+     *
+     * @param prefix The path prefix for all routes in this group.
+     * @param group  A lambda function where routes are registered.
+     * @return This {@code Router} instance for chaining.
+     */
+    public Router group(String prefix, Runnable group) {
+        prefixes.push(normalizePath(getCurrentPrefix() + prefix));
+        try {
+            group.run();
+        } finally {
+            prefixes.pop();
+        }
+        return this;
     }
 
     /**
@@ -280,5 +317,17 @@ public final class Router {
         routes.add(route);
         logger.info(() -> "Registered route: " + route.getHttpMethod() + " " + route.getPath());
         return this;
+    }
+
+    private String fullPath(String path) {
+        return normalizePath(getCurrentPrefix() + path);
+    }
+
+    private String getCurrentPrefix() {
+        return prefixes.isEmpty() ? "" : prefixes.peek();
+    }
+
+    private String normalizePath(String path) {
+        return path.replaceAll("//+", "/");
     }
 }
