@@ -55,8 +55,6 @@ public final class DefaultGlobalExceptionHandler implements GlobalExceptionHandl
      */
     @Override
     public void handle(Throwable t, HttpServletResponse res) {
-        log.warning("Unhandled exception : " + t.getMessage());
-
         HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
         String message = t.getMessage();
 

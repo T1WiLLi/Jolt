@@ -137,7 +137,6 @@ public final class JoltDispatcherServlet extends HttpServlet {
             }
         }
 
-        // No dynamic route found – if GET, try to serve a static resource.
         if (method.equals("GET")) {
             if (tryServeStaticResource(path, req, res)) {
                 long duration = System.currentTimeMillis() - start;
@@ -154,7 +153,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
         }
 
         log.info(() -> "No route found for path: " + path);
-        throw new JoltHttpException(HttpStatus.NOT_FOUND, "No route found for " + path);
+        exceptionHandler.handle(new JoltHttpException(HttpStatus.NOT_FOUND, "No route found for " + path), res);
     }
 
     /**
@@ -185,19 +184,15 @@ public final class JoltDispatcherServlet extends HttpServlet {
      */
     private boolean tryServeStaticResource(String path, HttpServletRequest req, HttpServletResponse res) {
         try {
-            // Handle paths that might start with a slash
             String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
 
-            // First try exact path
             InputStream in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedPath);
 
-            // If not found and looks like root request, try index.html
             if (in == null && (normalizedPath.isEmpty() || normalizedPath.equals("/"))) {
                 normalizedPath = "index.html";
                 in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedPath);
             }
 
-            // If resource found, serve it
             if (in != null) {
                 byte[] data = in.readAllBytes();
                 int dotIndex = normalizedPath.lastIndexOf('.');

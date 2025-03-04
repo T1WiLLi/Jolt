@@ -1,14 +1,13 @@
 In JoltDispatcherServlet, do the following : Object result = handler.handle(joltCtx); // Instead of Typing result as Object, we should try to either use
                                                      // HttpServletResponse, or, something of our own design. like a Handler.class
 
-Add support to ctx to serve static files, such as : 
-    ctx.serve("index.html");
-    ctx.serve("image.png");
 
-So basically, the files should be served from "/resources/static" directory. 
-We will also the logic that when we have a 'GET' request, if no path is found, we will try to check if that ressource is a static file, and serve it if it is.
+Add a simple redirect logic, if the requested resources is a static resource and that this static resource has a route in the Router. Redirect to that route.
+example : 
+get("/doc", ctx -> ctx.serve("index.html"));
+user do -> http://localhost/index.html => redirect to http://localhost/doc since /index.html is a static resource and has a route in the router.
 
-CLI to generate basic project.
+CLI to generate basic project. in JS 
 
 Package to easily integrate docker (and potentially later docker-compose to have a more complex setup).
 
