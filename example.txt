@@ -150,3 +150,15 @@ db.password=secret
 
 # JDBC driver class name.
 db.driver=com.mysql.cj.jdbc.Driver
+
+
+@JoltBean
+public class MyFilter implement JoltFilter  {
+
+
+        public void doFilter(JoltHttpContext context, JoltFilterChain chain) throws IOException, ServletException {
+                // Logic... 
+
+                chain.doFilter(this); // The chains continue to the next chains in the filter chains, can also do chain.stopFilter(this) to stop the filter chains after this filter has run. or chain.stopFilter() to stop the chain before this filter runs.
+        }
+}

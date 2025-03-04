@@ -8,7 +8,10 @@ import ca.jolt.routing.MimeInterpreter;
 import ca.jolt.routing.RouteHandler;
 import ca.jolt.routing.RouteMatch;
 import ca.jolt.routing.context.JoltHttpContext;
+import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
+import jakarta.servlet.ServletRequest;
+import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -20,8 +23,8 @@ import java.util.logging.Logger;
 
 /**
  * The {@code JoltDispatcherServlet} is the main servlet responsible for
- * dispatching
- * incoming HTTP requests to the appropriate route handler in a Jolt-based
+ * dispatching incoming HTTP requests to the appropriate route handler in a
+ * Jolt-based
  * application.
  * <p>
  * It is registered internally within the Jolt framework and uses:
@@ -107,20 +110,81 @@ public final class JoltDispatcherServlet extends HttpServlet {
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
         long start = System.currentTimeMillis();
+        RequestContext context = prepareRequestContext(req, res);
+
+        if (processFilters(context)) {
+            return;
+        }
+
+        RouteMatch match = router.match(context.method, context.path);
+        if (handleRouteMatch(match, context, start)) {
+            return;
+        }
+
+        handleStaticResourceOrError(context, start);
+    }
+
+    /**
+     * Prepares a context object to encapsulate request details and reduce
+     * parameter passing complexity.
+     *
+     * @param req The HTTP servlet request
+     * @param res The HTTP servlet response
+     * @return A context object containing request details
+     */
+    private RequestContext prepareRequestContext(HttpServletRequest req, HttpServletResponse res) {
         String method = req.getMethod();
         String path = getPath(req);
-
         log.info(() -> String.format("Incoming %s %s", method, path));
+        return new RequestContext(req, res, method, path);
+    }
 
-        RouteMatch match = router.match(method, path);
+    /**
+     * Processes all registered filters for the current request.
+     *
+     * @param context The request context containing request and response
+     * @return true if the request was handled by a filter, false otherwise
+     * @throws ServletException if a filter processing error occurs
+     * @throws IOException      if an I/O error occurs during filter processing
+     */
+    private boolean processFilters(RequestContext context) throws ServletException, IOException {
+        List<JoltFilter> filters = JoltContainer.getInstance().getBeans(JoltFilter.class);
+        for (JoltFilter filter : filters) {
+            filter.doFilter(context.req, context.res, new FilterChain() {
+                @Override
+                public void doFilter(ServletRequest request, ServletResponse response)
+                        throws IOException, ServletException {
+                    // No-op. The filter itself controls whether to pass to next filter.
+                }
+            });
+            if (context.res.isCommitted()) {
+                return true; // A filter already handled the response.
+            }
+        }
+        return false;
+    }
 
+    /**
+     * Handles a matched route by executing its handler and processing the result.
+     *
+     * @param match   The route match containing handler and path parameters
+     * @param context The request context
+     * @param start   The start time of request processing
+     * @return true if the route was successfully handled, false otherwise
+     * @throws IOException if an I/O error occurs during response writing
+     */
+    private boolean handleRouteMatch(RouteMatch match, RequestContext context, long start) throws IOException {
         if (match != null) {
             try {
-                JoltHttpContext joltCtx = new JoltHttpContext(req, res, match.matcher(), match.route().getParamNames());
+                JoltHttpContext joltCtx = new JoltHttpContext(
+                        context.req,
+                        context.res,
+                        match.matcher(),
+                        match.route().getParamNames());
                 RouteHandler handler = match.route().getHandler();
                 Object result = handler.handle(joltCtx);
 
-                if (!res.isCommitted() && result != null && !(result instanceof JoltHttpContext)) {
+                if (!context.res.isCommitted() && result != null && !(result instanceof JoltHttpContext)) {
                     if (result instanceof String str) {
                         joltCtx.text(str);
                     } else {
@@ -128,32 +192,43 @@ public final class JoltDispatcherServlet extends HttpServlet {
                     }
                 }
                 long duration = System.currentTimeMillis() - start;
-                log.info(() -> path + " handled successfully in " + duration + "ms");
-                return;
+                log.info(() -> context.path + " handled successfully in " + duration + "ms");
+                return true;
             } catch (Exception e) {
                 log.warning(() -> "Error in route handler: " + e.getMessage());
-                exceptionHandler.handle(e, res);
-                return;
+                exceptionHandler.handle(e, context.res);
+                return true;
             }
         }
+        return false;
+    }
 
-        if (method.equals("GET")) {
-            if (tryServeStaticResource(path, req, res)) {
+    /**
+     * Attempts to serve a static resource or handle a not found error.
+     *
+     * @param context The request context
+     * @param start   The start time of request processing
+     * @throws IOException if an I/O error occurs during static resource serving
+     */
+    private void handleStaticResourceOrError(RequestContext context, long start) throws IOException {
+        if (context.method.equals("GET")) {
+            if (tryServeStaticResource(context.path, context.req, context.res)) {
                 long duration = System.currentTimeMillis() - start;
-                log.info(() -> "Static resource " + path + " served successfully in " + duration + "ms");
+                log.info(() -> "Static resource " + context.path + " served successfully in " + duration + "ms");
                 return;
             }
         }
 
-        List<String> allowedMethods = router.getAllowedMethods(path);
+        List<String> allowedMethods = router.getAllowedMethods(context.path);
         if (!allowedMethods.isEmpty()) {
-            log.info(() -> "HTTP method " + method + " is not allowed for path: " + path);
+            log.info(() -> "HTTP method " + context.method + " is not allowed for path: " + context.path);
             throw new JoltHttpException(HttpStatus.METHOD_NOT_ALLOWED,
-                    "HTTP method " + method + " not allowed for " + path);
+                    "HTTP method " + context.method + " not allowed for " + context.path);
         }
 
-        log.info(() -> "No route found for path: " + path);
-        exceptionHandler.handle(new JoltHttpException(HttpStatus.NOT_FOUND, "No route found for " + path), res);
+        log.info(() -> "No route found for path: " + context.path);
+        exceptionHandler.handle(new JoltHttpException(HttpStatus.NOT_FOUND, "No route found for " + context.path),
+                context.res);
     }
 
     /**
@@ -208,5 +283,23 @@ public final class JoltDispatcherServlet extends HttpServlet {
             return false;
         }
         return false;
+    }
+
+    /**
+     * Holds context information for a single request to reduce parameter passing
+     * and improve method readability.
+     */
+    private static class RequestContext {
+        final HttpServletRequest req;
+        final HttpServletResponse res;
+        final String method;
+        final String path;
+
+        RequestContext(HttpServletRequest req, HttpServletResponse res, String method, String path) {
+            this.req = req;
+            this.res = res;
+            this.method = method;
+            this.path = path;
+        }
     }
 }

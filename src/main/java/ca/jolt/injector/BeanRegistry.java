@@ -141,6 +141,31 @@ final class BeanRegistry {
     }
 
     /**
+     * Retrieves all beans of a given parent type.
+     * 
+     * @param <T>        The expected bean type.
+     * @param parentType The parent type.
+     * @return A list of beans of the given parent type.
+     * @throws BeanNotFoundException if no beans are found assignable to the given
+     *                               type.
+     */
+    public <T> List<T> getBeans(Class<T> parentType) {
+        Objects.requireNonNull(parentType, "Parent type cannot be null");
+
+        List<T> beans = new ArrayList<>();
+        for (Map.Entry<String, Class<?>> entry : beanDefinitions.entrySet()) {
+            if (parentType.isAssignableFrom(entry.getValue())) {
+                beans.add(parentType.cast(getBean(entry.getKey())));
+            }
+        }
+
+        if (beans.isEmpty()) {
+            throw new BeanNotFoundException("No beans found of parent type: " + parentType.getName());
+        }
+        return beans;
+    }
+
+    /**
      * Retrieve a bean by its type and name.
      * 
      * @param type the bean class

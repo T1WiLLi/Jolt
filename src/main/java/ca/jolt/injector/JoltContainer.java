@@ -1,5 +1,6 @@
 package ca.jolt.injector;
 
+import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
@@ -237,6 +238,34 @@ public final class JoltContainer {
                 throw new BeanNotFoundException("No bean or configuration bean found for type: " + type.getName());
             }
         }
+    }
+
+    /**
+     * Retrieves a list of beans that are instances of the specified parent type.
+     *
+     * <p>
+     * This method searches through all registered bean definitions and returns a
+     * list
+     * of beans whose classes are assignable to the specified parent type. If no
+     * beans
+     * are found, an empty list is returned.
+     * </p>
+     *
+     * <p>
+     * <strong>Type Safety:</strong> The returned objects are cast using
+     * {@code parentType.cast(...)} ensuring that the runtime type is checked
+     * against
+     * the provided class.
+     * </p>
+     *
+     * @param <T>        the type of the beans to be retrieved
+     * @param parentType the class object representing the parent type of the beans;
+     *                   must not be {@code null}.
+     * @return a list of beans that are instances of the specified parent type.
+     * @throws NullPointerException if the {@code parentType} is {@code null}.
+     */
+    public <T> List<T> getBeans(Class<T> parentType) {
+        return beanRegistry.getBeans(parentType);
     }
 
     /**
