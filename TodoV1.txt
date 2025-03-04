@@ -7,6 +7,8 @@ example :
 get("/doc", ctx -> ctx.serve("index.html"));
 user do -> http://localhost/index.html => redirect to http://localhost/doc since /index.html is a static resource and has a route in the router.
 
+check for path traversal -> check security tab in github.
+
 CLI to generate basic project. in JS 
 
 Package to easily integrate docker (and potentially later docker-compose to have a more complex setup).

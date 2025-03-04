@@ -358,6 +358,12 @@ public final class JoltHttpContext {
         return this;
     }
 
+    public JoltHttpContext redirect(String location) {
+        status(HttpStatus.FOUND);
+        res.setHeader("Location", location);
+        return this;
+    }
+
     /**
      * Writes a plain-text response.
      * <p>

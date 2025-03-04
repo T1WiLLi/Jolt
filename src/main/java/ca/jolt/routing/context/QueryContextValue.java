@@ -100,4 +100,24 @@ public final class QueryContextValue extends JoltHttpContextValue {
             return defaultValue;
         }
     }
+
+    /**
+     * Parses the parameter as a boolean, or returns the specified default if
+     * the value is absent.
+     * <p>
+     * The method uses {@link Boolean#parseBoolean(String)} which returns true if
+     * the trimmed value is
+     * equal to "true" (ignoring case), and false otherwise.
+     * </p>
+     *
+     * @param defaultValue The fallback boolean.
+     * @return The parsed boolean or the default.
+     */
+    public boolean asBooleanOrDefault(boolean defaultValue) {
+        if (!isPresent()) {
+            return defaultValue;
+        }
+        // Boolean.parseBoolean returns false if the value is null or not "true"
+        return Boolean.parseBoolean(get().trim());
+    }
 }

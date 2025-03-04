@@ -43,6 +43,16 @@ public class Main extends JoltApplication {
 
                 get("/", () -> "Hello World");
 
+                get("/redirect", ctx -> {
+                        if (ctx.query("redirect").asBooleanOrDefault(false)) {
+                                return ctx.redirect("/redirect2");
+                        } else {
+                                return ctx.html("You are not being redirected");
+                        }
+                });
+
+                get("/redirect2", ctx -> ctx.html("You have been redirected"));
+
                 get("/doc", ctx -> ctx.serve("index.html"));
 
                 // Example route with typed path parameters.
