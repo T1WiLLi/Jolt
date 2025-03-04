@@ -358,8 +358,28 @@ public final class JoltHttpContext {
         return this;
     }
 
+    /**
+     * Redirect's the response to a new existing location.
+     * 
+     * @param location The new location to redirect to.
+     * @return This {@code JoltHttpContext}, for fluent chaining.
+     */
     public JoltHttpContext redirect(String location) {
         status(HttpStatus.FOUND);
+        res.setHeader("Location", location);
+        return this;
+    }
+
+    /**
+     * Redirect's the response to the newly created resource.
+     * 
+     * @param location        The newly created resource.
+     * @param redirectedRoute The newly created resource's route.
+     * @return This {@code JoltHttpContext}, for fluent chaining.
+     */
+    public JoltHttpContext redirect(String location, Runnable redirectedRoute) {
+        status(HttpStatus.FOUND);
+        redirectedRoute.run();
         res.setHeader("Location", location);
         return this;
     }
