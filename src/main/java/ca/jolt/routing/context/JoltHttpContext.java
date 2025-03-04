@@ -15,13 +15,13 @@ import java.util.regex.Matcher;
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import ca.jolt.cookie.CookieBuilder;
 import ca.jolt.exceptions.JoltBadRequestException;
 import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.files.JoltFile;
 import ca.jolt.form.Form;
 import ca.jolt.http.HttpStatus;
 import ca.jolt.routing.MimeInterpreter;
-import ca.jolt.routing.builder.CookieBuilder;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -597,6 +597,14 @@ public final class JoltHttpContext {
             }
         }
         return null;
+    }
+
+    public Cookie getSessionCookie() {
+        return getCookie("session");
+    }
+
+    public Cookie getJwtToken() {
+        return getCookie("jwt_token");
     }
 
     /**

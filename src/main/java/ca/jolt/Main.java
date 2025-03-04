@@ -152,7 +152,7 @@ public class Main extends JoltApplication {
                 });
 
                 get("/verify", ctx -> {
-                        var cookie = ctx.getCookie("auth");
+                        var cookie = ctx.getCookie("session");
                         if (cookie == null || !sessions.containsKey(cookie.getValue())) {
                                 return ctx.html(
                                                 "<html>" +
@@ -177,10 +177,10 @@ public class Main extends JoltApplication {
                 });
 
                 get("/logout", ctx -> {
-                        var cookie = ctx.getCookie("auth");
+                        var cookie = ctx.getCookie("session");
                         if (cookie != null) {
                                 sessions.remove(cookie.getValue());
-                                ctx.removeCookie("auth");
+                                ctx.removeCookie("session");
                         }
                         return ctx.html(
                                         "<html>" +

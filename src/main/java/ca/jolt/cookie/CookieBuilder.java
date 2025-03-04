@@ -1,4 +1,4 @@
-package ca.jolt.routing.builder;
+package ca.jolt.cookie;
 
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;

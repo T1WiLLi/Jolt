@@ -2,6 +2,8 @@ package ca.jolt.core;
 
 import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.exceptions.handler.GlobalExceptionHandler;
+import ca.jolt.filters.FilterConfiguration;
+import ca.jolt.filters.JoltFilter;
 import ca.jolt.http.HttpStatus;
 import ca.jolt.injector.JoltContainer;
 import ca.jolt.routing.MimeInterpreter;
@@ -18,8 +20,10 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 /**
  * The {@code JoltDispatcherServlet} is the main servlet responsible for
@@ -148,8 +152,26 @@ public final class JoltDispatcherServlet extends HttpServlet {
      * @throws IOException      if an I/O error occurs during filter processing
      */
     private boolean processFilters(RequestContext context) throws ServletException, IOException {
-        List<JoltFilter> filters = JoltContainer.getInstance().getBeans(JoltFilter.class);
+
+        FilterConfiguration filterConfig = JoltContainer.getInstance().getBean(FilterConfiguration.class);
+        filterConfig.configure();
+
+        List<JoltFilter> filters = JoltContainer.getInstance()
+                .getBeans(JoltFilter.class).stream()
+                .sorted((f1, f2) -> {
+                    int order1 = filterConfig.getOrder(f1);
+                    int order2 = filterConfig.getOrder(f2);
+
+                    return order1 != order2 ? Integer.compare(order1, order2) : 0;
+                })
+                .collect(Collectors.toList());
+
+        JoltHttpContext joltContext = new JoltHttpContext(context.req, context.res, null, Collections.emptyList());
+
         for (JoltFilter filter : filters) {
+            if (filterConfig.shouldExcludeRoute(joltContext)) {
+                continue;
+            }
             filter.doFilter(context.req, context.res, new FilterChain() {
                 @Override
                 public void doFilter(ServletRequest request, ServletResponse response)
@@ -158,7 +180,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
                 }
             });
             if (context.res.isCommitted()) {
-                return true; // A filter already handled the response.
+                return true;
             }
         }
         return false;

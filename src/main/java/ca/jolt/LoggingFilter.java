@@ -2,7 +2,7 @@ package ca.jolt;
 
 import java.io.IOException;
 
-import ca.jolt.core.JoltFilter;
+import ca.jolt.filters.JoltFilter;
 import ca.jolt.injector.annotation.JoltBean;
 import ca.jolt.routing.context.JoltHttpContext;
 import jakarta.servlet.FilterChain;

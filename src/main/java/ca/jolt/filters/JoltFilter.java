@@ -1,4 +1,4 @@
-package ca.jolt.core;
+package ca.jolt.filters;
 
 import ca.jolt.routing.context.JoltHttpContext;
 import jakarta.servlet.Filter;

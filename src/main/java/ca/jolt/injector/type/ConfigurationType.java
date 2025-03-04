@@ -6,5 +6,6 @@ package ca.jolt.injector.type;
 public enum ConfigurationType {
     EXCEPTION_HANDLER,
     SECURITY,
-    SERVER
+    SERVER,
+    FILTER
 }
