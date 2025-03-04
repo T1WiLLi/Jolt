@@ -251,4 +251,101 @@ public final class CookieBuilder {
         }
         res.addCookie(cookie);
     }
+
+    /**
+     * Creates a session cookie with secure and HttpOnly flags enabled.
+     * <p>
+     * Session cookies are temporary and will be deleted when the browser is closed.
+     * These cookies are not stored persistently and have no expiration time.
+     * They are suitable for maintaining session state during user interaction.
+     * </p>
+     * 
+     * <p>
+     * The cookie will be configured with:
+     * </p>
+     * <ul>
+     * <li>name: "session"</li>
+     * <li>secure: true</li>
+     * <li>httpOnly: true</li>
+     * <li>sameSite: "Strict"</li>
+     * <li>path: "/"</li>
+     * </ul>
+     * 
+     * @param value The cookie value to store
+     */
+    public void sessionCookie(String value) {
+        setName("session");
+        setValue(value);
+        secure(true);
+        httpOnly(true);
+        path("/");
+        sameSite("Strict");
+        build();
+    }
+
+    /**
+     * Creates a JWT cookie with appropriate security settings for storing
+     * JSON Web Tokens.
+     * <p>
+     * JWT cookies are typically used for authentication and should be protected
+     * with secure and HttpOnly flags. This method configures the cookie with
+     * a specified expiration time in seconds.
+     * </p>
+     * 
+     * <p>
+     * The cookie will be configured with:
+     * </p>
+     * <ul>
+     * <li>name: "jwt"</li>
+     * <li>secure: true</li>
+     * <li>httpOnly: true</li>
+     * <li>sameSite: "Strict"</li>
+     * <li>path: "/"</li>
+     * <li>maxAge: as specified</li>
+     * </ul>
+     * 
+     * @param value  The JWT string value
+     * @param maxAge The maximum age of the cookie in seconds
+     */
+    public void jwtCookie(String value, int maxAge) {
+        setName("jwt_token");
+        setValue(value);
+        secure(true);
+        httpOnly(true);
+        sameSite("Strict");
+        path("/");
+        maxAge(maxAge);
+        build();
+    }
+
+    /**
+     * Creates an unsecure cookie with minimal security settings.
+     * <p>
+     * <strong>WARNING:</strong> These cookies are accessible to JavaScript and
+     * are transmitted over both HTTP and HTTPS connections. They should NOT be
+     * used for sensitive information.
+     * </p>
+     * 
+     * <p>
+     * The cookie will be configured with:
+     * </p>
+     * <ul>
+     * <li>secure: false</li>
+     * <li>httpOnly: false</li>
+     * <li>sameSite: "Lax"</li>
+     * <li>path: "/"</li>
+     * </ul>
+     * 
+     * @param name  The name of the cookie
+     * @param value The value to store
+     */
+    public void unsecureCookie(String name, String value) {
+        setName(name);
+        setValue(value);
+        secure(false);
+        httpOnly(false);
+        path("/");
+        sameSite("Lax");
+        build();
+    }
 }

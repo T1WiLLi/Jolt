@@ -2,6 +2,7 @@ package ca.jolt.routing.context;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.InputStream;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -19,6 +20,7 @@ import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.files.JoltFile;
 import ca.jolt.form.Form;
 import ca.jolt.http.HttpStatus;
+import ca.jolt.routing.MimeInterpreter;
 import ca.jolt.routing.builder.CookieBuilder;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -446,6 +448,109 @@ public final class JoltHttpContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing HTML response", e);
         }
         return this;
+    }
+
+    /**
+     * Serves a static file from the "/static" directory located in the classpath.
+     * <p>
+     * For example, {@code ctx.serve("index.html")} will try to locate the resource
+     * at "resources/static/index.html" and write its contents to the response with
+     * an
+     * appropriate MIME type.
+     * </p>
+     *
+     * @param resourceName the file name to serve (e.g., "index.html" or
+     *                     "image.png")
+     * @return this {@code JoltHttpContext} for fluent chaining.
+     */
+    public JoltHttpContext serve(String resource) {
+        String normalizedResource = resource.startsWith("/") ? resource.substring(1) : resource;
+
+        InputStream in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedResource);
+        if (in == null) {
+            throw new JoltHttpException(HttpStatus.NOT_FOUND, "Static resource not found: " + resource);
+        }
+        try {
+            byte[] data = in.readAllBytes();
+            int dotIndex = resource.lastIndexOf('.');
+            String extension = (dotIndex != -1) ? resource.substring(dotIndex) : "";
+            String mimeType = MimeInterpreter.getMime(extension);
+            header("Content-Type", mimeType);
+            res.getOutputStream().write(data);
+        } catch (IOException e) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error serving static resource: " + e.getMessage(), e);
+        }
+        return this;
+    }
+
+    /**
+     * Aborts the request with a specified HTTP status and message.
+     * Sets the response status and writes the message as plain text.
+     * 
+     * @param status  The HTTP status to set.
+     * @param message The message to write.
+     * @throws JoltHttpException If writing the response fails.
+     */
+    public void abort(HttpStatus status, String message) {
+        try {
+            res.setStatus(status.code());
+            res.setContentType("text/plain;charset=UTF-8");
+            res.getWriter().write(message);
+        } catch (IOException e) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Failed to write abort message: " + e.getMessage());
+        }
+    }
+
+    /**
+     * Aborts the request with 400 Bad Request status.
+     *
+     * @param message The error message to send
+     * @throws JoltHttpException If writing the response fails
+     */
+    public void abortBadRequest(String message) {
+        abort(HttpStatus.BAD_REQUEST, message);
+    }
+
+    /**
+     * Aborts the request with 404 Not Found status.
+     *
+     * @param message The error message to send
+     * @throws JoltHttpException If writing the response fails
+     */
+    public void abortNotFound(String message) {
+        abort(HttpStatus.NOT_FOUND, message);
+    }
+
+    /**
+     * Aborts the request with 500 Internal Server Error status.
+     *
+     * @param message The error message to send
+     * @throws JoltHttpException If writing the response fails
+     */
+    public void abortInternalServerError(String message) {
+        abort(HttpStatus.INTERNAL_SERVER_ERROR, message);
+    }
+
+    /**
+     * Aborts the request with 401 Unauthorized status.
+     *
+     * @param message The error message to send
+     * @throws JoltHttpException If writing the response fails
+     */
+    public void abortUnauthorized(String message) {
+        abort(HttpStatus.UNAUTHORIZED, message);
+    }
+
+    /**
+     * Aborts the request with 403 Forbidden status.
+     *
+     * @param message The error message to send
+     * @throws JoltHttpException If writing the response fails
+     */
+    public void abortForbidden(String message) {
+        abort(HttpStatus.FORBIDDEN, message);
     }
 
     /**

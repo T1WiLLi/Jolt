@@ -43,6 +43,8 @@ public class Main extends JoltApplication {
 
                 get("/", () -> "Hello World");
 
+                get("/doc", ctx -> ctx.serve("index.html"));
+
                 // Example route with typed path parameters.
                 get("/hello/{age:int}", ctx -> ctx.html(
                                 "Hello " + ctx.query("name").orDefault("little one") + ", you are "
@@ -95,8 +97,6 @@ public class Main extends JoltApplication {
                                         .required("Password is required.")
                                         .minLength(6, "Password must be at least 6 characters long.");
 
-                        boolean isUsernameValid = form.field("username").verify();
-
                         if (!form.verify()) {
                                 StringBuilder sb = new StringBuilder();
                                 sb.append("<html><head><title>Validation Error</title></head><body>");
@@ -128,14 +128,7 @@ public class Main extends JoltApplication {
                         String token = UUID.randomUUID().toString();
                         sessions.put(token, username);
 
-                        ctx.addCookie()
-                                        .setName("auth")
-                                        .setValue(token)
-                                        .httpOnly(true)
-                                        .secure(true)
-                                        .sameSite("Strict")
-                                        .path("/")
-                                        .build();
+                        ctx.addCookie().sessionCookie(token);
 
                         return ctx.html(
                                         "<html>" +

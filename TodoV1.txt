@@ -1,17 +1,12 @@
 In JoltDispatcherServlet, do the following : Object result = handler.handle(joltCtx); // Instead of Typing result as Object, we should try to either use
                                                      // HttpServletResponse, or, something of our own design. like a Handler.class
 
-In the CTX, we should have function to directly abort, such as ctx.abort(HttpStatus status, String message); 
-& ctx.abortBadRequest(String message) 
-& ctx.abortNotFound(String message)
-& ctx.abortInternalServerError(String message)
-& ctx.abortUnauthorized(String message)
-& ctx.abortForbidden(String message)
+Add support to ctx to serve static files, such as : 
+    ctx.serve("index.html");
+    ctx.serve("image.png");
 
-Add quick cookie utils creation such as : 
-ctx.addCookie().sessionCookie(String name, Object value); // Sets a cookie, secure, http only, as a session ect.
-ctx.addCookie().jwtCookie(String value, int maxAge); // Sets a JWT cookie, with max age, secure, http only, etc
-ctx.addCookie().unsecureCookie(String name, Object value); // Sets a cookie, but not secure, not http only, etc.
+So basically, the files should be served from "/resources/static" directory. 
+We will also the logic that when we have a 'GET' request, if no path is found, we will try to check if that ressource is a static file, and serve it if it is.
 
 CLI to generate basic project.
 
