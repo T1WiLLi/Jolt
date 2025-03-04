@@ -1,5 +1,6 @@
 package ca.jolt;
 
+import ca.jolt.cookie.CookieConfiguration;
 import ca.jolt.core.JoltApplication;
 import ca.jolt.files.JoltFile;
 import ca.jolt.form.Form;
@@ -152,7 +153,7 @@ public class Main extends JoltApplication {
                 });
 
                 get("/verify", ctx -> {
-                        var cookie = ctx.getCookie("session");
+                        var cookie = ctx.getCookie(CookieConfiguration.getInstance().getSessionCookieName());
                         if (cookie == null || !sessions.containsKey(cookie.getValue())) {
                                 return ctx.html(
                                                 "<html>" +
@@ -177,10 +178,10 @@ public class Main extends JoltApplication {
                 });
 
                 get("/logout", ctx -> {
-                        var cookie = ctx.getCookie("session");
+                        var cookie = ctx.getCookie(CookieConfiguration.getInstance().getSessionCookieName());
                         if (cookie != null) {
                                 sessions.remove(cookie.getValue());
-                                ctx.removeCookie("session");
+                                ctx.removeCookie(CookieConfiguration.getInstance().getSessionCookieName());
                         }
                         return ctx.html(
                                         "<html>" +

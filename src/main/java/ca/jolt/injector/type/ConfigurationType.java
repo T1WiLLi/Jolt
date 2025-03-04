@@ -7,5 +7,6 @@ public enum ConfigurationType {
     EXCEPTION_HANDLER,
     SECURITY,
     SERVER,
-    FILTER
+    FILTER,
+    COOKIE
 }

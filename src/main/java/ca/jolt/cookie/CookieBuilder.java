@@ -274,12 +274,12 @@ public final class CookieBuilder {
      * @param value The cookie value to store
      */
     public void sessionCookie(String value) {
-        setName("session");
+        setName(CookieConfiguration.getInstance().getSessionCookieName());
         setValue(value);
         secure(true);
         httpOnly(true);
-        path("/");
-        sameSite("Strict");
+        path(CookieConfiguration.getInstance().getSessionCookiePath());
+        sameSite(CookieConfiguration.getInstance().getSessionSameSitePolicy());
         build();
     }
 
@@ -308,12 +308,12 @@ public final class CookieBuilder {
      * @param maxAge The maximum age of the cookie in seconds
      */
     public void jwtCookie(String value, int maxAge) {
-        setName("jwt_token");
+        setName(CookieConfiguration.getInstance().getJwtCookieName());
         setValue(value);
         secure(true);
         httpOnly(true);
-        sameSite("Strict");
-        path("/");
+        path(CookieConfiguration.getInstance().getJwtCookiePath());
+        sameSite(CookieConfiguration.getInstance().getJwtSameSitePolicy());
         maxAge(maxAge);
         build();
     }
