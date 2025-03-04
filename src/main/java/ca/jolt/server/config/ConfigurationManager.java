@@ -1,9 +1,6 @@
 package ca.jolt.server.config;
 
-import java.io.IOException;
-import java.io.InputStream;
 import java.util.Properties;
-import java.util.logging.Logger;
 
 /**
  * A simple singleton that loads application.properties from META-INF
@@ -12,9 +9,6 @@ import java.util.logging.Logger;
  */
 public final class ConfigurationManager {
 
-    private static final Logger logger = Logger.getLogger(ConfigurationManager.class.getName());
-
-    private static final String DEFAULT_CONFIG_FILE = "/META-INF/application.properties";
     private static final ConfigurationManager INSTANCE = new ConfigurationManager();
 
     private Properties properties;
@@ -31,16 +25,7 @@ public final class ConfigurationManager {
     }
 
     private void loadProperties() {
-        properties = new Properties();
-        try (InputStream in = ConfigurationManager.class.getResourceAsStream(DEFAULT_CONFIG_FILE)) {
-            if (in != null) {
-                properties.load(in);
-            } else {
-                logger.warning(() -> "No configuration file found at " + DEFAULT_CONFIG_FILE + ". Using defaults.");
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
+        properties = ConfigLoader.load();
     }
 
     private void loadConfigs() {
