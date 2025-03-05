@@ -1,11 +1,9 @@
 In JoltDispatcherServlet, do the following : Object result = handler.handle(joltCtx); // Instead of Typing result as Object, we should try to either use
                                                      // HttpServletResponse, or, something of our own design. like a Handler.class
 
-Cookie configuration for cookie name, default param ect.
-
-check for path traversal -> check security tab in github. Fix the issue we found. (No security issues tho !!!)
-
 CLI to generate basic project. in JS 
+
+make a function in the form that 'updateEntity(Class<T> clazz, T entity); and it basically check if a field in the form, is also a field of the entity, it updates it , if not, it just ignore it. and return updated entity
 
 Package to easily integrate docker (and potentially later docker-compose to have a more complex setup).
 

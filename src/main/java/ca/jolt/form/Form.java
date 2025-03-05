@@ -12,6 +12,8 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import ca.jolt.exceptions.FormConversionException;
 
 /**
@@ -490,6 +492,47 @@ public final class Form {
      */
     void registerDatePattern(String fieldName, String pattern) {
         datePatterns.put(fieldName, pattern);
+    }
+
+    /**
+     * Attempts to build an instance of the specified class from the form data.
+     * It converts the form's field values map into a JSON string and then
+     * deserializes
+     * that JSON into the target entity.
+     * <p>
+     * Fields specified in {@code ignoreFields} are omitted from the conversion.
+     * </p>
+     *
+     * @param clazz        the class to instantiate.
+     * @param ignoreFields field names to exclude from conversion.
+     * @param <T>          the type of the class.
+     * @return an instance of T populated with the form's field values.
+     * @throws FormConversionException if conversion fails.
+     */
+    public <T> T buildEntity(Class<T> clazz, String... ignoreFields) {
+        ObjectMapper mapper = new ObjectMapper();
+        try {
+            Map<String, String> data = new HashMap<>(fieldValues);
+            for (String ignore : ignoreFields) {
+                data.remove(ignore);
+            }
+            String json = mapper.writeValueAsString(data);
+            return mapper.readValue(json, clazz);
+        } catch (Exception e) {
+            throw new FormConversionException("Failed to build entity from form", e);
+        }
+    }
+
+    /**
+     * Convenience method to build an entity without excluding any fields.
+     *
+     * @param clazz the class to instantiate.
+     * @param <T>   the type of the class.
+     * @return an instance of T populated with the form's field values.
+     * @throws FormConversionException if conversion fails.
+     */
+    public <T> T buildEntity(Class<T> clazz) {
+        return buildEntity(clazz, new String[0]);
     }
 
     /**

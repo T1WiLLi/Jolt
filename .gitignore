@@ -37,3 +37,6 @@ tmp/
 # Windows
 Thumbs.db
 ehthumbs.db
+
+# custom 
+docs/template
