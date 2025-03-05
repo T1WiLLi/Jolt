@@ -10,16 +10,14 @@ public abstract class CookieConfiguration {
     public static synchronized CookieConfiguration getInstance() {
         if (INSTANCE == null) {
             INSTANCE = JoltContainer.getInstance().getBean(CookieConfiguration.class);
-
-            INSTANCE.configure();
         }
         return INSTANCE;
     }
 
     @Getter
-    private String sessionCookieName = "session";
+    private String sessionCookieName = "JSESSIONID";
     @Getter
-    private String jwtCookieName = "jwt_token";
+    private String jwtCookieName = "JWT-TOKEN";
 
     @Getter
     private String sessionCookiePath = "/";

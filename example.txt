@@ -164,13 +164,6 @@ public class MyFilter implement JoltFilter  {
 }
 
 
-Image de profil
-Aujourd’hui
-Vous avez dit
-does by default jakarta EE has element for web development like : Session, Authroization, authentification, cors, csrf, xss secure header ect
-Vous avez dit
-does by default jakarta EE has element for web development like : Session, Authroization, authentification, cors, csrf, xss secure header ect
-Copilote a dit
 Jakarta EE provides a strong foundation for web application development, but not everything you mentioned is "baked in" by default. Here’s a breakdown:
 
 Session Management
@@ -221,19 +214,3 @@ Final Thoughts
 While Jakarta EE gives you the building blocks for web development, best practices—especially around security—often require extra layers of configuration and sometimes third-party integrations. If your application demands advanced security measures, you might look into additional frameworks like Spring Security or libraries specialized in security headers and CSRF protection.
 
 Would you like some code snippets or examples on how to implement a CORS filter or CSRF token mechanism in Jakarta EE?
-
-
-
-
-
-
-Can you provide examples of implementing CSRF protection?
-
-How does Jakarta EE's security compare to Spring Security?
-
-What are the core components of Jakarta EE for web applications?
-
-
-Message Copilot
-
-Think Deeper

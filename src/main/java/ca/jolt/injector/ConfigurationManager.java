@@ -1,5 +1,7 @@
 package ca.jolt.injector;
 
+import java.lang.annotation.Annotation;
+import java.lang.reflect.Method;
 import java.util.EnumMap;
 import java.util.Map;
 import java.util.Objects;
@@ -8,6 +10,7 @@ import java.util.logging.Logger;
 import ca.jolt.exceptions.JoltDIException;
 import ca.jolt.exceptions.handler.GlobalExceptionHandler;
 import ca.jolt.injector.annotation.JoltConfiguration;
+import ca.jolt.injector.annotation.PostConstruct;
 import ca.jolt.injector.type.ConfigurationType;
 
 /**
@@ -51,6 +54,27 @@ final class ConfigurationManager {
         validateConfigurationType(configClass, type);
         Object configInstance = createConfigurationInstance(configClass);
         handleConfigurationRegistration(configClass, type, configInstance);
+    }
+
+    public void initializeConfigurations() {
+        for (Object config : configurations.values()) {
+            invokeLifecycleMethod(config, PostConstruct.class);
+        }
+        logger.info("Configuration beans initialized.");
+    }
+
+    private void invokeLifecycleMethod(Object instance, Class<? extends Annotation> annotationType) {
+        Class<?> clazz = instance.getClass();
+        for (Method method : clazz.getDeclaredMethods()) {
+            if (method.isAnnotationPresent(annotationType)) {
+                try {
+                    method.setAccessible(true);
+                    method.invoke(instance);
+                } catch (Exception e) {
+                    throw new JoltDIException("Failed to invoke lifecycle method on: " + clazz.getName(), e);
+                }
+            }
+        }
     }
 
     private void validateConfigurationClass(Class<?> configClass) {

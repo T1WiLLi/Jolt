@@ -48,7 +48,7 @@ public abstract class JoltFilter implements Filter {
             throws IOException, ServletException {
         if (!(request instanceof HttpServletRequest) || !(response instanceof HttpServletResponse)) {
             chain.doFilter(request, response);
-            return true;
+            return false;
         }
         HttpServletRequest req = (HttpServletRequest) request;
         String path = req.getPathInfo() != null ? req.getPathInfo() : req.getServletPath();
@@ -57,12 +57,12 @@ public abstract class JoltFilter implements Filter {
         }
         for (String r : routes) {
             if (path.equals(r)) {
-                return false;
+                return true;
             }
         }
         // No match: delegate immediately to the next filter.
         chain.doFilter(request, response);
-        return true;
+        return false;
     }
 
     /**

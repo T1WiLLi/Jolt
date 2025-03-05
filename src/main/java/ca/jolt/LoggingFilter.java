@@ -17,11 +17,9 @@ public class LoggingFilter extends JoltFilter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
         if (forRoutes(request, response, chain, "/", "/doc")) {
-            return; // Skip filtering for this request
+            JoltHttpContext ctx = buildJoltContext(request, response);
+            System.out.println("Filter: Processing request for: " + ctx.requestPath());
         }
-
-        JoltHttpContext ctx = buildJoltContext(request, response);
-        System.out.println("Filter: Processing request for: " + ctx.requestPath());
         chain.doFilter(request, response);
     }
 }

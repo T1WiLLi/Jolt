@@ -140,6 +140,7 @@ public final class JoltContainer {
      */
     public void initialize() {
         if (!isInitialized) {
+            configurationManager.initializeConfigurations();
             beanRegistry.initializeEagerBeans();
             isInitialized = true;
             logger.info("Container initialization complete.");

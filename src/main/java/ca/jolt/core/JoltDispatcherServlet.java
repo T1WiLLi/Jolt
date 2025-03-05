@@ -172,13 +172,17 @@ public final class JoltDispatcherServlet extends HttpServlet {
             if (filterConfig.shouldExcludeRoute(joltContext)) {
                 continue;
             }
-            filter.doFilter(context.req, context.res, new FilterChain() {
-                @Override
-                public void doFilter(ServletRequest request, ServletResponse response)
-                        throws IOException, ServletException {
-                    // No-op. The filter itself controls whether to pass to next filter.
-                }
-            });
+            try {
+                filter.doFilter(context.req, context.res, new FilterChain() {
+                    @Override
+                    public void doFilter(ServletRequest request, ServletResponse response)
+                            throws IOException, ServletException, JoltHttpException {
+                        // No-op. The filter itself controls whether to pass to next filter.
+                    }
+                });
+            } catch (IOException | ServletException | JoltHttpException e) {
+                exceptionHandler.handle(e, context.res);
+            }
             if (context.res.isCommitted()) {
                 return true;
             }
