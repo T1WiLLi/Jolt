@@ -35,7 +35,6 @@ public final class CorsFilter extends JoltFilter {
                 .map(String::toUpperCase)
                 .collect(Collectors.toSet());
 
-        allowedMethods.forEach(s -> System.out.println(s));
         String requestMethod = req.getMethod().toUpperCase();
 
         if (!allowedMethods.contains(requestMethod)) {

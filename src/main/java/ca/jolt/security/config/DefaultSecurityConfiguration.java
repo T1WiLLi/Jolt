@@ -3,6 +3,10 @@ package ca.jolt.security.config;
 import ca.jolt.injector.annotation.JoltConfiguration;
 import ca.jolt.injector.annotation.PostConstruct;
 import ca.jolt.injector.type.ConfigurationType;
+import ca.jolt.security.policy.policies.FrameOptionsPolicy;
+import ca.jolt.security.policy.policies.HstsPolicy;
+import ca.jolt.security.policy.policies.ReferrerPolicy;
+import ca.jolt.security.policy.policies.XssProtectionPolicy;
 
 @JoltConfiguration(value = ConfigurationType.SECURITY, isDefault = true)
 public class DefaultSecurityConfiguration extends SecurityConfiguration {
@@ -22,10 +26,10 @@ public class DefaultSecurityConfiguration extends SecurityConfiguration {
                 .maxAge(3600);
 
         withHeaders()
-                .withXssProtection(true)
-                .denyFrameOption(true)
-                .httpStrictTransportSecurity(true)
-                .referrerPolicy("same-origin")
+                .withXssProtection(XssProtectionPolicy.ENABLE_BLOCK)
+                .withFrameOptions(FrameOptionsPolicy.DENY)
+                .withHsts(HstsPolicy.ONE_YEAR_WITH_SUBDOMAINS_PRELOAD)
+                .withReferrerPolicy(ReferrerPolicy.SAME_ORIGIN)
                 .httpsOnly(false)
                 .contentSecurityPolicy(true);
         return this;

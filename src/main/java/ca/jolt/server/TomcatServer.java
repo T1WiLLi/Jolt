@@ -21,7 +21,7 @@ import java.util.Comparator;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
-public class TomcatServer {
+public final class TomcatServer {
     private static final Logger log = Logger.getLogger(TomcatServer.class.getName());
 
     private final ServerConfig config;
