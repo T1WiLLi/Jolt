@@ -32,15 +32,15 @@ public final class SecureHeadersFilter extends JoltFilter {
         }
 
         if (headers.isXssProtectionEnabled()) {
-            res.setHeader("X-XSS-Protection", "1; mode=block");
+            res.setHeader("X-XSS-Protection", headers.getXssProtectionValue());
         }
 
         if (headers.isFrameOptionsEnabled()) {
-            res.setHeader("X-Frame-Options", "DENY");
+            res.setHeader("X-Frame-Options", headers.getFrameOptionsValue());
         }
 
         if (headers.isHstsEnabled()) {
-            res.setHeader("Strict-Transport-Security", "max-age=31536000; includeSubDomains; preload");
+            res.setHeader("Strict-Transport-Security", headers.getHstsValue());
         }
 
         res.setHeader("Referrer-Policy", headers.getReferrerPolicy());

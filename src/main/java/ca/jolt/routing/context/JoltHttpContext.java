@@ -10,6 +10,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.regex.Matcher;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -178,6 +179,33 @@ public final class JoltHttpContext {
         Map<String, List<String>> map = new HashMap<>();
         req.getParameterMap().forEach((key, values) -> map.put(key, Arrays.asList(values)));
         return map;
+    }
+
+    /**
+     * Retrieves the bearer token from the HTTP context.
+     * <p>
+     * This method attempts to extract the bearer token from the HTTP request
+     * headers.
+     * The bearer token is typically used for authentication and authorization
+     * purposes.
+     * </p>
+     * <p>
+     * The method returns an {@link Optional} containing the bearer token if it is
+     * present
+     * in the request headers. If the bearer token is not found, an empty
+     * {@link Optional}
+     * is returned.
+     * </p>
+     * 
+     * @return an {@link Optional} containing the bearer token if present, otherwise
+     *         an empty {@link Optional}
+     */
+    public Optional<String> bearerToken() {
+        String authHeader = req.getHeader("Authorization");
+        if (authHeader != null && authHeader.toLowerCase().startsWith("bearer ")) {
+            return Optional.of(authHeader.substring(7).trim());
+        }
+        return Optional.empty();
     }
 
     /**
