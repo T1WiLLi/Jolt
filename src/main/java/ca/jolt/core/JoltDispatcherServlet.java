@@ -6,6 +6,7 @@ import ca.jolt.filters.FilterConfiguration;
 import ca.jolt.filters.JoltFilter;
 import ca.jolt.http.HttpStatus;
 import ca.jolt.injector.JoltContainer;
+import ca.jolt.routing.LifecycleEntry;
 import ca.jolt.routing.MimeInterpreter;
 import ca.jolt.routing.RouteHandler;
 import ca.jolt.routing.RouteMatch;
@@ -24,6 +25,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /**
  * The {@code JoltDispatcherServlet} is the main servlet responsible for
@@ -188,6 +190,19 @@ public final class JoltDispatcherServlet extends HttpServlet {
             }
         }
         return false;
+    }
+
+    private void executeBeforeHandlers(JoltHttpContext ctx) {
+        executeHandler(ctx, router.getBeforeHandlers().stream());
+    }
+
+    private void executeAfterHandlers(JoltHttpContext ctx) {
+        executeHandler(ctx, router.getAfterHandlers().stream());
+    }
+
+    private void executeHandler(JoltHttpContext ctx, Stream<LifecycleEntry> handlers) {
+        handlers.filter(entry -> entry.matches(ctx.requestPath()))
+                .forEach(entry -> entry.execute(ctx));
     }
 
     /**

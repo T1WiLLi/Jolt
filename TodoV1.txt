@@ -5,6 +5,21 @@ CLI to generate basic project. in JS
 
 make a function in the form that 'updateEntity(Class<T> clazz, T entity); and it basically check if a field in the form, is also a field of the entity, it updates it , if not, it just ignore it. and return updated entity
 
+add before and after handler such as : 
+
+before((ctx) -> {
+
+}); 
+
+after((ctx) -> {
+
+});
+
+but you can also precise a path : 
+
+before("/path", (ctx) -> {});
+after("/path", (ctx) -> {});
+
 Package to easily integrate docker (and potentially later docker-compose to have a more complex setup).
 
 Rewrite the documentation.

@@ -1,18 +1,25 @@
 package ca.jolt.core;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.Locale;
 import java.util.Stack;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.logging.Logger;
 
 import ca.jolt.exceptions.DuplicateRouteException;
 import ca.jolt.injector.annotation.JoltBean;
+import ca.jolt.injector.type.BeanScope;
+import ca.jolt.injector.type.InitializationMode;
+import ca.jolt.routing.LifecycleEntry;
 import ca.jolt.routing.Route;
 import ca.jolt.routing.RouteHandler;
 import ca.jolt.routing.RouteMatch;
+import ca.jolt.routing.context.JoltHttpContext;
+import lombok.Getter;
 
 /**
  * The {@code Router} is responsible for managing and matching routes
@@ -39,10 +46,22 @@ import ca.jolt.routing.RouteMatch;
  * @author William Beaudin
  * @since 1.0
  */
-@JoltBean
+@JoltBean(value = "Router", scope = BeanScope.SINGLETON, initialization = InitializationMode.EAGER)
 public final class Router {
 
     private static final Logger logger = Logger.getLogger(Router.class.getName());
+
+    /**
+     * Internal list storing all before handlers for lifecycle.
+     */
+    @Getter
+    private final List<LifecycleEntry> beforeHandlers = new ArrayList<>();
+
+    /**
+     * Internal list storing all after handlers for lifecycle.
+     */
+    @Getter
+    private final List<LifecycleEntry> afterHandlers = new ArrayList<>();
 
     /**
      * Internal list storing all registered routes.
@@ -61,6 +80,70 @@ public final class Router {
      */
     public Router() {
         // Empty constructor for DI.
+    }
+
+    /**
+     * Registers a before-handler that applies to all routes.
+     *
+     * @param handler the handler to execute before any route handler is invoked.
+     *                The handler receives a
+     *                {@link ca.jolt.routing.context.JoltHttpContext}
+     *                for the current request.
+     * @return the current Router instance (for fluent chaining).
+     */
+    public Router before(Consumer<JoltHttpContext> handler) {
+        beforeHandlers.add(new LifecycleEntry(null, handler));
+        return this;
+    }
+
+    /**
+     * Registers a before-handler that applies only to the specified routes.
+     *
+     * @param handler the handler to execute before the route handler is invoked.
+     *                The handler receives a
+     *                {@link ca.jolt.routing.context.JoltHttpContext}
+     *                for the current request.
+     * @param routes  one or more route paths (e.g., "/doc", "/api") where the
+     *                handler should be applied.
+     *                If the current request's path matches one of these, the
+     *                handler is executed.
+     * @return the current Router instance (for fluent chaining).
+     */
+    public Router before(Consumer<JoltHttpContext> handler, String... routes) {
+        beforeHandlers.add(new LifecycleEntry(Arrays.asList(routes), handler));
+        return this;
+    }
+
+    /**
+     * Registers an after-handler that applies to all routes.
+     *
+     * @param handler the handler to execute after any route handler is invoked.
+     *                The handler receives a
+     *                {@link ca.jolt.routing.context.JoltHttpContext}
+     *                for the current request.
+     * @return the current Router instance (for fluent chaining).
+     */
+    public Router after(Consumer<JoltHttpContext> handler) {
+        afterHandlers.add(new LifecycleEntry(null, handler));
+        return this;
+    }
+
+    /**
+     * Registers an after-handler that applies only to the specified routes.
+     *
+     * @param routes  one or more route paths (e.g., "/doc", "/api") where the
+     *                handler should be applied.
+     *                If the current request's path matches one of these, the
+     *                handler is executed.
+     * @param handler the handler to execute after the route handler is invoked.
+     *                The handler receives a
+     *                {@link ca.jolt.routing.context.JoltHttpContext}
+     *                for the current request.
+     * @return the current Router instance (for fluent chaining).
+     */
+    public Router after(Consumer<JoltHttpContext> handler, String... routes) {
+        afterHandlers.add(new LifecycleEntry(Arrays.asList(routes), handler));
+        return this;
     }
 
     /**

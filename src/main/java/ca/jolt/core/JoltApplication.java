@@ -1,5 +1,6 @@
 package ca.jolt.core;
 
+import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
@@ -8,6 +9,7 @@ import ca.jolt.injector.JoltContainer;
 import ca.jolt.logging.LogConfigurator;
 import ca.jolt.logging.StartupLog;
 import ca.jolt.routing.RouteHandler;
+import ca.jolt.routing.context.JoltHttpContext;
 import ca.jolt.server.TomcatServer;
 import ca.jolt.server.config.ConfigurationManager;
 import ca.jolt.server.config.ServerConfig;
@@ -175,6 +177,66 @@ public abstract class JoltApplication {
      * {@link #launch(Class)} after the application is instantiated.
      */
     protected abstract void setup();
+
+    /**
+     * Registers a before-handler that applies to all routes.
+     *
+     * @param handler the handler to execute before any route handler is invoked.
+     *                The handler receives a
+     *                {@link ca.jolt.routing.context.JoltHttpContext}
+     *                for the current request.
+     * @return the current Router instance (for fluent chaining).
+     */
+    public static void before(Consumer<JoltHttpContext> handler) {
+        router.before(handler);
+    }
+
+    /**
+     * Registers a before-handler that applies only to the specified routes.
+     *
+     * @param handler the handler to execute before the route handler is invoked.
+     *                The handler receives a
+     *                {@link ca.jolt.routing.context.JoltHttpContext}
+     *                for the current request.
+     * @param routes  one or more route paths (e.g., "/doc", "/api") where the
+     *                handler should be applied.
+     *                If the current request's path matches one of these, the
+     *                handler is executed.
+     * @return the current Router instance (for fluent chaining).
+     */
+    public static void before(Consumer<JoltHttpContext> handler, String... routes) {
+        router.before(handler, routes);
+    }
+
+    /**
+     * Registers an after-handler that applies to all routes.
+     *
+     * @param handler the handler to execute after any route handler is invoked.
+     *                The handler receives a
+     *                {@link ca.jolt.routing.context.JoltHttpContext}
+     *                for the current request.
+     * @return the current Router instance (for fluent chaining).
+     */
+    public static void after(Consumer<JoltHttpContext> handler) {
+        router.after(handler);
+    }
+
+    /**
+     * Registers an after-handler that applies only to the specified routes.
+     *
+     * @param routes  one or more route paths (e.g., "/doc", "/api") where the
+     *                handler should be applied.
+     *                If the current request's path matches one of these, the
+     *                handler is executed.
+     * @param handler the handler to execute after the route handler is invoked.
+     *                The handler receives a
+     *                {@link ca.jolt.routing.context.JoltHttpContext}
+     *                for the current request.
+     * @return the current Router instance (for fluent chaining).
+     */
+    public static void after(Consumer<JoltHttpContext> handler, String... routes) {
+        router.after(handler, routes);
+    }
 
     /**
      * Defines an HTTP GET route. The {@code handler} is used to process incoming
