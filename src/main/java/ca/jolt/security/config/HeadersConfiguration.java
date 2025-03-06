@@ -1,9 +1,9 @@
 package ca.jolt.security.config;
 
-import ca.jolt.security.policy.policies.FrameOptionsPolicy;
-import ca.jolt.security.policy.policies.HstsPolicy;
-import ca.jolt.security.policy.policies.ReferrerPolicy;
-import ca.jolt.security.policy.policies.XssProtectionPolicy;
+import ca.jolt.security.policies.FrameOptionsPolicy;
+import ca.jolt.security.policies.HstsPolicy;
+import ca.jolt.security.policies.ReferrerPolicy;
+import ca.jolt.security.policies.XssProtectionPolicy;
 import lombok.Getter;
 
 /**

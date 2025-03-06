@@ -1,4 +1,4 @@
-package ca.jolt.security.policy.policies;
+package ca.jolt.security.policies;
 
 import lombok.Getter;
 
