@@ -7,7 +7,6 @@ package ca.jolt.http;
  *
  * <p>
  * Example usage:
- * </p>
  * 
  * <pre>{@code
  * HttpStatus status = HttpStatus.OK;
@@ -19,7 +18,6 @@ package ca.jolt.http;
  * <p>
  * To convert a numeric status code to an enum constant, you can use
  * {@link #fromCode(int)}:
- * </p>
  * 
  * <pre>{@code
  * HttpStatus status404 = HttpStatus.fromCode(404);
@@ -287,7 +285,6 @@ public enum HttpStatus {
      * phrase.
      * <p>
      * For instance, {@link #OK} returns "200 OK".
-     * </p>
      *
      * @return
      *         A string in the format "{code} {reason}".

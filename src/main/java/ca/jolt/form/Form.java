@@ -18,6 +18,7 @@ import ca.jolt.exceptions.FormConversionException;
 
 /**
  * A container for form fields, field values, and their associated validators.
+ * <p>
  * This class orchestrates the validation process—both synchronous and
  * asynchronous—by delegating to each field's {@link FieldValidator}.
  * <p>
@@ -30,15 +31,12 @@ import ca.jolt.exceptions.FormConversionException;
  * {@link #verifyAsync()}.</li>
  * <li>Track validation errors in a dedicated map.</li>
  * </ul>
- * </p>
- *
  * <p>
  * <strong>Usage Example:</strong>
- * </p>
  * 
  * <pre>{@code
- * 
- * Form form = new Form(); // You can also do : ctx.queryToForm() or even ctx.bodyToForm()
+ *
+ * Form form = new Form(); // You can also do: ctx.queryToForm() or ctx.bodyToForm()
  * form.setValue("username", "john_doe");
  *
  * form.field("username")
@@ -56,7 +54,7 @@ import ca.jolt.exceptions.FormConversionException;
  * @see FieldValidator
  * @see Rule
  * @see AsyncRule
- * @author William Beaudin
+ * @author William
  * @since 1.0
  */
 public final class Form {
@@ -90,7 +88,6 @@ public final class Form {
      * <p>
      * {@code {field}} is replaced by the field name, and {@code {message}}
      * is replaced by the validation error message.
-     * </p>
      */
     private String errorTemplate = "{field}: {message}";
 
@@ -102,9 +99,8 @@ public final class Form {
     /**
      * Constructs a new {@code Form} with optional initial field data.
      *
-     * @param initialData
-     *                    A map of initial field data, or {@code null} for an empty
-     *                    form.
+     * @param initialData A map of initial field data, or {@code null} for an empty
+     *                    form
      */
     public Form(Map<String, String> initialData) {
         if (initialData != null) {
@@ -124,10 +120,8 @@ public final class Form {
     /**
      * Retrieves (or creates) a {@link FieldValidator} for the specified field name.
      *
-     * @param fieldName
-     *                  The name of the field to be validated.
-     * @return
-     *         The associated {@link FieldValidator}.
+     * @param fieldName The name of the field to be validated
+     * @return The associated {@link FieldValidator}
      */
     public FieldValidator field(String fieldName) {
         fieldValidators.computeIfAbsent(fieldName, name -> new FieldValidator(name, this));
@@ -137,12 +131,9 @@ public final class Form {
     /**
      * Sets (or updates) the value for the specified field in this form.
      *
-     * @param fieldName
-     *                  The field name.
-     * @param value
-     *                  The field value as a string.
-     * @return
-     *         This {@code Form} object (for fluent chaining).
+     * @param fieldName The field name
+     * @param value     The field value as a string
+     * @return This {@code Form} object (for fluent chaining)
      */
     public Form setValue(String fieldName, String value) {
         fieldValues.put(fieldName, value);
@@ -155,13 +146,12 @@ public final class Form {
      * <p>
      * Any fields whose names are included in {@code excludedFields} will be
      * skipped and assumed valid. The method logs the verification results and,
-     * if validation passes and a success callback is registered, it executes the
-     * callback.
-     * </p>
+     * if validation passes and a success callback is registered, it executes
+     * the callback.
      *
-     * @param excludedFields Field names to skip during validation.
+     * @param excludedFields Field names to skip during validation
      * @return {@code true} if all non-excluded fields pass validation;
-     *         {@code false} otherwise.
+     *         {@code false} otherwise
      */
     public boolean verify(String... excludedFields) {
         errors.clear();
@@ -220,17 +210,16 @@ public final class Form {
      * This method:
      * <ul>
      * <li>Clears any existing errors.</li>
-     * <li>Collects asynchronous validations only for fields not listed in
-     * {@code excludedFields}.</li>
+     * <li>Collects asynchronous validations only for fields not listed
+     * in {@code excludedFields}.</li>
      * <li>Runs synchronous validation on non‑excluded fields.</li>
-     * <li>Logs the process and returns a CompletableFuture that resolves to true
-     * only if both sync and async validations pass.</li>
+     * <li>Logs the process and returns a CompletableFuture that resolves
+     * to true only if both sync and async validations pass.</li>
      * </ul>
-     * </p>
      *
-     * @param excludedFields Field names to skip during validation.
+     * @param excludedFields Field names to skip during validation
      * @return A CompletableFuture that resolves to true if all validations pass;
-     *         false otherwise.
+     *         false otherwise
      */
     public CompletableFuture<Boolean> verifyAsync(String... excludedFields) {
         errors.clear();
@@ -272,8 +261,10 @@ public final class Form {
      * Helper method that gathers all {@link AsyncRule} instances from a validator
      * and schedules them.
      */
-    private void addAsyncValidationFutures(List<CompletableFuture<Boolean>> futures, String fieldName,
-            FieldValidator validator, String value) {
+    private void addAsyncValidationFutures(List<CompletableFuture<Boolean>> futures,
+            String fieldName,
+            FieldValidator validator,
+            String value) {
         for (Rule rule : validator.getRules()) {
             if (rule instanceof AsyncRule asyncRule) {
                 futures.add(asyncRule.validateAsync(value)
@@ -291,8 +282,7 @@ public final class Form {
      * Returns a map of all errors produced during the last validation call
      * ({@link #verify()} or {@link #verifyAsync()}).
      *
-     * @return
-     *         A map from field names to error messages.
+     * @return A map from field names to error messages
      */
     public Map<String, String> getErrors() {
         return errors;
@@ -302,10 +292,8 @@ public final class Form {
      * Returns the error message for the given field, or {@code null} if
      * no error is present.
      *
-     * @param fieldName
-     *                  The name of the field.
-     * @return
-     *         The error message, or {@code null} if no error exists.
+     * @param fieldName The name of the field
+     * @return The error message, or {@code null} if no error exists
      */
     public String getError(String fieldName) {
         return errors.get(fieldName);
@@ -317,10 +305,8 @@ public final class Form {
      * Each error is a string where <code>{field}</code> is replaced by the
      * field name and <code>{message}</code> is replaced by the associated
      * error message.
-     * </p>
      *
-     * @return
-     *         A list of formatted error strings.
+     * @return A list of formatted error strings
      */
     public List<String> getAllErrors() {
         List<String> allErrors = new ArrayList<>();
@@ -336,10 +322,8 @@ public final class Form {
     /**
      * Manually adds an error for the given field.
      *
-     * @param fieldName
-     *                     The name of the field that failed validation.
-     * @param errorMessage
-     *                     The error message describing why validation failed.
+     * @param fieldName    The name of the field that failed validation
+     * @param errorMessage The error message describing why validation failed
      */
     public void addError(String fieldName, String errorMessage) {
         errors.put(fieldName, errorMessage);
@@ -348,10 +332,8 @@ public final class Form {
     /**
      * Retrieves the raw (string) value for the given field name.
      *
-     * @param fieldName
-     *                  The field name.
-     * @return
-     *         The string value, or {@code null} if not set.
+     * @param fieldName The field name
+     * @return The string value, or {@code null} if not set
      */
     public String getValue(String fieldName) {
         return fieldValues.get(fieldName);
@@ -360,13 +342,10 @@ public final class Form {
     /**
      * Retrieves and parses the value of a field as an {@link Integer}.
      *
-     * @param fieldName
-     *                  The field name.
-     * @return
-     *         The parsed integer.
-     * @throws FormConversionException
-     *                                 If the value is missing or not parseable as
-     *                                 an int.
+     * @param fieldName The field name
+     * @return The parsed integer
+     * @throws FormConversionException If the value is missing or not parseable as
+     *                                 an int
      */
     public Integer getValueAsInt(String fieldName) {
         String value = getValue(fieldName);
@@ -385,13 +364,10 @@ public final class Form {
     /**
      * Retrieves and parses the value of a field as a {@link Double}.
      *
-     * @param fieldName
-     *                  The field name.
-     * @return
-     *         The parsed double.
-     * @throws FormConversionException
-     *                                 If the value is missing or not parseable as a
-     *                                 double.
+     * @param fieldName The field name
+     * @return The parsed double
+     * @throws FormConversionException If the value is missing or not parseable as a
+     *                                 double
      */
     public Double getValueAsDouble(String fieldName) {
         String value = getValue(fieldName);
@@ -410,12 +386,9 @@ public final class Form {
     /**
      * Retrieves and parses the value of a field as a {@link Boolean}.
      *
-     * @param fieldName
-     *                  The field name.
-     * @return
-     *         The parsed boolean.
-     * @throws FormConversionException
-     *                                 If the value is missing (null or empty).
+     * @param fieldName The field name
+     * @return The parsed boolean
+     * @throws FormConversionException If the value is missing (null or empty)
      */
     public Boolean getValueAsBoolean(String fieldName) {
         String value = getValue(fieldName);
@@ -431,12 +404,9 @@ public final class Form {
      * either a custom date pattern (if registered) or {@code "yyyy-MM-dd"} by
      * default.
      *
-     * @param fieldName
-     *                  The field name.
-     * @return
-     *         The parsed date.
-     * @throws FormConversionException
-     *                                 If the value is missing or cannot be parsed.
+     * @param fieldName The field name
+     * @return The parsed date
+     * @throws FormConversionException If the value is missing or cannot be parsed
      */
     public LocalDate getValueAsDate(String fieldName) {
         String value = getValue(fieldName);
@@ -458,14 +428,10 @@ public final class Form {
      * using the specified date pattern rather than any pattern in
      * {@link #datePatterns}.
      *
-     * @param fieldName
-     *                  The field name.
-     * @param pattern
-     *                  The date pattern (e.g., "MM/dd/yyyy").
-     * @return
-     *         The parsed date.
-     * @throws FormConversionException
-     *                                 If the value is missing or cannot be parsed.
+     * @param fieldName The field name
+     * @param pattern   The date pattern (e.g., "MM/dd/yyyy")
+     * @return The parsed date
+     * @throws FormConversionException If the value is missing or cannot be parsed
      */
     public LocalDate getValueAsDate(String fieldName, String pattern) {
         String value = getValue(fieldName);
@@ -485,10 +451,8 @@ public final class Form {
      * Registers a custom date format pattern for the specified field,
      * overriding the default "yyyy-MM-dd" used by {@link #getValueAsDate(String)}.
      *
-     * @param fieldName
-     *                  The field name that will use the pattern.
-     * @param pattern
-     *                  The date format pattern (e.g., "yyyy/MM/dd").
+     * @param fieldName The field name that will use the pattern
+     * @param pattern   The date format pattern (e.g., "yyyy/MM/dd")
      */
     void registerDatePattern(String fieldName, String pattern) {
         datePatterns.put(fieldName, pattern);
@@ -497,17 +461,15 @@ public final class Form {
     /**
      * Attempts to build an instance of the specified class from the form data.
      * It converts the form's field values map into a JSON string and then
-     * deserializes
-     * that JSON into the target entity.
+     * deserializes that JSON into the target entity.
      * <p>
      * Fields specified in {@code ignoreFields} are omitted from the conversion.
-     * </p>
      *
-     * @param clazz        the class to instantiate.
-     * @param ignoreFields field names to exclude from conversion.
-     * @param <T>          the type of the class.
-     * @return an instance of T populated with the form's field values.
-     * @throws FormConversionException if conversion fails.
+     * @param <T>          The type of the class
+     * @param clazz        The class to instantiate
+     * @param ignoreFields Field names to exclude from conversion
+     * @return An instance of T populated with the form's field values
+     * @throws FormConversionException If conversion fails
      */
     public <T> T buildEntity(Class<T> clazz, String... ignoreFields) {
         ObjectMapper mapper = new ObjectMapper();
@@ -526,10 +488,10 @@ public final class Form {
     /**
      * Convenience method to build an entity without excluding any fields.
      *
-     * @param clazz the class to instantiate.
-     * @param <T>   the type of the class.
-     * @return an instance of T populated with the form's field values.
-     * @throws FormConversionException if conversion fails.
+     * @param <T>   The type of the class
+     * @param clazz The class to instantiate
+     * @return An instance of T populated with the form's field values
+     * @throws FormConversionException If conversion fails
      */
     public <T> T buildEntity(Class<T> clazz) {
         return buildEntity(clazz, new String[0]);
@@ -540,10 +502,8 @@ public final class Form {
      * allowing a custom template string with <code>{field}</code> and
      * <code>{message}</code> placeholders.
      *
-     * @param template
-     *                 The template for formatting error strings.
-     * @return
-     *         This {@code Form} (for fluent chaining).
+     * @param template The template for formatting error strings
+     * @return This {@code Form} (for fluent chaining)
      */
     public Form setErrorTemplate(String template) {
         this.errorTemplate = template;
@@ -553,10 +513,8 @@ public final class Form {
     /**
      * Specifies a callback to run if the form validation succeeds.
      *
-     * @param callback
-     *                 A {@link Runnable} to execute upon successful validation.
-     * @return
-     *         This {@code Form} (for fluent chaining).
+     * @param callback A {@link Runnable} to execute upon successful validation
+     * @return This {@code Form} (for fluent chaining)
      */
     public Form onSuccess(Runnable callback) {
         this.successCallback = callback;
@@ -567,12 +525,9 @@ public final class Form {
      * Creates a quick, single-field {@code Form} and returns a
      * {@link FieldValidator} for it, useful for one-off validations.
      *
-     * @param fieldName
-     *                  The name of the field being validated.
-     * @param value
-     *                  The initial value for that field.
-     * @return
-     *         A new {@link FieldValidator} for chaining additional rules.
+     * @param fieldName The name of the field being validated
+     * @param value     The initial value for that field
+     * @return A new {@link FieldValidator} for chaining additional rules
      */
     public static FieldValidator validateField(String fieldName, String value) {
         Form form = new Form();

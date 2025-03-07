@@ -5,29 +5,30 @@ import java.time.format.DateTimeFormatter;
 import java.util.regex.Pattern;
 
 /**
- * A utility class containing static factory methods that produce common
- * {@link Rule} instances. This class offers prebuilt rules such as:
- * <ul>
- * <li>{@link #required(String)} for non-empty fields.</li>
- * <li>{@link #minLength(int, String)} and {@link #maxLength(int, String)}
- * for length constraints.</li>
- * <li>{@link #email(String)} for email format checking.</li>
- * <li>{@link #phoneNumber(String)} for phone format checking.</li>
- * <li>{@link #creditCard(String)} for Luhn algorithm checks.</li>
- * <li>{@link #regex(String, String, String)} for a custom regular expression
- * rule.</li>
- * <li>And more, including numeric comparisons and date parsing checks.</li>
- * </ul>
- *
+ * Provides static factory methods that produce common {@link Rule} instances.
  * <p>
- * This class is not meant to be instantiated—its methods should be called
- * directly (e.g., {@code BaseRules.required("Field is required")}).
- * </p>
+ * Offers prebuilt rules such as:
+ * <ul>
+ * <li>{@link #required(String)} for non-empty fields</li>
+ * <li>{@link #minLength(int, String)} and {@link #maxLength(int, String)}
+ * for string length constraints</li>
+ * <li>{@link #email(String)} for email format validation</li>
+ * <li>{@link #phoneNumber(String)} for phone number format validation</li>
+ * <li>{@link #creditCard(String)} for Luhn algorithm checks</li>
+ * <li>{@link #regex(String, String, String)} for custom regular
+ * expressions</li>
+ * <li>And more, including numeric comparisons and date parsing checks</li>
+ * </ul>
+ * <p>
+ * This class is not intended for instantiation—call its methods directly:
+ * 
+ * <pre>{@code
+ * Rule rule = BaseRules.required("Field is required");
+ * }</pre>
  *
  * @see Rule
  * @see Form
  * @see FieldValidator
- * @author William Beaudin
  * @since 1.0
  */
 final class BaseRules {
@@ -36,17 +37,18 @@ final class BaseRules {
      * Private constructor to prevent instantiation.
      */
     BaseRules() {
-        // Prevent instantiation.
     }
 
     /**
-     * Produces a rule ensuring the field is neither {@code null} nor empty.
+     * Ensures the field is neither {@code null} nor empty.
+     *
+     * @param errorMessage The error message to use if validation fails
+     * @return A {@link Rule} enforcing non-null, non-empty fields
      */
     static Rule required(String errorMessage) {
         return Rule.custom((data) -> {
             if (data == null)
                 return false;
-            // If numeric, allow "0" or "0.0" etc.
             if (isNumeric(data))
                 return true;
             return !data.trim().isEmpty();
@@ -54,21 +56,32 @@ final class BaseRules {
     }
 
     /**
-     * Produces a rule ensuring the field is at least {@code min} characters.
+     * Enforces a minimum string length.
+     *
+     * @param min          The minimum length
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing the specified minimum length
      */
     static Rule minLength(int min, String errorMessage) {
         return Rule.custom((data) -> data != null && data.length() >= min, errorMessage);
     }
 
     /**
-     * Produces a rule ensuring the field is at most {@code max} characters.
+     * Enforces a maximum string length.
+     *
+     * @param max          The maximum length
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing the specified maximum length
      */
     static Rule maxLength(int max, String errorMessage) {
         return Rule.custom((data) -> data != null && data.length() <= max, errorMessage);
     }
 
     /**
-     * Produces a rule verifying valid email format via a regular expression.
+     * Validates an email address format.
+     *
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} checking for a valid email format
      */
     static Rule email(String errorMessage) {
         String emailRegex = "^[a-zA-Z0-9_+&*-]+(?:\\.[a-zA-Z0-9_+&*-]+)*@(?:[a-zA-Z0-9-]+\\.)+[a-zA-Z]{2,7}$";
@@ -76,29 +89,41 @@ final class BaseRules {
     }
 
     /**
-     * Produces a rule verifying only alphanumeric characters.
+     * Ensures the field contains only alphanumeric characters.
+     *
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing alphanumeric input
      */
     static Rule alphanumeric(String errorMessage) {
         return regex("^[a-zA-Z0-9]+$", errorMessage, "");
     }
 
     /**
-     * Produces a rule verifying phone numbers that may include plus signs,
-     * spaces, dashes, and parentheses (7-20 digits in length).
+     * Validates phone numbers with optional plus signs, spaces,
+     * dashes, and parentheses (7-20 digits).
+     *
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing the specified phone format
      */
     static Rule phoneNumber(String errorMessage) {
         return regex("^\\+?[0-9\\s-()]{7,20}$", errorMessage, "");
     }
 
     /**
-     * Produces a rule verifying US zip codes (5-digit or 5+4-digit format).
+     * Validates US ZIP code format (5-digit or 5+4-digit).
+     *
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing the ZIP code format
      */
     static Rule zipCode(String errorMessage) {
         return regex("^[0-9]{5}(?:-[0-9]{4})?$", errorMessage, "");
     }
 
     /**
-     * Produces a rule verifying simple URL format (supports http, https, ftp).
+     * Validates simple URL formats (supports http, https, ftp).
+     *
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing basic URL format validation
      */
     static Rule url(String errorMessage) {
         String urlRegex = "^(https?|ftp)://[^\\s/$.?#].[^\\s]*$";
@@ -106,8 +131,10 @@ final class BaseRules {
     }
 
     /**
-     * Produces a rule that attempts to parse the field value as a date using
-     * the ISO-8601 pattern.
+     * Attempts to parse the field value as a date (ISO-8601).
+     *
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing ISO-8601 date format
      */
     static Rule date(String errorMessage) {
         return Rule.custom((data) -> {
@@ -124,8 +151,11 @@ final class BaseRules {
     }
 
     /**
-     * Produces a rule that attempts to parse the field value as a date using
-     * the provided pattern.
+     * Attempts to parse the field value as a date using a custom pattern.
+     *
+     * @param pattern      The date pattern (e.g. "MM/dd/yyyy")
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing the specified date format
      */
     static Rule date(String pattern, String errorMessage) {
         return Rule.custom((data) -> {
@@ -142,8 +172,11 @@ final class BaseRules {
     }
 
     /**
-     * Produces a rule ensuring that the field value passes a Luhn check
-     * for credit card numbers (13-19 digits).
+     * Performs a Luhn check on a numeric string to validate credit card numbers
+     * (13-19 digits).
+     *
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing a valid credit card number
      */
     static Rule creditCard(String errorMessage) {
         return Rule.custom((data) -> {
@@ -171,9 +204,11 @@ final class BaseRules {
     }
 
     /**
-     * Produces a rule ensuring a "strong" password with at least one
-     * uppercase letter, one lowercase letter, one digit, one special character,
-     * and a minimum length of 8 characters.
+     * Requires at least one uppercase letter, one lowercase letter,
+     * one digit, one special character, and a minimum length of 8.
+     *
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing "strong" password requirements
      */
     static Rule strongPassword(String errorMessage) {
         return Rule.custom((data) -> {
@@ -201,15 +236,21 @@ final class BaseRules {
     }
 
     /**
-     * Produces a rule verifying a valid IPv4 address format.
+     * Validates a standard IPv4 address.
+     *
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing IPv4 format
      */
     static Rule ipAddress(String errorMessage) {
         return regex("^(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?:\\.(?!$)|$)){4}$", errorMessage, "");
     }
 
     /**
-     * Produces a rule ensuring the numeric value is less than the specified
-     * threshold.
+     * Ensures the numeric value is less than a specified threshold.
+     *
+     * @param threshold    The upper limit
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing a maximum numeric value
      */
     static Rule lowerThan(Number threshold, String errorMessage) {
         return Rule.custom((data) -> {
@@ -223,8 +264,11 @@ final class BaseRules {
     }
 
     /**
-     * Produces a rule ensuring the numeric value is less than or equal to the
-     * specified threshold.
+     * Ensures the numeric value is less than or equal to a specified threshold.
+     *
+     * @param threshold    The upper limit (inclusive)
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing a maximum numeric value (inclusive)
      */
     static Rule lowerEqualsThan(Number threshold, String errorMessage) {
         return Rule.custom((data) -> {
@@ -238,8 +282,11 @@ final class BaseRules {
     }
 
     /**
-     * Produces a rule ensuring the numeric value is greater than the specified
-     * threshold.
+     * Ensures the numeric value is greater than a specified threshold.
+     *
+     * @param threshold    The lower limit
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing a minimum numeric value
      */
     static Rule greaterThan(Number threshold, String errorMessage) {
         return Rule.custom((data) -> {
@@ -253,8 +300,11 @@ final class BaseRules {
     }
 
     /**
-     * Produces a rule ensuring the numeric value is greater than or equal to the
-     * specified threshold.
+     * Ensures the numeric value is greater than or equal to a specified threshold.
+     *
+     * @param threshold    The lower limit (inclusive)
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing a minimum numeric value (inclusive)
      */
     static Rule greaterEqualsThan(Number threshold, String errorMessage) {
         return Rule.custom((data) -> {
@@ -267,6 +317,15 @@ final class BaseRules {
         }, errorMessage);
     }
 
+    /**
+     * Ensures the numeric value is between the specified minimum and maximum,
+     * inclusive.
+     *
+     * @param min          The lower bound (inclusive)
+     * @param max          The upper bound (inclusive)
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing a numeric range
+     */
     static Rule clamp(Number min, Number max, String errorMessage) {
         return Rule.custom((data) -> {
             try {
@@ -279,15 +338,12 @@ final class BaseRules {
     }
 
     /**
-     * Produces a rule verifying the field matches a specified regular expression.
+     * Matches the field against a custom regular expression.
      *
-     * @param pattern
-     *                     The regex pattern string.
-     * @param errorMessage
-     *                     The error message on match failure.
-     * @param modifiers
-     *                     Optional string of regex flags (e.g., "i" for
-     *                     case-insensitivity).
+     * @param pattern      The regex pattern string
+     * @param errorMessage The error message if this rule fails
+     * @param modifiers    Optional flags (e.g., {@code "i"} for case-insensitive)
+     * @return A {@link Rule} enforcing the specified regex
      */
     static Rule regex(String pattern, String errorMessage, String modifiers) {
         return Rule.custom((data) -> {

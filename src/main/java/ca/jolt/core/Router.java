@@ -22,43 +22,39 @@ import ca.jolt.routing.context.JoltHttpContext;
 import lombok.Getter;
 
 /**
- * The {@code Router} is responsible for managing and matching routes
- * against HTTP method/path patterns within a Jolt application. It
- * supports the standard HTTP verbs ({@code GET}, {@code POST},
- * {@code PUT}, {@code DELETE}) and allows registering both
- * {@link RouteHandler} instances and {@link Supplier} objects as
- * route handlers. The router also allow for grouping via {@link #group(String)}
- * method for better organization.
- * 
+ * Manages and matches routes against HTTP method/path patterns
+ * within a Jolt application. Supports the standard HTTP verbs
+ * ({@code GET}, {@code POST}, {@code PUT}, {@code DELETE}) and
+ * allows registering both {@link RouteHandler} and {@link Supplier}
+ * as route handlers. Also supports grouping routes for organization
+ * via {@link #group(String, Runnable)}.
  * <p>
- * Routes are stored in an internal list, and this class provides
- * methods to determine which route should handle an incoming request
- * and which HTTP methods are allowed for a particular path.
- * Duplicate routes are prevented by {@link #addRoute(Route)}.
- * </p>
- * 
- * <p>
- * The router is exposed as a bean via the {@link JoltBean} annotation
- * so that it can be injected where needed, such as in {@code JoltApplication}
- * or {@code JoltDispatcherServlet}.
- * </p>
- * 
- * @author William Beaudin
+ * Routes are stored internally and checked against incoming
+ * requests to determine the correct handler. Duplicate routes
+ * (same method and path) throw a {@link DuplicateRouteException}.
+ * This router is exposed as a bean via {@link JoltBean} so it can
+ * be injected where needed (e.g., in {@code JoltApplication} or
+ * {@code JoltDispatcherServlet}).
+ *
+ * @author William
  * @since 1.0
  */
 @JoltBean(value = "Router", scope = BeanScope.SINGLETON, initialization = InitializationMode.EAGER)
 public final class Router {
 
+    /**
+     * The logger for this router.
+     */
     private static final Logger logger = Logger.getLogger(Router.class.getName());
 
     /**
-     * Internal list storing all before handlers for lifecycle.
+     * Internal list storing all "before" lifecycle handlers.
      */
     @Getter
     private final List<LifecycleEntry> beforeHandlers = new ArrayList<>();
 
     /**
-     * Internal list storing all after handlers for lifecycle.
+     * Internal list storing all "after" lifecycle handlers.
      */
     @Getter
     private final List<LifecycleEntry> afterHandlers = new ArrayList<>();
@@ -69,274 +65,196 @@ public final class Router {
     private final List<Route> routes = new ArrayList<>();
 
     /**
-     * Prefix for grouped routes.
+     * Maintains prefixes for grouped routes.
      */
-    private Stack<String> prefixes = new Stack<>();
+    private final Stack<String> prefixes = new Stack<>();
 
     /**
-     * Constructs a new {@code Router} with an empty list of routes.
-     * <p>
+     * Constructs a new {@code Router} with no pre-registered routes.
      * Primarily used by the dependency injection mechanism.
      */
     public Router() {
-        // Empty constructor for DI.
     }
 
     /**
-     * Registers a before-handler that applies to all routes.
+     * Registers a "before" handler that applies to all routes.
      *
-     * @param handler the handler to execute before any route handler is invoked.
-     *                The handler receives a
-     *                {@link ca.jolt.routing.context.JoltHttpContext}
-     *                for the current request.
-     * @return the current Router instance (for fluent chaining).
+     * @param handler A handler to run before each route handler.
+     *                Receives a {@link JoltHttpContext} for the current request.
      */
-    public Router before(Consumer<JoltHttpContext> handler) {
+    public void before(Consumer<JoltHttpContext> handler) {
         beforeHandlers.add(new LifecycleEntry(null, handler));
-        return this;
     }
 
     /**
-     * Registers a before-handler that applies only to the specified routes.
+     * Registers a "before" handler that applies only to the specified routes.
      *
-     * @param handler the handler to execute before the route handler is invoked.
-     *                The handler receives a
-     *                {@link ca.jolt.routing.context.JoltHttpContext}
-     *                for the current request.
-     * @param routes  one or more route paths (e.g., "/doc", "/api") where the
-     *                handler should be applied.
-     *                If the current request's path matches one of these, the
-     *                handler is executed.
-     * @return the current Router instance (for fluent chaining).
+     * @param handler A handler to run before each matching route.
+     *                Receives a {@link JoltHttpContext} for the current request.
+     * @param routes  One or more route paths (e.g. "/doc", "/api") where
+     *                the handler applies
      */
-    public Router before(Consumer<JoltHttpContext> handler, String... routes) {
+    public void before(Consumer<JoltHttpContext> handler, String... routes) {
         beforeHandlers.add(new LifecycleEntry(Arrays.asList(routes), handler));
-        return this;
     }
 
     /**
-     * Registers an after-handler that applies to all routes.
+     * Registers an "after" handler that applies to all routes.
      *
-     * @param handler the handler to execute after any route handler is invoked.
-     *                The handler receives a
-     *                {@link ca.jolt.routing.context.JoltHttpContext}
-     *                for the current request.
-     * @return the current Router instance (for fluent chaining).
+     * @param handler A handler to run after each route handler.
+     *                Receives a {@link JoltHttpContext} for the current request.
      */
-    public Router after(Consumer<JoltHttpContext> handler) {
+    public void after(Consumer<JoltHttpContext> handler) {
         afterHandlers.add(new LifecycleEntry(null, handler));
-        return this;
     }
 
     /**
-     * Registers an after-handler that applies only to the specified routes.
+     * Registers an "after" handler that applies only to the specified routes.
      *
-     * @param routes  one or more route paths (e.g., "/doc", "/api") where the
-     *                handler should be applied.
-     *                If the current request's path matches one of these, the
-     *                handler is executed.
-     * @param handler the handler to execute after the route handler is invoked.
-     *                The handler receives a
-     *                {@link ca.jolt.routing.context.JoltHttpContext}
-     *                for the current request.
-     * @return the current Router instance (for fluent chaining).
+     * @param handler A handler to run after each matching route.
+     *                Receives a {@link JoltHttpContext} for the current request.
+     * @param routes  One or more route paths (e.g. "/doc", "/api") where
+     *                the handler applies
      */
-    public Router after(Consumer<JoltHttpContext> handler, String... routes) {
+    public void after(Consumer<JoltHttpContext> handler, String... routes) {
         afterHandlers.add(new LifecycleEntry(Arrays.asList(routes), handler));
-        return this;
     }
 
     /**
      * Registers a new HTTP {@code GET} route.
      *
-     * @param path
-     *                The path pattern (potentially including placeholders such as
-     *                <code>{id:int}</code>).
-     * @param handler
-     *                A {@link RouteHandler} that processes the request and produces
-     *                a response.
-     * @return
-     *         The current {@code Router} instance, for fluent chaining.
-     * @throws DuplicateRouteException
-     *                                 If another route with the same HTTP method
-     *                                 and path is already registered.
+     * @param path    The path pattern, possibly with placeholders
+     * @param handler A {@link RouteHandler} to process the request
+     * @throws DuplicateRouteException If a route with the same method and path
+     *                                 exists
      */
-    public Router get(String path, RouteHandler handler) {
+    public void get(String path, RouteHandler handler) {
         addRoute(new Route("GET", fullPath(path), handler));
-        return this;
     }
 
     /**
-     * Registers a new HTTP {@code GET} route where the response is produced
-     * by a {@link Supplier} (useful for simple static responses).
+     * Registers a new HTTP {@code GET} route that returns a response
+     * from a {@link Supplier}.
      *
-     * @param path
-     *                 The path pattern to match.
-     * @param supplier
-     *                 A {@link Supplier} that returns a response object.
-     * @return
-     *         The current {@code Router} instance, for fluent chaining.
-     * @throws DuplicateRouteException
-     *                                 If another route with the same HTTP method
-     *                                 and path is already registered.
+     * @param path     The path pattern to match
+     * @param supplier A supplier providing the response object
+     * @throws DuplicateRouteException If a route with the same method and path
+     *                                 exists
      */
-    public Router get(String path, Supplier<Object> supplier) {
-        return get(path, RouteHandler.fromSupplier(supplier));
+    public void get(String path, Supplier<Object> supplier) {
+        get(path, RouteHandler.fromSupplier(supplier));
     }
 
     /**
      * Registers a new HTTP {@code POST} route.
      *
-     * @param path
-     *                The path pattern to match.
-     * @param handler
-     *                A {@link RouteHandler} that processes the request and produces
-     *                a response.
-     * @return
-     *         The current {@code Router} instance, for fluent chaining.
-     * @throws DuplicateRouteException
-     *                                 If another route with the same HTTP method
-     *                                 and path is already registered.
+     * @param path    The path pattern to match
+     * @param handler A {@link RouteHandler} to process the request
+     * @throws DuplicateRouteException If a route with the same method and path
+     *                                 exists
      */
-    public Router post(String path, RouteHandler handler) {
+    public void post(String path, RouteHandler handler) {
         addRoute(new Route("POST", fullPath(path), handler));
-        return this;
     }
 
     /**
-     * Registers a new HTTP {@code POST} route with a {@link Supplier} for the
-     * response.
+     * Registers a new HTTP {@code POST} route that returns a response
+     * from a {@link Supplier}.
      *
-     * @param path
-     *                 The path pattern to match.
-     * @param supplier
-     *                 A {@link Supplier} that returns a response object.
-     * @return
-     *         The current {@code Router} instance, for fluent chaining.
-     * @throws DuplicateRouteException
-     *                                 If another route with the same HTTP method
-     *                                 and path is already registered.
+     * @param path     The path pattern to match
+     * @param supplier A supplier providing the response object
+     * @throws DuplicateRouteException If a route with the same method and path
+     *                                 exists
      */
-    public Router post(String path, Supplier<Object> supplier) {
-        return post(path, RouteHandler.fromSupplier(supplier));
+    public void post(String path, Supplier<Object> supplier) {
+        post(path, RouteHandler.fromSupplier(supplier));
     }
 
     /**
      * Registers a new HTTP {@code PUT} route.
      *
-     * @param path
-     *                The path pattern to match.
-     * @param handler
-     *                A {@link RouteHandler} that processes the request and produces
-     *                a response.
-     * @return
-     *         The current {@code Router} instance, for fluent chaining.
-     * @throws DuplicateRouteException
-     *                                 If another route with the same HTTP method
-     *                                 and path is already registered.
+     * @param path    The path pattern to match
+     * @param handler A {@link RouteHandler} to process the request
+     * @throws DuplicateRouteException If a route with the same method and path
+     *                                 exists
      */
-    public Router put(String path, RouteHandler handler) {
+    public void put(String path, RouteHandler handler) {
         addRoute(new Route("PUT", fullPath(path), handler));
-        return this;
     }
 
     /**
-     * Registers a new HTTP {@code PUT} route with a {@link Supplier} for the
-     * response.
+     * Registers a new HTTP {@code PUT} route that returns a response
+     * from a {@link Supplier}.
      *
-     * @param path
-     *                 The path pattern to match.
-     * @param supplier
-     *                 A {@link Supplier} that returns a response object.
-     * @return
-     *         The current {@code Router} instance, for fluent chaining.
-     * @throws DuplicateRouteException
-     *                                 If another route with the same HTTP method
-     *                                 and path is already registered.
+     * @param path     The path pattern to match
+     * @param supplier A supplier providing the response object
+     * @throws DuplicateRouteException If a route with the same method and path
+     *                                 exists
      */
-    public Router put(String path, Supplier<Object> supplier) {
-        return put(path, RouteHandler.fromSupplier(supplier));
+    public void put(String path, Supplier<Object> supplier) {
+        put(path, RouteHandler.fromSupplier(supplier));
     }
 
     /**
      * Registers a new HTTP {@code DELETE} route.
      *
-     * @param path
-     *                The path pattern to match.
-     * @param handler
-     *                A {@link RouteHandler} that processes the request and produces
-     *                a response.
-     * @return
-     *         The current {@code Router} instance, for fluent chaining.
-     * @throws DuplicateRouteException
-     *                                 If another route with the same HTTP method
-     *                                 and path is already registered.
+     * @param path    The path pattern to match
+     * @param handler A {@link RouteHandler} to process the request
+     * @throws DuplicateRouteException If a route with the same method and path
+     *                                 exists
      */
-    public Router delete(String path, RouteHandler handler) {
+    public void delete(String path, RouteHandler handler) {
         addRoute(new Route("DELETE", fullPath(path), handler));
-        return this;
     }
 
     /**
-     * Registers a new HTTP {@code DELETE} route with a {@link Supplier} for the
-     * response.
+     * Registers a new HTTP {@code DELETE} route that returns a response
+     * from a {@link Supplier}.
      *
-     * @param path
-     *                 The path pattern to match.
-     * @param supplier
-     *                 A {@link Supplier} that returns a response object.
-     * @return
-     *         The current {@code Router} instance, for fluent chaining.
-     * @throws DuplicateRouteException
-     *                                 If another route with the same HTTP method
-     *                                 and path is already registered.
+     * @param path     The path pattern to match
+     * @param supplier A supplier providing the response object
+     * @throws DuplicateRouteException If a route with the same method and path
+     *                                 exists
      */
-    public Router delete(String path, Supplier<Object> supplier) {
-        return delete(path, RouteHandler.fromSupplier(supplier));
+    public void delete(String path, Supplier<Object> supplier) {
+        delete(path, RouteHandler.fromSupplier(supplier));
     }
 
     /**
      * Groups multiple routes under a common path prefix.
-     * 
+     * <p>
      * Example usage:
      * 
      * <pre>{@code
      * group("/api", () -> {
      *     get("/users", UserController::getAll);
      *     post("/users", UserController::create);
-     * 
      *     group("/admin", () -> {
      *         get("/dashboard", AdminController::dashboard);
      *     });
      * });
      * }</pre>
      *
-     * @param prefix The path prefix for all routes in this group.
-     * @param group  A lambda function where routes are registered.
-     * @return This {@code Router} instance for chaining.
+     * @param prefix The path prefix for the grouped routes
+     * @param group  A {@link Runnable} containing route definitions
      */
-    public Router group(String prefix, Runnable group) {
+    public void group(String prefix, Runnable group) {
         prefixes.push(normalizePath(getCurrentPrefix() + prefix));
         try {
             group.run();
         } finally {
             prefixes.pop();
         }
-        return this;
     }
 
     /**
      * Returns a list of HTTP methods allowed for the specified path.
      * <p>
-     * This is useful in scenarios such as responding to an
-     * <em>HTTP 405 Method Not Allowed</em> by indicating which methods are
-     * valid for the given path.
+     * Useful when responding with HTTP 405, indicating which methods
+     * are valid for a certain path.
      *
-     * @param path
-     *             The request path to check.
-     * @return
-     *         A list of allowed HTTP methods; may be empty if no matching route is
-     *         found.
+     * @param path The request path to check
+     * @return A list of valid HTTP methods, or an empty list if none match
      */
     public List<String> getAllowedMethods(String path) {
         List<String> allowed = new ArrayList<>();
@@ -349,20 +267,13 @@ public final class Router {
     }
 
     /**
-     * Matches the incoming HTTP method and path against the registered routes.
-     * <p>
-     * Internally, it loops over all routes, checks if the methods match,
-     * and then uses the route's {@link java.util.regex.Pattern} to see if
-     * the path is a match. If both match, a {@link RouteMatch} is returned.
+     * Matches the HTTP method and path against registered routes
+     * using a {@link java.util.regex.Pattern}. Returns a
+     * {@link RouteMatch} if successful or {@code null} if no match is found.
      *
-     * @param method
-     *                    The HTTP method, e.g., <code>"GET"</code> or
-     *                    <code>"POST"</code>.
-     * @param requestPath
-     *                    The request path, e.g., <code>"/user/123"</code>.
-     * @return
-     *         A {@link RouteMatch} containing the matched route and matcher
-     *         object, or {@code null} if none match.
+     * @param method      The HTTP method (e.g., {@code "GET"})
+     * @param requestPath The request path (e.g., {@code "/user/123"})
+     * @return A {@link RouteMatch} if a route is matched, otherwise {@code null}
      */
     public RouteMatch match(String method, String requestPath) {
         String upperMethod = method.toUpperCase(Locale.ROOT);
@@ -378,19 +289,13 @@ public final class Router {
     }
 
     /**
-     * Adds the specified {@link Route} to the internal list of routes.
-     * <p>
-     * Enforces uniqueness based on the route's HTTP method and path.
+     * Adds a route to the internal list, checking for duplicates by HTTP method
+     * and path.
      *
-     * @param route
-     *              The {@link Route} to add.
-     * @return
-     *         The current {@code Router} instance, for fluent chaining.
-     * @throws DuplicateRouteException
-     *                                 If another route with the same HTTP method
-     *                                 and path is already registered.
+     * @param route The route to add
+     * @throws DuplicateRouteException If a route with the same method/path exists
      */
-    private Router addRoute(Route route) {
+    private void addRoute(Route route) {
         for (Route r : routes) {
             if (r.getHttpMethod().equals(route.getHttpMethod()) && r.getPath().equals(route.getPath())) {
                 throw new DuplicateRouteException(
@@ -399,17 +304,35 @@ public final class Router {
         }
         routes.add(route);
         logger.info(() -> "Registered route: " + route.getHttpMethod() + " " + route.getPath());
-        return this;
     }
 
+    /**
+     * Combines the current prefix with the given path and normalizes it
+     * by reducing consecutive slashes.
+     *
+     * @param path A route path to combine with the current prefix
+     * @return A normalized path string
+     */
     private String fullPath(String path) {
         return normalizePath(getCurrentPrefix() + path);
     }
 
+    /**
+     * Retrieves the top prefix from the stack if available, or an empty
+     * string if none is present.
+     *
+     * @return The current route prefix
+     */
     private String getCurrentPrefix() {
         return prefixes.isEmpty() ? "" : prefixes.peek();
     }
 
+    /**
+     * Normalizes a path by converting consecutive slashes to a single slash.
+     *
+     * @param path The path to normalize
+     * @return A cleaned-up path
+     */
     private String normalizePath(String path) {
         return path.replaceAll("//+", "/");
     }

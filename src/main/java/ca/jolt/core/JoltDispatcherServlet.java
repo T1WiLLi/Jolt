@@ -28,56 +28,51 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /**
- * The {@code JoltDispatcherServlet} is the main servlet responsible for
- * dispatching incoming HTTP requests to the appropriate route handler in a
- * Jolt-based
- * application.
+ * The main servlet responsible for dispatching HTTP requests to the appropriate
+ * route handler in a Jolt-based application.
  * <p>
  * It is registered internally within the Jolt framework and uses:
  * <ul>
  * <li>A {@link Router} to match the incoming request path and method.</li>
- * <li>A {@link GlobalExceptionHandler} to handle any exceptions thrown during
+ * <li>A {@link GlobalExceptionHandler} to handle exceptions thrown during
  * request handling.</li>
  * </ul>
  * <p>
- * Typical usage involves the framework automatically configuring this servlet
- * and mapping it to handle all incoming requests. When a request arrives,
- * {@link #service(HttpServletRequest, HttpServletResponse)} is invoked,
- * which then:
+ * On receiving a request,
+ * {@link #service(HttpServletRequest, HttpServletResponse)}
+ * performs the following steps:
  * <ol>
  * <li>Attempts to serve static resources first.</li>
  * <li>Matches the request to a route.</li>
  * <li>Invokes the corresponding {@link RouteHandler}.</li>
- * <li>Serializes the response, either as text or JSON, unless the handler
- * itself has already committed the response.</li>
- * <li>Catches any thrown exception and delegates handling to the
+ * <li>Serializes the response as text or JSON, unless already committed.</li>
+ * <li>Catches exceptions and delegates handling to the
  * {@link GlobalExceptionHandler}.</li>
  * </ol>
- * </p>
  *
- * @author William Beaudin
+ * @author William
  * @since 1.0
  */
 public final class JoltDispatcherServlet extends HttpServlet {
 
+    /**
+     * The logger for this servlet.
+     */
     private static final Logger log = Logger.getLogger(JoltDispatcherServlet.class.getName());
 
     /**
-     * The {@link Router} used to match incoming requests to {@link RouteHandler}
-     * instances.
+     * Matches incoming requests to a {@link RouteHandler}.
      */
     private final transient Router router;
 
     /**
-     * A global exception handler that handles all exceptions thrown during
-     * request handling.
+     * Handles exceptions thrown during request handling.
      */
     private final transient GlobalExceptionHandler exceptionHandler;
 
     /**
-     * Constructs a new {@code JoltDispatcherServlet}, retrieving and storing the
-     * necessary components (router and exception handler) from the
-     * {@link JoltContainer} IoC container.
+     * Constructs a new {@code JoltDispatcherServlet}, retrieving necessary
+     * components from the {@link JoltContainer} IoC container.
      */
     public JoltDispatcherServlet() {
         this.router = JoltContainer.getInstance().getBean(Router.class);
@@ -87,31 +82,21 @@ public final class JoltDispatcherServlet extends HttpServlet {
     /**
      * Dispatches incoming HTTP requests to the appropriate route handler.
      * <p>
-     * This method:
+     * Steps:
      * <ul>
-     * <li>Extracts the request path using
-     * {@link #getPath(HttpServletRequest)}.</li>
-     * <li>Tries to serve static resources first.</li>
-     * <li>Finds a matching route via the {@link Router}.</li>
-     * <li>Executes the matched {@link RouteHandler} if found.</li>
-     * <li>Serializes the handler's response as text or JSON, if not already
-     * written.</li>
-     * <li>Logs the request and response details.</li>
-     * <li>Delegates exception handling to the {@link GlobalExceptionHandler}.</li>
+     * <li>Extracts the request path.</li>
+     * <li>Tries serving static resources.</li>
+     * <li>Finds a matching route and executes its {@link RouteHandler}.</li>
+     * <li>Serializes the handler's response if not already committed.</li>
+     * <li>Logs request/response details.</li>
+     * <li>Delegates exception handling to {@link GlobalExceptionHandler}.</li>
      * </ul>
      *
-     * @param req
-     *            The {@link HttpServletRequest} object that contains the client
-     *            request.
-     * @param res
-     *            The {@link HttpServletResponse} object that contains the servlet's
-     *            response.
-     * @throws ServletException
-     *                          If the request could not be handled due to a
-     *                          servlet-related error.
-     * @throws IOException
-     *                          If an input or output error is detected when the
-     *                          servlet handles the request.
+     * @param req The incoming {@link HttpServletRequest}
+     * @param res The outgoing {@link HttpServletResponse}
+     * @throws ServletException If a servlet-related error occurs
+     * @throws IOException      If an I/O error is detected while handling the
+     *                          request
      */
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
@@ -148,12 +133,11 @@ public final class JoltDispatcherServlet extends HttpServlet {
     }
 
     /**
-     * Prepares a context object to encapsulate request details and reduce
-     * parameter passing complexity.
+     * Prepares an internal request context object with extracted method and path.
      *
-     * @param req The HTTP servlet request
-     * @param res The HTTP servlet response
-     * @return A context object containing request details
+     * @param req The HTTP request
+     * @param res The HTTP response
+     * @return A new {@link RequestContext} containing request details
      */
     private RequestContext prepareRequestContext(HttpServletRequest req, HttpServletResponse res) {
         String method = req.getMethod();
@@ -165,10 +149,11 @@ public final class JoltDispatcherServlet extends HttpServlet {
     /**
      * Processes all registered filters for the current request.
      *
-     * @param context The request context containing request and response
-     * @return true if the request was handled by a filter, false otherwise
-     * @throws ServletException if a filter processing error occurs
-     * @throws IOException      if an I/O error occurs during filter processing
+     * @param context The request context
+     * @return {@code true} if the request was fully handled by a filter,
+     *         {@code false} otherwise
+     * @throws ServletException If a filter processing error occurs
+     * @throws IOException      If an I/O error occurs during filter processing
      */
     private boolean processFilters(RequestContext context) throws ServletException, IOException {
         FilterConfiguration filterConfig = JoltContainer.getInstance().getBean(FilterConfiguration.class);
@@ -313,16 +298,11 @@ public final class JoltDispatcherServlet extends HttpServlet {
     }
 
     /**
-     * Determines the request path by checking
-     * {@link HttpServletRequest#getPathInfo()}
-     * first, then falling back to {@link HttpServletRequest#getServletPath()} if
-     * necessary.
-     * If neither is present, returns {@code "/"} as a default.
+     * Determines the request path from {@link HttpServletRequest#getPathInfo()}
+     * or falls back to {@link HttpServletRequest#getServletPath()}.
      *
-     * @param req
-     *            The {@link HttpServletRequest} from which the path is extracted.
-     * @return
-     *         The normalized request path, never {@code null}.
+     * @param req The HTTP request
+     * @return The normalized path, or {@code "/"} if none is found
      */
     private String getPath(HttpServletRequest req) {
         String p = (req.getPathInfo() != null) ? req.getPathInfo() : req.getServletPath();
@@ -376,6 +356,14 @@ public final class JoltDispatcherServlet extends HttpServlet {
         final String method;
         final String path;
 
+        /**
+         * Creates a new {@link RequestContext} for a request/response pair.
+         *
+         * @param req    The HTTP request
+         * @param res    The HTTP response
+         * @param method The HTTP method (e.g., "GET", "POST")
+         * @param path   The request path
+         */
         RequestContext(HttpServletRequest req, HttpServletResponse res, String method, String path) {
             this.req = req;
             this.res = res;

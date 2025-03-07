@@ -17,11 +17,9 @@ import java.util.function.Function;
  * effectively doing nothing. The {@link Form#verifyAsync()} method
  * is responsible for invoking {@code validateAsync} on all
  * {@code AsyncRule} instances.
- * </p>
  *
  * <p>
  * <strong>Usage Example:</strong>
- * </p>
  * 
  * <pre>{@code
  * AsyncRule rule = new AsyncRule(
@@ -55,12 +53,10 @@ public class AsyncRule implements Rule {
      * Constructs a new {@code AsyncRule} with the provided async validator function
      * and error message.
      *
-     * @param asyncValidator
-     *                       A function that takes a string value and returns a
+     * @param asyncValidator A function that takes a string value and returns a
      *                       {@link CompletableFuture<Boolean>} indicating if the
      *                       value is valid.
-     * @param errorMessage
-     *                       The error message displayed if validation fails.
+     * @param errorMessage   The error message displayed if validation fails.
      */
     public AsyncRule(Function<String, CompletableFuture<Boolean>> asyncValidator, String errorMessage) {
         this.asyncValidator = asyncValidator;
@@ -71,12 +67,9 @@ public class AsyncRule implements Rule {
      * A no-op for synchronous checks, always returning {@code true}.
      * Asynchronous validation is delegated to {@link #validateAsync(String, Map)}.
      *
-     * @param data
-     *                  The field value to validate (unused).
-     * @param allValues
-     *                  All form field values (unused).
-     * @return
-     *         Always {@code true}.
+     * @param data      The field value to validate (unused).
+     * @param allValues All form field values (unused).
+     * @return Always {@code true}.
      */
     @Override
     public boolean validate(String data) {
@@ -86,15 +79,11 @@ public class AsyncRule implements Rule {
     /**
      * Performs the actual asynchronous validation for this rule.
      *
-     * @param data
-     *                  The field value to validate.
-     * @param allValues
-     *                  All form field values, which may be useful if cross-field
+     * @param data      The field value to validate.
+     * @param allValues All form field values, which may be useful if cross-field
      *                  checks are needed.
-     * @return
-     *         A {@link CompletableFuture} that resolves to {@code true} if valid,
-     *         or
-     *         {@code false} otherwise.
+     * @return A {@link CompletableFuture} that resolves to {@code true} if valid,
+     *         or {@code false} otherwise.
      */
     public CompletableFuture<Boolean> validateAsync(String data) {
         return asyncValidator.apply(data);
@@ -105,8 +94,7 @@ public class AsyncRule implements Rule {
      * completes
      * with {@code false}.
      *
-     * @return
-     *         The error message.
+     * @return The error message.
      */
     @Override
     public String getErrorMessage() {

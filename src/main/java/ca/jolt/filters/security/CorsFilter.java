@@ -19,9 +19,34 @@ import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+/**
+ * A filter that enforces Cross-Origin Resource Sharing (CORS) rules.
+ * <p>
+ * This filter obtains the CORS configuration from the container's
+ * {@link SecurityConfiguration}, verifies that the request method is allowed,
+ * and sets appropriate {@code Access-Control} headers on the response.
+ * If the request method is not allowed, a {@link JoltHttpException} with
+ * an HTTP 405 status is thrown.
+ * </p>
+ */
 @JoltBean
 public final class CorsFilter extends JoltFilter {
 
+    /**
+     * Processes incoming requests for CORS compliance.
+     * <p>
+     * Retrieves the configured CORS settings, verifies the request method against
+     * the allowed methods, and sets the necessary CORS response headers. If the
+     * request method is disallowed, an exception is thrown with status
+     * {@code METHOD_NOT_ALLOWED}.
+     * </p>
+     *
+     * @param request  The incoming {@link ServletRequest}
+     * @param response The outgoing {@link ServletResponse}
+     * @param chain    The {@link FilterChain} to pass the request and response
+     * @throws IOException      If an I/O error occurs during filter processing
+     * @throws ServletException If a servlet-related error occurs during filtering
+     */
     @Override
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {
@@ -29,7 +54,9 @@ public final class CorsFilter extends JoltFilter {
         HttpServletRequest req = (HttpServletRequest) request;
         HttpServletResponse res = (HttpServletResponse) response;
 
-        CorsConfiguration cors = JoltContainer.getInstance().getBean(SecurityConfiguration.class).getCorsConfig();
+        CorsConfiguration cors = JoltContainer.getInstance()
+                .getBean(SecurityConfiguration.class)
+                .getCorsConfig();
 
         Set<String> allowedMethods = Arrays.stream(cors.getAllowedMethods().split(",\\s*"))
                 .map(String::toUpperCase)
