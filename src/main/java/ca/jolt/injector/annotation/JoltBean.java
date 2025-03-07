@@ -18,16 +18,22 @@ import ca.jolt.injector.type.InitializationMode;
 public @interface JoltBean {
     /**
      * Optional bean name. If empty, the name is derived from the class name.
+     * 
+     * @return the bean name
      */
     String value() default "";
 
     /**
      * The scope of the bean.
+     * 
+     * @return the scope
      */
     BeanScope scope() default BeanScope.SINGLETON;
 
     /**
      * Whether the bean should be initialized eagerly or lazily.
+     * 
+     * @return the initialization mode
      */
     InitializationMode initialization() default InitializationMode.EAGER;
 }

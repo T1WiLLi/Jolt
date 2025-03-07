@@ -1,8 +1,8 @@
 package ca.jolt.cookie;
 
 import ca.jolt.injector.annotation.JoltConfiguration;
-import ca.jolt.injector.annotation.PostConstruct;
 import ca.jolt.injector.type.ConfigurationType;
+import jakarta.annotation.PostConstruct;
 
 /**
  * Provides a default cookie configuration that is automatically loaded.

@@ -14,13 +14,11 @@ import jakarta.servlet.annotation.WebListener;
  * The initialization happens automatically - no additional configuration is
  * required.
  * The listener is registered through the {@code @WebListener} annotation.
- * </p>
  * 
  * <p>
  * To disable automatic initialization, you can exclude this class from
  * component scanning
  * or override the logging configuration in your web.xml.
- * </p>
  * 
  * @author William Beaudin
  * @see LogConfigurator

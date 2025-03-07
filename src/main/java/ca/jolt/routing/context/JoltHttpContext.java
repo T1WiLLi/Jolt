@@ -44,7 +44,6 @@ import jakarta.servlet.http.Part;
  *
  * <p>
  * <strong>Usage Example :</strong>
- * </p>
  * 
  * <pre>{@code
  * get("/user/{id:int}", ctx -> ctx.html("Hi user #" + ctx.path("id").asInt()));
@@ -138,8 +137,7 @@ public final class JoltHttpContext {
      * Returns a {@link PathContextValue} for a named path parameter.
      * <p>
      * For example, if the route is "/user/{id:int}" and the request
-     * path is "/user/42", calling {@code ctx.path("id")} would return "42".
-     * </p>
+     * path is "/user/42", calling {@code ctx.path("id").asInt()} would return "42".
      *
      * @param name
      *             The name of the path parameter.
@@ -155,7 +153,6 @@ public final class JoltHttpContext {
      * <p>
      * If no query parameter with that name exists, this will wrap
      * an empty optional.
-     * </p>
      *
      * @param name
      *             The name of the query parameter.
@@ -188,14 +185,12 @@ public final class JoltHttpContext {
      * headers.
      * The bearer token is typically used for authentication and authorization
      * purposes.
-     * </p>
      * <p>
      * The method returns an {@link Optional} containing the bearer token if it is
      * present
      * in the request headers. If the bearer token is not found, an empty
      * {@link Optional}
      * is returned.
-     * </p>
      * 
      * @return an {@link Optional} containing the bearer token if present, otherwise
      *         an empty {@link Optional}
@@ -234,7 +229,6 @@ public final class JoltHttpContext {
      * Parses the request body as JSON into an object of type {@code T}.
      * <p>
      * Returns {@code null} if the raw body is empty.
-     * </p>
      *
      * @param <T>
      *             The type into which the JSON should be deserialized.
@@ -262,7 +256,6 @@ public final class JoltHttpContext {
      * {@link TypeReference}.
      * <p>
      * Returns {@code null} if the raw body is empty.
-     * </p>
      *
      * @param <T>
      *                The generic type corresponding to the {@code TypeReference}.
@@ -291,7 +284,7 @@ public final class JoltHttpContext {
      * If the request isn't multipart, returns an empty list or throws an exception
      * as needed.
      * 
-     * @return List<JoltFile> of JoltFile objects.
+     * @return List<{@link JoltFile}> of JoltFile objects.
      */
     public List<JoltFile> getFiles() {
         List<JoltFile> files = new ArrayList<>();
@@ -416,7 +409,6 @@ public final class JoltHttpContext {
      * Writes a plain-text response.
      * <p>
      * Sets the Content-Type to {@code "text/plain;charset=UTF-8"}.
-     * </p>
      *
      * @param data
      *             The text to write.
@@ -439,7 +431,6 @@ public final class JoltHttpContext {
      * Writes a JSON response using a {@link Map}.
      * <p>
      * Sets the Content-Type to {@code "application/json;charset=UTF-8"}.
-     * </p>
      *
      * @param json
      *             A {@link Map} to serialize as JSON.
@@ -462,7 +453,6 @@ public final class JoltHttpContext {
      * Writes a JSON response from any Java object (POJO, List, etc.).
      * <p>
      * Sets the Content-Type to {@code "application/json;charset=UTF-8"}.
-     * </p>
      *
      * @param data
      *             The Java object to serialize as JSON.
@@ -485,7 +475,6 @@ public final class JoltHttpContext {
      * Writes an HTML response.
      * <p>
      * Sets the Content-Type to {@code "text/html;charset=UTF-8"}.
-     * </p>
      *
      * @param html
      *             The HTML content to write.
@@ -511,10 +500,9 @@ public final class JoltHttpContext {
      * at "resources/static/index.html" and write its contents to the response with
      * an
      * appropriate MIME type.
-     * </p>
      *
-     * @param resourceName the file name to serve (e.g., "index.html" or
-     *                     "image.png")
+     * @param resource the file name to serve (e.g., "index.html" or
+     *                 "image.png")
      * @return this {@code JoltHttpContext} for fluent chaining.
      */
     public JoltHttpContext serve(String resource) {
@@ -627,10 +615,31 @@ public final class JoltHttpContext {
         return null;
     }
 
+    /**
+     * Retrieves the session cookie from the current context.
+     * <p>
+     * Delegates to {@link #getCookie(String)} to fetch the cookie identified by
+     * the "session" key, typically used to manage user session state.
+     *
+     * @return The {@link Cookie} object representing the session cookie, or
+     *         {@code null}
+     *         if no such cookie exists.
+     */
     public Cookie getSessionCookie() {
         return getCookie("session");
     }
 
+    /**
+     * Retrieves the JWT token cookie from the current context.
+     * <p>
+     * Delegates to {@link #getCookie(String)} to fetch the cookie identified by
+     * the "jwt_token" key, typically used to store a JSON Web Token for
+     * authentication.
+     *
+     * @return The {@link Cookie} object representing the JWT token cookie, or
+     *         {@code null}
+     *         if no such cookie exists.
+     */
     public Cookie getJwtToken() {
         return getCookie("jwt_token");
     }
@@ -640,7 +649,6 @@ public final class JoltHttpContext {
      * response.
      * <p>
      * Example:
-     * </p>
      * 
      * <pre>{@code
      * ctx.addCookie()
@@ -695,7 +703,7 @@ public final class JoltHttpContext {
      * path parameters)
      * will override those from earlier sources.
      * 
-     * @param String... excludes The name of the fields to exclude from the form.
+     * @param excludes The name of the fields to exclude from the form.
      * 
      * @return A new {@link Form} instance populated with all available input data.
      * @throws JoltBadRequestException If JSON parsing fails.

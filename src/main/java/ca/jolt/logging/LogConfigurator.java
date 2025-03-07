@@ -11,17 +11,15 @@ import java.util.logging.Logger;
  * 
  * <p>
  * The configuration:
- * </p>
  * <ul>
  * <li>Sets the log level to INFO by default</li>
- * <li>Applies the {@link JoltLogFormatter} to all logs</li>
+ * <li>Applies the {@link ca.jolt.logging.LogFormatter} to all logs</li>
  * <li>Configures both application and Tomcat logging</li>
  * <li>Removes existing handlers to ensure consistent formatting</li>
  * </ul>
  * 
  * <p>
  * Basic usage example:
- * </p>
  * 
  * <pre>{@code
  * // Logging will be automatically configured on startup

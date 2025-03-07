@@ -1,6 +1,5 @@
 package ca.jolt.form;
 
-import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
 
@@ -12,9 +11,10 @@ import java.util.function.Function;
  *
  * <p>
  * Unlike regular rules, the actual validation occurs in
- * {@link #validateAsync(String, Map)}. The synchronous
- * {@link #validate(String, Map)} method always returns {@code true},
- * effectively doing nothing. The {@link Form#verifyAsync()} method
+ * {@link #validateAsync(String)}. The synchronous
+ * {@link #validate(String)} method always returns {@code true},
+ * effectively doing nothing. The
+ * {@link ca.jolt.form.Form#verifyAsync(String[])} method
  * is responsible for invoking {@code validateAsync} on all
  * {@code AsyncRule} instances.
  *
@@ -30,8 +30,8 @@ import java.util.function.Function;
  *         "Value was rejected by remote service.");
  * }</pre>
  *
+ * @see ca.jolt.form.Form#verifyAsync(String[])
  * @see Rule
- * @see Form#verifyAsync()
  * @see FieldValidator#asyncRule(Function, String)
  * @author William Beaudin
  * @since 1.0
@@ -65,10 +65,9 @@ public class AsyncRule implements Rule {
 
     /**
      * A no-op for synchronous checks, always returning {@code true}.
-     * Asynchronous validation is delegated to {@link #validateAsync(String, Map)}.
+     * Asynchronous validation is delegated to {@link #validateAsync(String)}.
      *
-     * @param data      The field value to validate (unused).
-     * @param allValues All form field values (unused).
+     * @param data The field value to validate (unused).
      * @return Always {@code true}.
      */
     @Override
@@ -79,9 +78,7 @@ public class AsyncRule implements Rule {
     /**
      * Performs the actual asynchronous validation for this rule.
      *
-     * @param data      The field value to validate.
-     * @param allValues All form field values, which may be useful if cross-field
-     *                  checks are needed.
+     * @param data The field value to validate.
      * @return A {@link CompletableFuture} that resolves to {@code true} if valid,
      *         or {@code false} otherwise.
      */
@@ -91,8 +88,7 @@ public class AsyncRule implements Rule {
 
     /**
      * Returns the error message for this rule, used if {@code validateAsync}
-     * completes
-     * with {@code false}.
+     * completes with {@code false}.
      *
      * @return The error message.
      */

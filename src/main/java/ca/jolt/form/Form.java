@@ -26,9 +26,9 @@ import ca.jolt.exceptions.FormConversionException;
  * <ul>
  * <li>Store raw field values in a map.</li>
  * <li>Maintain a map of field names to {@link FieldValidator} instances.</li>
- * <li>Perform synchronous validation via {@link #verify()}.</li>
+ * <li>Perform synchronous validation via {@link #verify(String[])}.</li>
  * <li>Perform asynchronous validation (supporting {@link AsyncRule}) via
- * {@link #verifyAsync()}.</li>
+ * {@link #verifyAsync(String[])}.</li>
  * <li>Track validation errors in a dedicated map.</li>
  * </ul>
  * <p>
@@ -36,7 +36,7 @@ import ca.jolt.exceptions.FormConversionException;
  * 
  * <pre>{@code
  *
- * Form form = new Form(); // You can also do: ctx.queryToForm() or ctx.bodyToForm()
+ * Form form = new Form(); // You can also do: ctx.buildForm();
  * form.setValue("username", "john_doe");
  *
  * form.field("username")
@@ -280,7 +280,7 @@ public final class Form {
 
     /**
      * Returns a map of all errors produced during the last validation call
-     * ({@link #verify()} or {@link #verifyAsync()}).
+     * ({@link #verify(String[])} or {@link #verifyAsync(String[])}).
      *
      * @return A map from field names to error messages
      */

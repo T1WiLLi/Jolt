@@ -7,11 +7,14 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
 
+import ca.jolt.cookie.CookieConfiguration;
 import ca.jolt.exceptions.JoltDIException;
 import ca.jolt.exceptions.handler.GlobalExceptionHandler;
+import ca.jolt.filters.FilterConfiguration;
 import ca.jolt.injector.annotation.JoltConfiguration;
-import ca.jolt.injector.annotation.PostConstruct;
 import ca.jolt.injector.type.ConfigurationType;
+import ca.jolt.security.config.SecurityConfiguration;
+import jakarta.annotation.PostConstruct;
 
 /**
  * The ConfigurationManager is responsible for registering and validating
@@ -40,7 +43,6 @@ final class ConfigurationManager {
      * <li>If both are non-default, a warning is logged and the first registered
      * configuration is used.</li>
      * </ul>
-     * </p>
      *
      * @param configClass the configuration class to register.
      * @throws JoltDIException if the class is not annotated with
@@ -94,6 +96,42 @@ final class ConfigurationManager {
             throw new JoltDIException(
                     "Configuration for EXCEPTION_HANDLER must implement GlobalExceptionHandler: " +
                             configClass.getName());
+        }
+        if (type == ConfigurationType.COOKIE && !CookieConfiguration.class.isAssignableFrom(configClass)) {
+            throw new JoltDIException(
+                    "Configuration for COOKIE must implement CookieConfiguration: " + configClass.getName());
+        }
+
+        if (type == ConfigurationType.FILTER && !FilterConfiguration.class.isAssignableFrom(configClass)) {
+            throw new JoltDIException(
+                    "Configuration for FILTER must implement FilterConfiguration: " + configClass.getName());
+        }
+
+        if (type == ConfigurationType.SECURITY && !SecurityConfiguration.class.isAssignableFrom(configClass)) {
+            throw new JoltDIException(
+                    "Configuration for SECURITY must implement SecurityConfiguration: " + configClass.getName());
+        }
+
+        if (type != ConfigurationType.EXCEPTION_HANDLER) {
+            try {
+                Method initMethod = configClass.getDeclaredMethod("init");
+                if (!initMethod.isAnnotationPresent(PostConstruct.class)) {
+                    throw new JoltDIException(
+                            "Configuration class must have @PostConstruct annotation on init() method: "
+                                    + configClass.getName());
+                }
+
+                try {
+                    configClass.getDeclaredMethod("configure");
+                } catch (NoSuchMethodException e) {
+                    throw new JoltDIException(
+                            "Configuration class must implement configure() method: " + configClass.getName());
+                }
+            } catch (NoSuchMethodException e) {
+                throw new JoltDIException(
+                        "Configuration class must implement init() method with @PostConstruct: "
+                                + configClass.getName());
+            }
         }
     }
 

@@ -11,7 +11,6 @@ import java.util.Optional;
  * Subclasses typically provide additional convenience methods for
  * converting the value to other types (e.g., int, double) or providing
  * default values.
- * </p>
  *
  * @see PathContextValue
  * @see QueryContextValue

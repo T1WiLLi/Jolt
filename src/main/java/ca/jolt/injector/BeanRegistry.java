@@ -20,10 +20,10 @@ import ca.jolt.exceptions.CircularDependencyException;
 import ca.jolt.exceptions.JoltDIException;
 import ca.jolt.injector.annotation.JoltBean;
 import ca.jolt.injector.annotation.JoltBeanInjection;
-import ca.jolt.injector.annotation.PostConstruct;
-import ca.jolt.injector.annotation.PreDestroy;
 import ca.jolt.injector.type.BeanScope;
 import ca.jolt.injector.type.InitializationMode;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
 
 /**
  * The BeanRegistry is responsible for registering bean classes (annotated with

@@ -17,6 +17,8 @@ public @interface JoltConfiguration {
     /**
      * The type of configuration. For example, EXCEPTION_HANDLER, SECURITY, SERVER,
      * etc.
+     * 
+     * @return the type of configuration
      */
     ConfigurationType value();
 
@@ -24,6 +26,8 @@ public @interface JoltConfiguration {
      * Flag to indicate if this configuration is the framework's default
      * implementation.
      * User provided configurations should have this set to false.
+     * 
+     * @return true if this is the default implementation, false otherwise
      */
     boolean isDefault() default false;
 }

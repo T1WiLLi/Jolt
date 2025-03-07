@@ -9,7 +9,6 @@ package ca.jolt.http;
  * 
  * <p>
  * <strong>Usage Example:</strong>
- * </p>
  * 
  * <pre>{@code
  * HttpMethod method = HttpMethod.GET;

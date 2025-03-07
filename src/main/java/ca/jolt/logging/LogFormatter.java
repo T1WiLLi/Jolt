@@ -13,7 +13,6 @@ import java.util.logging.LogRecord;
  * 
  * <p>
  * Log entries are formatted as follows:
- * </p>
  * 
  * <pre>
  * Jolt [LOG_LEVEL] - [YYYY-MM-DD HH:mm:ss] : Log message
@@ -22,7 +21,6 @@ import java.util.logging.LogRecord;
  * 
  * <p>
  * Example output:
- * </p>
  * 
  * <pre>
  * Jolt [INFO] - [2024-02-18 14:30:22] : Application started successfully
@@ -36,7 +34,6 @@ import java.util.logging.LogRecord;
  * This formatter is thread-safe and handles exceptions appropriately by
  * including
  * their stack traces in the log output.
- * </p>
  * 
  * @author William Beaudin
  * @see LogConfigurator

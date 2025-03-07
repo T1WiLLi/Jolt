@@ -10,13 +10,11 @@ import ca.jolt.routing.context.JoltHttpContext;
  * <p>
  * The {@code handle} method accepts a {@link JoltHttpContext} and
  * returns an object, which might be used as the response body in Jolt.
- * </p>
  *
  * <p>
  * If a route should return a simple static response, you can convert
  * a {@link Supplier} to a {@code RouteHandler} using
  * {@link #fromSupplier(Supplier)}.
- * </p>
  *
  * @see JoltHttpContext
  * @see Route
@@ -31,7 +29,6 @@ public interface RouteHandler {
      * This method receives a {@link JoltHttpContext} allowing
      * access to request data (e.g., path/query parameters, body, etc.)
      * and response methods (e.g., setting headers or cookies).
-     * </p>
      *
      * @param ctx
      *            The request/response context object for this route.

@@ -15,7 +15,7 @@ import lombok.Getter;
  * A class that encapsulates validation logic for a single form field.
  * <p>
  * Each {@code FieldValidator} is associated with exactly one field name in
- * a {@link Form}. It maintains:
+ * a {@link ca.jolt.form.Form}. It maintains:
  * <ul>
  * <li>A list of {@link Rule} objects representing validation checks.</li>
  * <li>A list of {@link UnaryOperator} transformations that may alter or clean
@@ -37,13 +37,14 @@ import lombok.Getter;
  *         .when(allValues -> allValues.get("role").equals("user"));
  * }</pre>
  * <p>
- * When the {@link #validate(String, Map)} method is called (typically
- * via the form’s {@link Form#verify()} or {@link Form#verifyAsync()}),
+ * When the {@link #verify()} method is called (typically
+ * via the form’s {@link ca.jolt.form.Form#verify(String[])} or
+ * {@link ca.jolt.form.Form#verifyAsync(String[])}),
  * the field's value undergoes the specified transformations, then
  * each registered {@code Rule} runs in order. If any rule fails,
  * an error is recorded in the parent form.
  *
- * @see Form
+ * @see ca.jolt.form.Form
  * @see BaseRules
  * @see Rule
  * @see AsyncRule

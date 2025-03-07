@@ -10,8 +10,6 @@ import ca.jolt.exceptions.CircularDependencyException;
 import ca.jolt.exceptions.JoltDIException;
 import ca.jolt.injector.annotation.JoltBean;
 import ca.jolt.injector.annotation.JoltBeanInjection;
-import ca.jolt.injector.annotation.PostConstruct;
-import ca.jolt.injector.annotation.PreDestroy;
 import lombok.Getter;
 
 /**
@@ -33,17 +31,16 @@ import lombok.Getter;
  * attribute of the {@code JoltBean} annotation or, if empty, by a convention
  * that lowercases the first
  * letter of the class's simple name.
- * </p>
  *
  * <p>
  * <strong>Dependency Injection and Lifecycle Management:</strong><br>
  * When a bean is created, its fields annotated with {@link JoltBeanInjection}
  * are automatically populated.
  * The container also ensures that lifecycle methods annotated with
- * {@link PostConstruct} and {@link PreDestroy}
+ * {@link jakarta.annotation.PostConstruct} and
+ * {@link jakarta.annotation.PreDestroy}
  * are invoked at the appropriate times. For singleton beans, an instance is
  * maintained and reused upon subsequent requests.
- * </p>
  *
  * <p>
  * <strong>Exception Handling and Circular Dependencies:</strong><br>
@@ -53,7 +50,6 @@ import lombok.Getter;
  * found or fails to create,
  * {@link BeanNotFoundException} or {@link BeanCreationException} is thrown,
  * respectively.
- * </p>
  *
  * <p>
  * <strong>Usage Example:</strong>
@@ -71,14 +67,11 @@ import lombok.Getter;
  * </pre>
  * 
  * </blockquote>
- * </p>
  *
  * <p>
  * <em>Note:</em> This container is designed to be simple and lightweight. It
  * may not include some features
- * found in more comprehensive DI frameworks, but it can be extended or modified
- * to fit specific needs.
- * </p>
+ * found in more comprehensive DI frameworks.
  *
  * @author William Beaudin
  * @since 1.0
@@ -106,10 +99,9 @@ public final class JoltContainer {
      * file found,
      * the class is loaded and, if it carries the {@code JoltBean} annotation, it is
      * validated and registered.
-     * </p>
      *
-     * @param basePackage the base package to scan for bean classes; must not be
-     *                    {@code null} or empty.
+     * @param directory the base package to scan for bean classes; must not be
+     *                  {@code null} or empty.
      * @throws JoltDIException if the base package is {@code null}, empty, not
      *                         found, or if an error occurs during scanning.
      * @return the container instance for method chaining.
@@ -130,13 +122,11 @@ public final class JoltContainer {
      * creation. This ensures that
      * these beans are ready for use and that their {@code PostConstruct} lifecycle
      * methods are invoked.
-     * </p>
      *
      * <p>
      * <strong>Note:</strong> This method can only be called once. After
      * initialization, no further
      * modifications to the bean definitions are permitted.
-     * </p>
      */
     public void initialize() {
         if (!isInitialized) {
@@ -153,16 +143,15 @@ public final class JoltContainer {
      * <p>
      * During shutdown, the container iterates over all managed beans and invokes
      * any lifecycle methods
-     * annotated with {@link PreDestroy}. After invoking these callbacks, all
+     * annotated with {@link jakarta.annotation.PreDestroy}. After invoking these
+     * callbacks, all
      * internal caches, bean definitions,
      * and tracking collections are cleared, effectively resetting the container.
-     * </p>
      *
      * <p>
      * This method should be called during application shutdown to ensure that
      * resources are properly released
      * and any cleanup logic is executed.
-     * </p>
      */
     public void shutdown() {
         logger.info("Shutting down container. Invoking @PreDestroy methods.");
@@ -182,7 +171,6 @@ public final class JoltContainer {
      * {@code PostConstruct} lifecycle callbacks are
      * invoked. The created bean is then stored in the singleton cache (if
      * applicable) and returned.
-     * </p>
      *
      * @deprecated This method is not thread-safe and as been marked for removal.
      *             You should use
@@ -212,13 +200,11 @@ public final class JoltContainer {
      * the cached instance is returned. Otherwise, the bean is instantiated, its
      * dependencies injected, and
      * its lifecycle callbacks invoked.
-     * </p>
      *
      * <p>
      * <strong>Type Safety:</strong> The returned object is cast using
      * {@code type.cast(...)} ensuring that the
      * runtime type is checked against the provided class.
-     * </p>
      *
      * @param type the class type of the bean to retrieve; must not be {@code null}.
      * @param <T>  the expected type of the bean.
@@ -250,14 +236,12 @@ public final class JoltContainer {
      * of beans whose classes are assignable to the specified parent type. If no
      * beans
      * are found, an empty list is returned.
-     * </p>
      *
      * <p>
      * <strong>Type Safety:</strong> The returned objects are cast using
      * {@code parentType.cast(...)} ensuring that the runtime type is checked
      * against
      * the provided class.
-     * </p>
      *
      * @param <T>        the type of the beans to be retrieved
      * @param parentType the class object representing the parent type of the beans;

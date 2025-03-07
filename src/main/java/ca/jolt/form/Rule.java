@@ -1,6 +1,5 @@
 package ca.jolt.form;
 
-import java.util.Map;
 import java.util.function.Predicate;
 
 /**
@@ -8,18 +7,16 @@ import java.util.function.Predicate;
  * this interface should define how to validate the field value based on
  * all available form data, and provide an error message for invalid cases.
  * <p>
- * The {@link #validate(String, Map)} method is used by {@code Form} or
+ * The {@link #validate(String)} method is used by {@code Form} or
  * other components to determine if a field is valid, while
  * {@link #getErrorMessage()} provides the text to display if the validation
  * fails.
- * </p>
  * 
  * <p>
  * Note: The actual method signature in this interface is
  * {@link #validate(String)}, which performs the validation check on the
  * field value alone. Implementations may choose to reference additional
  * data as needed.
- * </p>
  * 
  * @author William
  * @since 1.0

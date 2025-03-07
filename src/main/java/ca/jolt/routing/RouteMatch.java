@@ -14,7 +14,6 @@ import java.util.regex.Matcher;
  * This object is typically created internally during request matching
  * and used by the Jolt framework to invoke the appropriate
  * {@link RouteHandler}.
- * </p>
  *
  * @param route
  *                The matched {@link Route} object.

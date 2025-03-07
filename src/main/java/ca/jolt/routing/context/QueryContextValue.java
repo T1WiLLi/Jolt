@@ -9,7 +9,6 @@ import java.util.function.Predicate;
  *
  * <p>
  * Example usage:
- * </p>
  * 
  * <pre>{@code
  * int page = ctx.query("page").asIntOrDefault(1);

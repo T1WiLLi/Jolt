@@ -15,7 +15,6 @@ import lombok.Getter;
  * <code>{paramName:TYPE}</code>, where {@code TYPE} can be
  * <code>int</code>, <code>double</code>, or omitted (meaning a general string).
  * For instance:
- * </p>
  * 
  * <pre>{@code
  * GET /users/{id:int}
@@ -24,11 +23,9 @@ import lombok.Getter;
  * Parameters are compiled into a regex {@link Pattern}, and any extracted
  * parameter names are stored in {@link #paramNames} for later use in the
  * request context.
- * </p>
  *
  * <p>
  * <strong>Example usage:</strong>
- * </p>
  * 
  * <pre>{@code
  * get("/users/{id:int}", ctx -> {

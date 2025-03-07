@@ -5,7 +5,6 @@ package ca.jolt.routing.context;
  * It provides methods for type conversion from string to integer or double.
  * <p>
  * Example usage:
- * </p>
  * 
  * <pre>{@code
  * int userId = ctx.path("id").asInt();

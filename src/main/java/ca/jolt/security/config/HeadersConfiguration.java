@@ -12,7 +12,6 @@ import lombok.Getter;
  * <p>
  * This simplified version allows you to either enable CSP using a strict
  * default configuration or supply a custom CSP string.
- * </p>
  */
 public class HeadersConfiguration {
 
