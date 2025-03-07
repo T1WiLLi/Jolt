@@ -2,6 +2,7 @@ package ca.jolt.filters;
 
 import ca.jolt.injector.annotation.JoltConfiguration;
 import ca.jolt.injector.type.ConfigurationType;
+import jakarta.annotation.PostConstruct;
 
 /**
  * Provides the default filter configuration for the Jolt framework.
@@ -18,6 +19,11 @@ import ca.jolt.injector.type.ConfigurationType;
  */
 @JoltConfiguration(value = ConfigurationType.FILTER, isDefault = true)
 public final class DefaultFilterConfiguration extends FilterConfiguration {
+
+    @PostConstruct
+    public void init() {
+        configure();
+    }
 
     /**
      * Performs filter configuration steps for the default setup.

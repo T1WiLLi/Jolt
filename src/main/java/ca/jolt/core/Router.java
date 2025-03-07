@@ -12,8 +12,6 @@ import java.util.logging.Logger;
 
 import ca.jolt.exceptions.DuplicateRouteException;
 import ca.jolt.injector.annotation.JoltBean;
-import ca.jolt.injector.type.BeanScope;
-import ca.jolt.injector.type.InitializationMode;
 import ca.jolt.routing.LifecycleEntry;
 import ca.jolt.routing.Route;
 import ca.jolt.routing.RouteHandler;
@@ -39,7 +37,7 @@ import lombok.Getter;
  * @author William
  * @since 1.0
  */
-@JoltBean(value = "Router", scope = BeanScope.SINGLETON, initialization = InitializationMode.EAGER)
+@JoltBean()
 public final class Router {
 
     /**

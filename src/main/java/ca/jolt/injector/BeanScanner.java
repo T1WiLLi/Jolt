@@ -133,17 +133,27 @@ final class BeanScanner {
 
     private void processJarFile(List<Class<?>> classes, String jarPath, String packageName) throws IOException {
         try (JarFile jarFile = new JarFile(jarPath)) {
-            String packagePath = packageName.replace('.', File.separatorChar) + File.separator;
+            String packagePath = packageName.replace('.', '/') + "/";
 
             Enumeration<JarEntry> entries = jarFile.entries();
             while (entries.hasMoreElements()) {
                 JarEntry entry = entries.nextElement();
+                if (!entry.isDirectory()) {
+                    String entryName = entry.getName();
 
-                if (!entry.isDirectory() && entry.getName().startsWith(packagePath)
-                        && entry.getName().endsWith(".class")) {
-                    String className = entry.getName().replace('/', '.')
-                            .substring(0, entry.getName().length() - 6);
-                    loadClass(classes, className);
+                    if (entryName.startsWith("/")) {
+                        entryName = entryName.substring(1);
+                    }
+
+                    if (entryName.startsWith(packagePath) && entryName.endsWith(".class")) {
+                        String className = entryName.replace('/', '.')
+                                .substring(0, entryName.length() - 6);
+
+                        if (className.startsWith(".")) {
+                            className = className.substring(1);
+                        }
+                        loadClass(classes, className);
+                    }
                 }
             }
         }

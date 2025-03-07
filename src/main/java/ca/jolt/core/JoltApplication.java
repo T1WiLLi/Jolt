@@ -103,7 +103,7 @@ public abstract class JoltApplication {
                 instance = appClass.getDeclaredConstructor().newInstance();
             }
             JoltContainer.getInstance().scan("ca.jolt");
-            if (!scan.equals("ca.jolt")) {
+            if (!scan.equals("ca.jolt") && !scan.isEmpty()) {
                 JoltContainer.getInstance().scan(scan);
             }
             JoltContainer.getInstance().initialize();
