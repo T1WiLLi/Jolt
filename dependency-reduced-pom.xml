@@ -3,7 +3,12 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>ca.jolt</groupId>
   <artifactId>jolt</artifactId>
-  <version>1.0</version>
+  <version>1.0.0</version>
+  <scm>
+    <connection>scm:git:git://github.com/T1WiLLi/Jolt.git</connection>
+    <developerConnection>scm:git:ssh://github.com/T1WiLLi/Jolt.git</developerConnection>
+    <url>https://github.com/T1WiLLi/Jolt</url>
+  </scm>
   <build>
     <plugins>
       <plugin>
@@ -41,26 +46,6 @@
         <configuration>
           <failOnError>false</failOnError>
         </configuration>
-      </plugin>
-      <plugin>
-        <artifactId>maven-antrun-plugin</artifactId>
-        <version>3.0.0</version>
-        <executions>
-          <execution>
-            <id>add-favicon</id>
-            <phase>package</phase>
-            <goals>
-              <goal>run</goal>
-            </goals>
-            <configuration>
-              <target>
-                <replace>
-                  <replacefilter />
-                </replace>
-              </target>
-            </configuration>
-          </execution>
-        </executions>
       </plugin>
       <plugin>
         <artifactId>maven-shade-plugin</artifactId>
@@ -175,8 +160,8 @@
   <distributionManagement>
     <repository>
       <id>github</id>
-      <name>Github Packages</name>
-      <url>https://maven.pkg.github.com/T1WiLLi/jolt</url>
+      <name>GitHub T1WiLLi Apache Maven Packages</name>
+      <url>https://maven.pkg.github.com/t1willi/jolt</url>
     </repository>
   </distributionManagement>
   <properties>

@@ -1,0 +1,24 @@
+-classpath
+'C:/Users/willi/.m2/repository/org/apache/tomcat/embed/tomcat-embed-core/11.0.3/tomcat-embed-core-11.0.3.jar;C:/Users/willi/.m2/repository/org/apache/tomcat/tomcat-annotations-api/11.0.3/tomcat-annotations-api-11.0.3.jar;C:/Users/willi/.m2/repository/org/apache/tomcat/embed/tomcat-embed-jasper/11.0.3/tomcat-embed-jasper-11.0.3.jar;C:/Users/willi/.m2/repository/org/apache/tomcat/embed/tomcat-embed-el/11.0.3/tomcat-embed-el-11.0.3.jar;C:/Users/willi/.m2/repository/org/eclipse/jdt/ecj/3.40.0/ecj-3.40.0.jar;C:/Users/willi/.m2/repository/org/apache/tomcat/tomcat-juli/11.0.3/tomcat-juli-11.0.3.jar;C:/Users/willi/.m2/repository/jakarta/servlet/jakarta.servlet-api/6.0.0/jakarta.servlet-api-6.0.0.jar;C:/Users/willi/.m2/repository/org/projectlombok/lombok/1.18.36/lombok-1.18.36.jar;C:/Users/willi/.m2/repository/com/fasterxml/jackson/core/jackson-databind/2.18.2/jackson-databind-2.18.2.jar;C:/Users/willi/.m2/repository/com/fasterxml/jackson/core/jackson-annotations/2.18.2/jackson-annotations-2.18.2.jar;C:/Users/willi/.m2/repository/com/fasterxml/jackson/core/jackson-core/2.18.2/jackson-core-2.18.2.jar;C:/Users/willi/.m2/repository/io/github/cdimascio/dotenv-java/2.3.2/dotenv-java-2.3.2.jar'
+-encoding
+'UTF-8'
+-protected
+-source
+'21'
+-sourcepath
+'D:/Cegep/ProjetPerso/jolt/src/main/java;D:/Cegep/ProjetPerso/jolt/target/generated-sources/annotations'
+-author
+-bottom
+'Copyright &#169; 2025. All rights reserved.'
+-charset
+'UTF-8'
+-d
+'D:/Cegep/ProjetPerso/jolt/target/site/apidocs'
+-docencoding
+'UTF-8'
+-doctitle
+'jolt 1.0.0 API'
+-use
+-version
+-windowtitle
+'jolt 1.0.0 API'

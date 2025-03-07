@@ -21,11 +21,11 @@
     </scm>
 
     <distributionManagement>
-      <repository>
-        <id>github</id>
-        <name>Github Packages</name>
-        <url>https://maven.pkg.github.com/T1WiLLi/jolt</url>
-      </repository>
+        <repository>
+            <id>github</id>
+            <name>GitHub T1WiLLi Apache Maven Packages</name>
+            <url>https://maven.pkg.github.com/t1willi/jolt</url>
+        </repository>
     </distributionManagement>
 
     <dependencies>
