@@ -6,7 +6,7 @@
 
     <groupId>ca.jolt</groupId>
     <artifactId>jolt</artifactId>
-    <version>1.0</version>
+    <version>1.0.0</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -14,6 +14,11 @@
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     </properties>
 
+    <scm>
+        <connection>scm:git:git://github.com/T1WiLLi/Jolt.git</connection>
+        <developerConnection>scm:git:ssh://github.com/T1WiLLi/Jolt.git</developerConnection>
+        <url>https://github.com/T1WiLLi/Jolt</url>
+    </scm>
 
     <distributionManagement>
       <repository>
