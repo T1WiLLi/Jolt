@@ -6,7 +6,7 @@
 
     <groupId>ca.jolt</groupId>
     <artifactId>jolt</artifactId>
-    <version>1.0.0</version>
+    <version>1.0.0-RELEASE</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
@@ -115,36 +115,6 @@
                 <configuration>
                     <failOnError>false</failOnError>
                 </configuration>
-            </plugin>
-            <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-shade-plugin</artifactId>
-                <version>3.5.3</version>
-                <executions>
-                    <execution>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>shade</goal>
-                        </goals>
-                        <configuration>
-                            <createDependencyReducedPom>true</createDependencyReducedPom>
-                            <filters>
-                                <filter>
-                                    <excludes>
-                                        <exclude>jakarta/servlet/**</exclude>
-                                        <exclude>org/projectlombok/**</exclude>
-                                    </excludes>
-                                </filter>
-                            </filters>
-                            <relocations>
-                                <relocation>
-                                    <pattern>com.fasterxml.jackson</pattern>
-                                    <shadedPattern>ca.jolt.shaded.jackson</shadedPattern>
-                                </relocation>
-                            </relocations>
-                        </configuration>
-                    </execution>
-                </executions>
             </plugin>
                 <!-- Attach source code to JAR -->
             <plugin>
