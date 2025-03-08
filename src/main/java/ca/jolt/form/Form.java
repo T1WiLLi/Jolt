@@ -12,6 +12,7 @@ import java.util.Map;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
+import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ca.jolt.exceptions.FormConversionException;
@@ -495,6 +496,54 @@ public final class Form {
      */
     public <T> T buildEntity(Class<T> clazz) {
         return buildEntity(clazz, new String[0]);
+    }
+
+    /**
+     * Updates the provided entity instance with values from the form's field
+     * values,
+     * ignoring any fields specified in the {@code ignoreFields} array.
+     * <p>
+     * This method creates a copy of the form's field values, removes any entries
+     * whose keys
+     * are present in the {@code ignoreFields}, and then uses Jackson's
+     * {@link ObjectMapper#updateValue(Object, Object)}
+     * to update the entity with the remaining values. Any form fields that do not
+     * correspond
+     * to properties in the entity are ignored.
+     *
+     * @param <T>          The type of the entity.
+     * @param clazz        The class of the entity.
+     * @param entity       The existing entity instance to be updated.
+     * @param ignoreFields Field names to exclude from updating.
+     * @return The updated entity instance.
+     * @throws FormConversionException If an error occurs during the update process.
+     */
+    public <T> T updateEntity(Class<T> clazz, T entity, String... ignoreFields) {
+        ObjectMapper mapper = new ObjectMapper();
+        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
+        try {
+            Map<String, String> data = new HashMap<>(fieldValues);
+            for (String ignore : ignoreFields) {
+                data.remove(ignore);
+            }
+            mapper.updateValue(entity, data);
+            return entity;
+        } catch (Exception e) {
+            throw new FormConversionException("Failed to update entity from form", e);
+        }
+    }
+
+    /**
+     * Conveniance method to update an entity without excluding any fields.
+     * 
+     * @param <T>    The type of the entity
+     * @param clazz  The class of the entity
+     * @param entity The existing entity instance to be updated
+     * @return The updated entity instance
+     * @throws FormConversionException If an error occurs during the update process
+     */
+    public <T> T updateEntity(Class<T> clazz, T entity) {
+        return updateEntity(clazz, entity, new String[0]);
     }
 
     /**
