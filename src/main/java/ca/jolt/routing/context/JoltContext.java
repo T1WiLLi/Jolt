@@ -613,15 +613,8 @@ public final class JoltContext {
      * @param message The message to write.
      * @throws JoltHttpException If writing the response fails.
      */
-    public void abort(HttpStatus status, String message) {
-        try {
-            res.setStatus(status.code());
-            res.setContentType("text/plain;charset=UTF-8");
-            res.getWriter().write(message);
-        } catch (IOException e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Failed to write abort message: " + e.getMessage());
-        }
+    public JoltContext abort(HttpStatus status, String message) {
+        throw new JoltHttpException(status, message);
     }
 
     /**
@@ -630,8 +623,8 @@ public final class JoltContext {
      * @param message The error message to send
      * @throws JoltHttpException If writing the response fails
      */
-    public void abortBadRequest(String message) {
-        abort(HttpStatus.BAD_REQUEST, message);
+    public JoltContext abortBadRequest(String message) {
+        return abort(HttpStatus.BAD_REQUEST, message);
     }
 
     /**
@@ -640,8 +633,8 @@ public final class JoltContext {
      * @param message The error message to send
      * @throws JoltHttpException If writing the response fails
      */
-    public void abortNotFound(String message) {
-        abort(HttpStatus.NOT_FOUND, message);
+    public JoltContext abortNotFound(String message) {
+        return abort(HttpStatus.NOT_FOUND, message);
     }
 
     /**
@@ -650,8 +643,8 @@ public final class JoltContext {
      * @param message The error message to send
      * @throws JoltHttpException If writing the response fails
      */
-    public void abortInternalServerError(String message) {
-        abort(HttpStatus.INTERNAL_SERVER_ERROR, message);
+    public JoltContext abortInternalServerError(String message) {
+        return abort(HttpStatus.INTERNAL_SERVER_ERROR, message);
     }
 
     /**
@@ -660,8 +653,8 @@ public final class JoltContext {
      * @param message The error message to send
      * @throws JoltHttpException If writing the response fails
      */
-    public void abortUnauthorized(String message) {
-        abort(HttpStatus.UNAUTHORIZED, message);
+    public JoltContext abortUnauthorized(String message) {
+        return abort(HttpStatus.UNAUTHORIZED, message);
     }
 
     /**
@@ -670,8 +663,8 @@ public final class JoltContext {
      * @param message The error message to send
      * @throws JoltHttpException If writing the response fails
      */
-    public void abortForbidden(String message) {
-        abort(HttpStatus.FORBIDDEN, message);
+    public JoltContext abortForbidden(String message) {
+        return abort(HttpStatus.FORBIDDEN, message);
     }
 
     /**
@@ -679,8 +672,8 @@ public final class JoltContext {
      *
      * @param message the error message to send
      */
-    public void abortConflict(String message) {
-        abort(HttpStatus.CONFLICT, message);
+    public JoltContext abortConflict(String message) {
+        return abort(HttpStatus.CONFLICT, message);
     }
 
     /**
@@ -688,8 +681,8 @@ public final class JoltContext {
      *
      * @param message the error message to send
      */
-    public void abortUnprocessableEntity(String message) {
-        abort(HttpStatus.UNPROCESSABLE_ENTITY, message);
+    public JoltContext abortUnprocessableEntity(String message) {
+        return abort(HttpStatus.UNPROCESSABLE_ENTITY, message);
     }
 
     /**

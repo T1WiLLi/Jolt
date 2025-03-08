@@ -20,6 +20,17 @@ import lombok.Getter;
 @Getter
 public class JoltFile {
 
+    /**
+     * Creates a {@link JoltFile} instance from a static file located in the
+     * "static" resource directory.
+     *
+     * @param filename the name of the file to be loaded. If the filename starts
+     *                 with a "/", it will be removed.
+     * @return a {@link JoltFile} instance containing the file data, MIME type, and
+     *         other metadata.
+     * @throws JoltHttpException if the file is not found or if an I/O error occurs
+     *                           while reading the file.
+     */
     public static JoltFile fromStatic(String filename) {
         String normalizedResource = filename.startsWith("/") ? filename.substring(1) : filename;
         InputStream in = JoltFile.class.getClassLoader().getResourceAsStream("static/" + normalizedResource);
