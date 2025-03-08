@@ -66,6 +66,10 @@ public final class SecureHeadersFilter extends JoltFilter {
         res.setHeader("Referrer-Policy", headers.getReferrerPolicy());
         res.setHeader("X-Content-Type-Options", "nosniff");
 
+        if (headers.getCacheControlDirective() != null) {
+            res.setHeader("Cache-Control", headers.getCacheControlDirective());
+        }
+
         if (headers.isHttpsOnly() && !req.isSecure()) {
             res.sendRedirect("https://" + req.getServerName() + req.getRequestURI());
             return;

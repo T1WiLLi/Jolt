@@ -17,6 +17,6 @@ public class Main extends JoltApplication {
     }
 
     public static JoltContext getUser(JoltContext ctx) {
-        return ctx.status(HttpStatus.BAD_REQUEST).json(Map.of("name", "John Doe", "age", 30));
+        return ctx.status(HttpStatus.OK).json(Map.of("name", "John Doe", "age", 30));
     }
 }

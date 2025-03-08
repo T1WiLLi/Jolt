@@ -1,7 +1,12 @@
 package ca.jolt.files;
 
 import java.io.ByteArrayInputStream;
+import java.io.IOException;
 import java.io.InputStream;
+
+import ca.jolt.exceptions.JoltHttpException;
+import ca.jolt.http.HttpStatus;
+import ca.jolt.routing.MimeInterpreter;
 import lombok.Getter;
 
 /**
@@ -14,6 +19,23 @@ import lombok.Getter;
  */
 @Getter
 public class JoltFile {
+
+    public static JoltFile fromStatic(String filename) {
+        String normalizedResource = filename.startsWith("/") ? filename.substring(1) : filename;
+        InputStream in = JoltFile.class.getClassLoader().getResourceAsStream("static/" + normalizedResource);
+        if (in == null) {
+            throw new JoltHttpException(HttpStatus.NOT_FOUND, "File not found : " + filename);
+        }
+        try {
+            byte[] data = in.readAllBytes();
+            int dotIndex = filename.lastIndexOf('.');
+            String extension = dotIndex != -1 ? filename.substring(dotIndex + 1) : "";
+            String mimeType = MimeInterpreter.getMime(extension);
+            return new JoltFile(filename, mimeType, data.length, data);
+        } catch (IOException e) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Failed to read file : " + filename);
+        }
+    }
 
     /**
      * The original file name.
