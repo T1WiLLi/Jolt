@@ -92,7 +92,11 @@ public final class CookieBuilder {
      */
     public CookieBuilder(HttpServletResponse res) {
         this.res = res;
-        cookieConfig = JoltContainer.getInstance().getBean(CookieConfiguration.class);
+        try {
+            cookieConfig = JoltContainer.getInstance().getBean(CookieConfiguration.class);
+        } catch (Exception e) {
+            // Ignore and use default configuration
+        }
     }
 
     /**
