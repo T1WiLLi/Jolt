@@ -1,10 +1,11 @@
 package ca.jolt.core;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Deque;
 import java.util.List;
 import java.util.Locale;
-import java.util.Stack;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -65,14 +66,7 @@ public final class Router {
     /**
      * Maintains prefixes for grouped routes.
      */
-    private final Stack<String> prefixes = new Stack<>();
-
-    /**
-     * Constructs a new {@code Router} with no pre-registered routes.
-     * Primarily used by the dependency injection mechanism.
-     */
-    public Router() {
-    }
+    private final Deque<String> prefixes = new ArrayDeque<>();
 
     /**
      * Registers a "before" handler that applies to all routes.

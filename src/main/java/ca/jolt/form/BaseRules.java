@@ -46,7 +46,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing non-null, non-empty fields
      */
     static Rule required(String errorMessage) {
-        return Rule.custom((data) -> {
+        return Rule.custom(data -> {
             if (data == null)
                 return false;
             if (isNumeric(data))
@@ -63,7 +63,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing the specified minimum length
      */
     static Rule minLength(int min, String errorMessage) {
-        return Rule.custom((data) -> data != null && data.length() >= min, errorMessage);
+        return Rule.custom(data -> data != null && data.length() >= min, errorMessage);
     }
 
     /**
@@ -74,7 +74,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing the specified maximum length
      */
     static Rule maxLength(int max, String errorMessage) {
-        return Rule.custom((data) -> data != null && data.length() <= max, errorMessage);
+        return Rule.custom(data -> data != null && data.length() <= max, errorMessage);
     }
 
     /**
@@ -137,7 +137,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing ISO-8601 date format
      */
     static Rule date(String errorMessage) {
-        return Rule.custom((data) -> {
+        return Rule.custom(data -> {
             if (data == null || data.isEmpty()) {
                 return false;
             }
@@ -158,7 +158,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing the specified date format
      */
     static Rule date(String pattern, String errorMessage) {
-        return Rule.custom((data) -> {
+        return Rule.custom(data -> {
             if (data == null || data.isEmpty()) {
                 return false;
             }
@@ -179,7 +179,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing a valid credit card number
      */
     static Rule creditCard(String errorMessage) {
-        return Rule.custom((data) -> {
+        return Rule.custom(data -> {
             if (data == null || data.isEmpty()) {
                 return false;
             }
@@ -211,7 +211,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing "strong" password requirements
      */
     static Rule strongPassword(String errorMessage) {
-        return Rule.custom((data) -> {
+        return Rule.custom(data -> {
             if (data == null || data.isEmpty() || data.length() < 8) {
                 return false;
             }
@@ -253,7 +253,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing a maximum numeric value
      */
     static Rule lowerThan(Number threshold, String errorMessage) {
-        return Rule.custom((data) -> {
+        return Rule.custom(data -> {
             try {
                 double value = Double.parseDouble(data);
                 return value < threshold.doubleValue();
@@ -271,7 +271,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing a maximum numeric value (inclusive)
      */
     static Rule lowerEqualsThan(Number threshold, String errorMessage) {
-        return Rule.custom((data) -> {
+        return Rule.custom(data -> {
             try {
                 double value = Double.parseDouble(data);
                 return value <= threshold.doubleValue();
@@ -289,7 +289,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing a minimum numeric value
      */
     static Rule greaterThan(Number threshold, String errorMessage) {
-        return Rule.custom((data) -> {
+        return Rule.custom(data -> {
             try {
                 double value = Double.parseDouble(data);
                 return value > threshold.doubleValue();
@@ -307,7 +307,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing a minimum numeric value (inclusive)
      */
     static Rule greaterEqualsThan(Number threshold, String errorMessage) {
-        return Rule.custom((data) -> {
+        return Rule.custom(data -> {
             try {
                 double value = Double.parseDouble(data);
                 return value >= threshold.doubleValue();
@@ -327,7 +327,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing a numeric range
      */
     static Rule clamp(Number min, Number max, String errorMessage) {
-        return Rule.custom((data) -> {
+        return Rule.custom(data -> {
             try {
                 double value = Double.parseDouble(data);
                 return value >= min.doubleValue() && value <= max.doubleValue();
@@ -346,7 +346,7 @@ final class BaseRules {
      * @return A {@link Rule} enforcing the specified regex
      */
     static Rule regex(String pattern, String errorMessage, String modifiers) {
-        return Rule.custom((data) -> {
+        return Rule.custom(data -> {
             if (data == null)
                 return false;
             int flags = 0;

@@ -698,28 +698,45 @@ public final class JoltHttpContext {
      * <li>JSON request body (if the Content-Type is "application/json")</li>
      * <li>Path parameters extracted from the URL</li>
      * </ul>
-     * 
-     * In case of duplicate keys, the values from later sources (e.g. JSON body or
-     * path parameters)
-     * will override those from earlier sources.
-     * 
-     * @param excludes The name of the fields to exclude from the form.
-     * 
+     * In case of duplicate keys, the values from later sources override those from
+     * earlier sources.
+     *
+     * @param excludes The names of the fields to exclude from the form.
      * @return A new {@link Form} instance populated with all available input data.
      * @throws JoltBadRequestException If JSON parsing fails.
      */
     public Form buildForm(String... excludes) {
         Map<String, String> formData = new HashMap<>();
+        addQueryParameters(formData, excludes);
+        addJsonBodyParameters(formData, excludes);
+        formData.putAll(pathParams);
+        return new Form(formData);
+    }
 
-        // 1. Query parameters (or form-encoded parameters)
+    /**
+     * Adds query or form-encoded parameters from the HTTP request to the provided
+     * form data map.
+     *
+     * @param formData The map to which query parameters will be added.
+     * @param excludes The fields to exclude.
+     */
+    private void addQueryParameters(Map<String, String> formData, String... excludes) {
         req.getParameterMap().forEach((key, values) -> {
-            if (values != null && values.length > 0) {
-                if (!shouldExclude(key, excludes) && values.length > 0) {
-                    formData.put(key, values[0]);
-                }
+            if (values != null && values.length > 0 && !shouldExclude(key, excludes)) {
+                formData.put(key, values[0]);
             }
         });
+    }
 
+    /**
+     * Parses the JSON request body (if applicable) and adds its key-value pairs to
+     * the provided form data map.
+     *
+     * @param formData The map to which JSON parameters will be added.
+     * @param excludes The fields to exclude.
+     * @throws JoltBadRequestException If the JSON body cannot be parsed.
+     */
+    private void addJsonBodyParameters(Map<String, String> formData, String... excludes) {
         String contentType = req.getContentType();
         if (contentType != null && contentType.startsWith("application/json")) {
             String raw = bodyRaw();
@@ -727,7 +744,6 @@ public final class JoltHttpContext {
                 try {
                     Map<String, Object> parsed = JSON_MAPPER.readValue(raw, new TypeReference<Map<String, Object>>() {
                     });
-
                     parsed.forEach((key, object) -> {
                         if (!shouldExclude(key, excludes)) {
                             String valueStr = (object == null) ? "" : object.toString();
@@ -739,9 +755,6 @@ public final class JoltHttpContext {
                 }
             }
         }
-
-        formData.putAll(pathParams);
-        return new Form(formData);
     }
 
     /**

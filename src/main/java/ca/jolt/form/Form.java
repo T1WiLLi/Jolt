@@ -6,9 +6,11 @@ import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
@@ -157,18 +159,20 @@ public final class Form {
     public boolean verify(String... excludedFields) {
         errors.clear();
         boolean isValid = true;
-        for (FieldValidator validator : fieldValidators.values()) {
-            if (!validator.verify()) {
+        Set<String> excludeSet = new HashSet<>(Arrays.asList(excludedFields));
+
+        for (Map.Entry<String, FieldValidator> entry : fieldValidators.entrySet()) {
+            if (excludeSet.contains(entry.getKey())) {
+                continue;
+            }
+            if (!entry.getValue().verify()) {
                 isValid = false;
             }
         }
-
         verifyLog(isValid);
-
         if (isValid && successCallback != null) {
             successCallback.run();
         }
-
         return isValid;
     }
 
@@ -241,21 +245,14 @@ public final class Form {
         verifyLog(syncValid);
 
         return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                .thenApply(v -> {
-                    boolean allValid = true;
-                    for (CompletableFuture<Boolean> future : futures) {
-                        try {
-                            if (!future.join()) {
-                                allValid = false;
-                            }
-                        } catch (Exception e) {
-                            allValid = false;
-                            logger.warning("Async validation exception: " + e.getMessage());
-                        }
+                .thenApply(v -> syncValid && futures.stream().allMatch(future -> {
+                    try {
+                        return future.join();
+                    } catch (Exception e) {
+                        logger.warning("Async validation exception: " + e.getMessage());
+                        return false;
                     }
-                    boolean finalResult = syncValid && allValid;
-                    return finalResult;
-                });
+                }));
     }
 
     /**
@@ -269,14 +266,21 @@ public final class Form {
         for (Rule rule : validator.getRules()) {
             if (rule instanceof AsyncRule asyncRule) {
                 futures.add(asyncRule.validateAsync(value)
-                        .thenApply(valid -> {
-                            if (!valid) {
-                                addError(fieldName, rule.getErrorMessage());
-                            }
-                            return valid;
-                        }));
+                        .thenApply(valid -> valid ? true : addErrorAndReturnFalse(fieldName, rule.getErrorMessage())));
             }
         }
+    }
+
+    /**
+     * Helper method that adds an error to the list of errors and returns false.
+     * 
+     * @param fieldName
+     * @param errorMessage
+     * @return
+     */
+    private boolean addErrorAndReturnFalse(String fieldName, String errorMessage) {
+        addError(fieldName, errorMessage);
+        return false;
     }
 
     /**
@@ -512,13 +516,12 @@ public final class Form {
      * to properties in the entity are ignored.
      *
      * @param <T>          The type of the entity.
-     * @param clazz        The class of the entity.
      * @param entity       The existing entity instance to be updated.
      * @param ignoreFields Field names to exclude from updating.
      * @return The updated entity instance.
      * @throws FormConversionException If an error occurs during the update process.
      */
-    public <T> T updateEntity(Class<T> clazz, T entity, String... ignoreFields) {
+    public <T> T updateEntity(T entity, String... ignoreFields) {
         ObjectMapper mapper = new ObjectMapper();
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         try {
@@ -537,13 +540,12 @@ public final class Form {
      * Conveniance method to update an entity without excluding any fields.
      * 
      * @param <T>    The type of the entity
-     * @param clazz  The class of the entity
      * @param entity The existing entity instance to be updated
      * @return The updated entity instance
      * @throws FormConversionException If an error occurs during the update process
      */
-    public <T> T updateEntity(Class<T> clazz, T entity) {
-        return updateEntity(clazz, entity, new String[0]);
+    public <T> T updateEntity(T entity) {
+        return updateEntity(entity, new String[0]);
     }
 
     /**

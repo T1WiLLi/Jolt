@@ -3,6 +3,8 @@ package ca.jolt.security.cryptography;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 
+import ca.jolt.exceptions.JoltSecurityException;
+
 /**
  * Internal utility class for generating cryptographically secure random values.
  * This class provides access to a properly initialized SecureRandom instance
@@ -16,11 +18,14 @@ final class SecureRandomGenerator {
      */
     private static final SecureRandom SECURE_RANDOM;
 
+    private SecureRandomGenerator() {
+    }
+
     static {
         try {
             SECURE_RANDOM = SecureRandom.getInstanceStrong();
         } catch (NoSuchAlgorithmException e) {
-            throw new RuntimeException("Failed to initialize secure random generator", e);
+            throw new JoltSecurityException("Failed to initialize secure random generator", e);
         }
     }
 

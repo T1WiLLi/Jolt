@@ -11,6 +11,9 @@ public final class Cryptography {
     private static final String HEX_CHARS = "0123456789ABCDEF";
     private static final String ALPHANUMERIC = "0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
+    private Cryptography() {
+    }
+
     /**
      * Generates a random hexadecimal string of the specified length.
      *

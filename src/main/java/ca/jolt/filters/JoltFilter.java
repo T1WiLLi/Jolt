@@ -88,18 +88,4 @@ public abstract class JoltFilter implements Filter {
     protected JoltHttpContext buildJoltContext(ServletRequest req, ServletResponse res) {
         return new JoltHttpContext((HttpServletRequest) req, (HttpServletResponse) res, null, Collections.emptyList());
     }
-
-    /**
-     * The core filtering method. Subclasses must implement custom
-     * filtering logic here.
-     *
-     * @param request  The current {@link ServletRequest}
-     * @param response The current {@link ServletResponse}
-     * @param chain    The {@link FilterChain} to pass control to the next filter
-     * @throws IOException      If an I/O error occurs
-     * @throws ServletException If a servlet error occurs
-     */
-    @Override
-    public abstract void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
-            throws IOException, ServletException;
 }

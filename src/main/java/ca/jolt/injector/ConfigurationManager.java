@@ -70,7 +70,6 @@ final class ConfigurationManager {
         for (Method method : clazz.getDeclaredMethods()) {
             if (method.isAnnotationPresent(annotationType)) {
                 try {
-                    method.setAccessible(true);
                     method.invoke(instance);
                 } catch (Exception e) {
                     throw new JoltDIException("Failed to invoke lifecycle method on: " + clazz.getName(), e);
@@ -86,52 +85,108 @@ final class ConfigurationManager {
         }
     }
 
+    /**
+     * Validates the configuration class against the provided configuration type.
+     * <p>
+     * This method checks that:
+     * <ol>
+     * <li>A configuration type is provided.</li>
+     * <li>The configuration class implements the required interface for the given
+     * type.</li>
+     * <li>For all types except EXCEPTION_HANDLER, the configuration class defines
+     * the required lifecycle methods.</li>
+     * </ol>
+     *
+     * @param configClass The configuration class to validate.
+     * @param type        The configuration type.
+     * @throws JoltDIException If any validation fails.
+     */
     private void validateConfigurationType(Class<?> configClass, ConfigurationType type) {
         if (type == null) {
             throw new JoltDIException("Configuration type must be provided in @JoltConfiguration for " +
                     configClass.getName());
         }
-        if (type == ConfigurationType.EXCEPTION_HANDLER
-                && !GlobalExceptionHandler.class.isAssignableFrom(configClass)) {
-            throw new JoltDIException(
-                    "Configuration for EXCEPTION_HANDLER must implement GlobalExceptionHandler: " +
-                            configClass.getName());
-        }
-        if (type == ConfigurationType.COOKIE && !CookieConfiguration.class.isAssignableFrom(configClass)) {
-            throw new JoltDIException(
-                    "Configuration for COOKIE must implement CookieConfiguration: " + configClass.getName());
-        }
-
-        if (type == ConfigurationType.FILTER && !FilterConfiguration.class.isAssignableFrom(configClass)) {
-            throw new JoltDIException(
-                    "Configuration for FILTER must implement FilterConfiguration: " + configClass.getName());
-        }
-
-        if (type == ConfigurationType.SECURITY && !SecurityConfiguration.class.isAssignableFrom(configClass)) {
-            throw new JoltDIException(
-                    "Configuration for SECURITY must implement SecurityConfiguration: " + configClass.getName());
-        }
+        validateRequiredInterface(configClass, type);
 
         if (type != ConfigurationType.EXCEPTION_HANDLER) {
-            try {
-                Method initMethod = configClass.getDeclaredMethod("init");
-                if (!initMethod.isAnnotationPresent(PostConstruct.class)) {
-                    throw new JoltDIException(
-                            "Configuration class must have @PostConstruct annotation on init() method: "
-                                    + configClass.getName());
-                }
+            validateLifecycleMethods(configClass);
+        }
+    }
 
-                try {
-                    configClass.getDeclaredMethod("configure");
-                } catch (NoSuchMethodException e) {
+    /**
+     * Validates that the given configuration class implements the required
+     * interface
+     * for the specified configuration type.
+     *
+     * @param configClass The configuration class to validate.
+     * @param type        The configuration type.
+     * @throws JoltDIException If the configuration class does not implement the
+     *                         required interface.
+     */
+    private void validateRequiredInterface(Class<?> configClass, ConfigurationType type) {
+        switch (type) {
+            case EXCEPTION_HANDLER:
+                if (!GlobalExceptionHandler.class.isAssignableFrom(configClass)) {
                     throw new JoltDIException(
-                            "Configuration class must implement configure() method: " + configClass.getName());
+                            "Configuration for EXCEPTION_HANDLER must implement GlobalExceptionHandler: " +
+                                    configClass.getName());
                 }
-            } catch (NoSuchMethodException e) {
-                throw new JoltDIException(
-                        "Configuration class must implement init() method with @PostConstruct: "
-                                + configClass.getName());
+                break;
+            case COOKIE:
+                if (!CookieConfiguration.class.isAssignableFrom(configClass)) {
+                    throw new JoltDIException("Configuration for COOKIE must implement CookieConfiguration: " +
+                            configClass.getName());
+                }
+                break;
+            case FILTER:
+                if (!FilterConfiguration.class.isAssignableFrom(configClass)) {
+                    throw new JoltDIException("Configuration for FILTER must implement FilterConfiguration: " +
+                            configClass.getName());
+                }
+                break;
+            case SECURITY:
+                if (!SecurityConfiguration.class.isAssignableFrom(configClass)) {
+                    throw new JoltDIException("Configuration for SECURITY must implement SecurityConfiguration: " +
+                            configClass.getName());
+                }
+                break;
+            default:
+                break;
+        }
+    }
+
+    /**
+     * Validates that the configuration class defines the required lifecycle
+     * methods.
+     * <p>
+     * Specifically, this method verifies that:
+     * <ul>
+     * <li>The <code>init()</code> method exists and is annotated with
+     * <code>@PostConstruct</code>.</li>
+     * <li>The <code>configure()</code> method exists.</li>
+     * </ul>
+     *
+     * @param configClass The configuration class to validate.
+     * @throws JoltDIException If the required lifecycle methods are missing or
+     *                         incorrectly annotated.
+     */
+    private void validateLifecycleMethods(Class<?> configClass) {
+        try {
+            Method initMethod = configClass.getDeclaredMethod("init");
+            if (!initMethod.isAnnotationPresent(PostConstruct.class)) {
+                throw new JoltDIException("Configuration class must have @PostConstruct annotation on init() method: " +
+                        configClass.getName());
             }
+        } catch (NoSuchMethodException e) {
+            throw new JoltDIException("Configuration class must implement init() method with @PostConstruct: " +
+                    configClass.getName());
+        }
+
+        try {
+            configClass.getDeclaredMethod("configure");
+        } catch (NoSuchMethodException e) {
+            throw new JoltDIException("Configuration class must implement configure() method: " +
+                    configClass.getName());
         }
     }
 

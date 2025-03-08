@@ -94,13 +94,13 @@ public final class ConfigLoader {
     /**
      * Resolves placeholders in property values using environment variables.
      * <p>
-     * Iterates through the properties, replacing placeholders (e.g.,
-     * {@code {VARIABLE}}) with
-     * corresponding values from the {@code .env} file loaded by {@link Dotenv}. The
-     * process
-     * repeats up to 10 times to handle nested placeholders, logging a warning if
-     * unresolved
-     * placeholders remain.
+     * Iterates through the provided {@link Properties}, replacing any placeholders
+     * (e.g.,
+     * {@code {VARIABLE}}) with corresponding values from the {@code .env} file
+     * loaded by {@link Dotenv}.
+     * This process repeats up to 10 times to handle nested placeholders. If, after
+     * the maximum
+     * iterations, some placeholders remain unresolved, a warning is logged.
      *
      * @param props The {@link Properties} object whose values need placeholder
      *              resolution.
@@ -111,36 +111,17 @@ public final class ConfigLoader {
             return;
         }
 
-        boolean anyUnresolved;
-        int iterations = 0;
         final int MAX_ITERATIONS = 10;
+        int iterations = 0;
+        boolean anyUnresolved;
 
         do {
             anyUnresolved = false;
             iterations++;
 
             for (String key : props.stringPropertyNames()) {
-                String value = props.getProperty(key);
-                Matcher matcher = PLACEHOLDER_PATTERN.matcher(value);
-
-                if (matcher.find()) {
-                    StringBuffer resolvedValue = new StringBuffer();
-                    matcher.reset();
-
-                    while (matcher.find()) {
-                        String envKey = matcher.group(1);
-                        String envValue = dotenv.get(envKey);
-
-                        if (envValue != null) {
-                            matcher.appendReplacement(resolvedValue, Matcher.quoteReplacement(envValue));
-                        } else {
-                            anyUnresolved = true;
-                            matcher.appendReplacement(resolvedValue, Matcher.quoteReplacement(matcher.group(0)));
-                        }
-                    }
-
-                    matcher.appendTail(resolvedValue);
-                    props.setProperty(key, resolvedValue.toString());
+                if (resolveProperty(props, key)) {
+                    anyUnresolved = true;
                 }
             }
         } while (anyUnresolved && iterations < MAX_ITERATIONS);
@@ -150,6 +131,50 @@ public final class ConfigLoader {
                     "Reached maximum placeholder resolution iterations. Some placeholders may remain unresolved.");
         }
         logger.info(() -> ".env file loaded and injected with success.");
+    }
+
+    /**
+     * Resolves placeholders in the property value for a specific key.
+     * <p>
+     * For each placeholder found in the property's value, this method attempts to
+     * replace it
+     * with the corresponding environment variable from {@code .env}. If a matching
+     * value is found,
+     * it is replaced; otherwise, the placeholder remains and the method indicates
+     * that unresolved
+     * placeholders exist.
+     *
+     * @param props The {@link Properties} object containing the property.
+     * @param key   The key of the property to process.
+     * @return {@code true} if any placeholders remain unresolved; {@code false}
+     *         otherwise.
+     */
+    private static boolean resolveProperty(Properties props, String key) {
+        String value = props.getProperty(key);
+        Matcher matcher = PLACEHOLDER_PATTERN.matcher(value);
+
+        if (!matcher.find()) {
+            return false;
+        }
+
+        StringBuffer resolvedValue = new StringBuffer();
+        matcher.reset();
+        boolean anyUnresolved = false;
+
+        while (matcher.find()) {
+            String envKey = matcher.group(1);
+            String envValue = dotenv.get(envKey);
+            if (envValue != null) {
+                matcher.appendReplacement(resolvedValue, Matcher.quoteReplacement(envValue));
+            } else {
+                anyUnresolved = true;
+                matcher.appendReplacement(resolvedValue, Matcher.quoteReplacement(matcher.group(0)));
+            }
+        }
+        matcher.appendTail(resolvedValue);
+        props.setProperty(key, resolvedValue.toString());
+
+        return anyUnresolved;
     }
 
     /**
