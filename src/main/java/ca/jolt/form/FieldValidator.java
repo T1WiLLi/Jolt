@@ -4,10 +4,8 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.Map;
-import java.util.concurrent.CompletableFuture;
 import java.util.function.Predicate;
 import java.util.function.UnaryOperator;
-import java.util.function.Function;
 
 import lombok.Getter;
 
@@ -394,20 +392,6 @@ public final class FieldValidator {
      */
     public FieldValidator when(Predicate<Map<String, String>> condition) {
         this.condition = condition;
-        return this;
-    }
-
-    /**
-     * Adds an asynchronous rule based on a provided function returning
-     * a {@link CompletableFuture} of {@code Boolean}.
-     *
-     * @param asyncValidator The function that performs asynchronous validation
-     * @param errorMessage   The error message if validation fails
-     * @return This {@code FieldValidator} (for fluent chaining)
-     * @see AsyncRule
-     */
-    public FieldValidator asyncRule(Function<String, CompletableFuture<Boolean>> asyncValidator, String errorMessage) {
-        addRule(new AsyncRule(asyncValidator, errorMessage));
         return this;
     }
 

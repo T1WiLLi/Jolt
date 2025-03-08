@@ -11,7 +11,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.CompletableFuture;
 import java.util.logging.Logger;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
@@ -206,81 +205,6 @@ public final class Form {
         }
         sb.append("]");
         return sb.toString();
-    }
-
-    /**
-     * Runs asynchronous validation on all fields (except those excluded)
-     * to support any {@link AsyncRule} objects.
-     * <p>
-     * This method:
-     * <ul>
-     * <li>Clears any existing errors.</li>
-     * <li>Collects asynchronous validations only for fields not listed
-     * in {@code excludedFields}.</li>
-     * <li>Runs synchronous validation on non‑excluded fields.</li>
-     * <li>Logs the process and returns a CompletableFuture that resolves
-     * to true only if both sync and async validations pass.</li>
-     * </ul>
-     *
-     * @param excludedFields Field names to skip during validation
-     * @return A CompletableFuture that resolves to true if all validations pass;
-     *         false otherwise
-     */
-    public CompletableFuture<Boolean> verifyAsync(String... excludedFields) {
-        errors.clear();
-        List<CompletableFuture<Boolean>> futures = new ArrayList<>();
-        List<String> excluded = Arrays.asList(excludedFields);
-
-        for (var entry : fieldValidators.entrySet()) {
-            String fieldName = entry.getKey();
-            if (excluded.contains(fieldName)) {
-                continue;
-            }
-            FieldValidator validator = entry.getValue();
-            String value = fieldValues.getOrDefault(fieldName, "");
-            addAsyncValidationFutures(futures, fieldName, validator, value);
-        }
-
-        boolean syncValid = verify(excludedFields);
-        verifyLog(syncValid);
-
-        return CompletableFuture.allOf(futures.toArray(new CompletableFuture[0]))
-                .thenApply(v -> syncValid && futures.stream().allMatch(future -> {
-                    try {
-                        return future.join();
-                    } catch (Exception e) {
-                        logger.warning("Async validation exception: " + e.getMessage());
-                        return false;
-                    }
-                }));
-    }
-
-    /**
-     * Helper method that gathers all {@link AsyncRule} instances from a validator
-     * and schedules them.
-     */
-    private void addAsyncValidationFutures(List<CompletableFuture<Boolean>> futures,
-            String fieldName,
-            FieldValidator validator,
-            String value) {
-        for (Rule rule : validator.getRules()) {
-            if (rule instanceof AsyncRule asyncRule) {
-                futures.add(asyncRule.validateAsync(value)
-                        .thenApply(valid -> valid ? true : addErrorAndReturnFalse(fieldName, rule.getErrorMessage())));
-            }
-        }
-    }
-
-    /**
-     * Helper method that adds an error to the list of errors and returns false.
-     * 
-     * @param fieldName
-     * @param errorMessage
-     * @return
-     */
-    private boolean addErrorAndReturnFalse(String fieldName, String errorMessage) {
-        addError(fieldName, errorMessage);
-        return false;
     }
 
     /**
