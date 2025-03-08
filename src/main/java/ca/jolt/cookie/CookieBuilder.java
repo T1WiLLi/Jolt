@@ -1,5 +1,6 @@
 package ca.jolt.cookie;
 
+import ca.jolt.injector.JoltContainer;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -80,12 +81,18 @@ public final class CookieBuilder {
     private String sameSite;
 
     /**
+     * The configuration for the cookie.
+     */
+    private static CookieConfiguration cookieConfig;
+
+    /**
      * Creates a new cookie builder for the given HTTP response.
      *
      * @param res The HTTP response to which the cookie will be added
      */
     public CookieBuilder(HttpServletResponse res) {
         this.res = res;
+        cookieConfig = JoltContainer.getInstance().getBean(CookieConfiguration.class);
     }
 
     /**
@@ -208,12 +215,12 @@ public final class CookieBuilder {
      * @param value The cookie value to store
      */
     public void sessionCookie(String value) {
-        setName(CookieConfiguration.getInstance().getSessionCookieName());
+        setName(cookieConfig.getSessionCookieName());
         setValue(value);
         secure(true);
         httpOnly(true);
-        path(CookieConfiguration.getInstance().getSessionCookiePath());
-        sameSite(CookieConfiguration.getInstance().getSessionSameSitePolicy());
+        path(cookieConfig.getSessionCookiePath());
+        sameSite(cookieConfig.getSessionSameSitePolicy());
         build();
     }
 
@@ -224,12 +231,12 @@ public final class CookieBuilder {
      * @param maxAge The maximum age of the cookie in seconds
      */
     public void jwtCookie(String value, int maxAge) {
-        setName(CookieConfiguration.getInstance().getJwtCookieName());
+        setName(cookieConfig.getJwtCookieName());
         setValue(value);
         secure(true);
         httpOnly(true);
-        path(CookieConfiguration.getInstance().getJwtCookiePath());
-        sameSite(CookieConfiguration.getInstance().getJwtSameSitePolicy());
+        path(cookieConfig.getJwtCookiePath());
+        sameSite(cookieConfig.getJwtSameSitePolicy());
         maxAge(maxAge);
         build();
     }
@@ -250,5 +257,34 @@ public final class CookieBuilder {
         path("/");
         sameSite("Lax");
         build();
+    }
+
+    /*-----------------------------------
+     * COOKIE CONFIGURATION VALUES ACCESS
+     * ----------------------------------
+     */
+
+    public static String sessionCookieName() {
+        return cookieConfig.getSessionCookieName();
+    }
+
+    public static String jwtCookieName() {
+        return cookieConfig.getJwtCookieName();
+    }
+
+    public static String sessionCookiePath() {
+        return cookieConfig.getSessionCookiePath();
+    }
+
+    public static String jwtCookiePath() {
+        return cookieConfig.getJwtCookiePath();
+    }
+
+    public static String sessionCookieDomain() {
+        return cookieConfig.getSessionSameSitePolicy();
+    }
+
+    public static String jwtSameSitePolicy() {
+        return cookieConfig.getJwtSameSitePolicy();
     }
 }

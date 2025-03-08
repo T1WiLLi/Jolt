@@ -1,6 +1,5 @@
 package ca.jolt.cookie;
 
-import ca.jolt.injector.JoltContainer;
 import lombok.Getter;
 
 /**
@@ -12,25 +11,6 @@ import lombok.Getter;
  * instance. This instance is retrieved from the dependency injector.
  */
 public abstract class CookieConfiguration {
-
-    /**
-     * Holds the singleton instance of this configuration.
-     */
-    private static volatile CookieConfiguration INSTANCE;
-
-    /**
-     * Returns the global instance of {@code CookieConfiguration}.
-     * <p>
-     * If no instance exists, this method retrieves it from {@link JoltContainer}.
-     *
-     * @return The singleton configuration instance
-     */
-    public static synchronized CookieConfiguration getInstance() {
-        if (INSTANCE == null) {
-            INSTANCE = JoltContainer.getInstance().getBean(CookieConfiguration.class);
-        }
-        return INSTANCE;
-    }
 
     /**
      * The name of the session cookie.
