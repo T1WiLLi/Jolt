@@ -1,6 +1,6 @@
 package ca.jolt.filters;
 
-import ca.jolt.routing.context.JoltHttpContext;
+import ca.jolt.routing.context.JoltContext;
 import jakarta.servlet.Filter;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.FilterConfig;
@@ -78,14 +78,14 @@ public abstract class JoltFilter implements Filter {
     }
 
     /**
-     * Creates a {@link JoltHttpContext} for the current request and response.
+     * Creates a {@link JoltContext} for the current request and response.
      * This context is built with an empty list of path parameters.
      *
      * @param req The current {@link HttpServletRequest}
      * @param res The current {@link HttpServletResponse}
-     * @return A newly created {@link JoltHttpContext} for this request
+     * @return A newly created {@link JoltContext} for this request
      */
-    protected JoltHttpContext buildJoltContext(ServletRequest req, ServletResponse res) {
-        return new JoltHttpContext((HttpServletRequest) req, (HttpServletResponse) res, null, Collections.emptyList());
+    protected JoltContext buildJoltContext(ServletRequest req, ServletResponse res) {
+        return new JoltContext((HttpServletRequest) req, (HttpServletResponse) res, null, Collections.emptyList());
     }
 }

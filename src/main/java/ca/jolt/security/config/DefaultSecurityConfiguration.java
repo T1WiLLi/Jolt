@@ -2,6 +2,7 @@ package ca.jolt.security.config;
 
 import ca.jolt.injector.annotation.JoltConfiguration;
 import ca.jolt.injector.type.ConfigurationType;
+import ca.jolt.security.policies.CacheControlPolicy;
 import ca.jolt.security.policies.FrameOptionsPolicy;
 import ca.jolt.security.policies.HstsPolicy;
 import ca.jolt.security.policies.ReferrerPolicy;
@@ -44,6 +45,7 @@ public class DefaultSecurityConfiguration extends SecurityConfiguration {
      * - Sets Referrer-Policy to same-origin
      * - Doesn't enforce HTTPS only
      * - Enables Content-Security-Policy
+     * - Sets Cache-Control to no-cache
      *
      * @return This configuration instance for method chaining
      */
@@ -62,7 +64,9 @@ public class DefaultSecurityConfiguration extends SecurityConfiguration {
                 .withHsts(HstsPolicy.ONE_YEAR_WITH_SUBDOMAINS_PRELOAD)
                 .withReferrerPolicy(ReferrerPolicy.SAME_ORIGIN)
                 .httpsOnly(false)
-                .contentSecurityPolicy(true);
+                .contentSecurityPolicy(true)
+                .withCacheControl(CacheControlPolicy.NO_CACHE);
+
         return this;
     }
 }

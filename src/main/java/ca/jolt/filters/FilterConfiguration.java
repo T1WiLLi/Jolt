@@ -7,7 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
 
-import ca.jolt.routing.context.JoltHttpContext;
+import ca.jolt.routing.context.JoltContext;
 import lombok.Getter;
 
 /**
@@ -31,10 +31,10 @@ public abstract class FilterConfiguration {
 
     /**
      * A collection of predicates used to determine whether a route
-     * should be excluded based on the {@link JoltHttpContext}.
+     * should be excluded based on the {@link JoltContext}.
      */
     @Getter
-    protected final List<Predicate<JoltHttpContext>> exclusionPredicates = new ArrayList<>();
+    protected final List<Predicate<JoltContext>> exclusionPredicates = new ArrayList<>();
 
     /**
      * Maintains filter instances mapped to their assigned order.
@@ -66,7 +66,7 @@ public abstract class FilterConfiguration {
      * @param routePredicate A predicate that, if {@code true}, excludes the route
      * @return This configuration instance for method chaining
      */
-    public FilterConfiguration excludeIf(Predicate<JoltHttpContext> routePredicate) {
+    public FilterConfiguration excludeIf(Predicate<JoltContext> routePredicate) {
         exclusionPredicates.add(routePredicate);
         return this;
     }
@@ -97,10 +97,10 @@ public abstract class FilterConfiguration {
     /**
      * Determines if the specified route should be excluded from filtering.
      *
-     * @param context The current {@link JoltHttpContext}
+     * @param context The current {@link JoltContext}
      * @return {@code true} if the route is excluded, {@code false} otherwise
      */
-    public boolean shouldExcludeRoute(JoltHttpContext context) {
+    public boolean shouldExcludeRoute(JoltContext context) {
         String path = context.getRequest().getPathInfo() != null
                 ? context.getRequest().getPathInfo()
                 : context.getRequest().getServletPath();

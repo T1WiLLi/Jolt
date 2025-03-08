@@ -4,7 +4,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
 
-import ca.jolt.routing.context.JoltHttpContext;
+import ca.jolt.routing.context.JoltContext;
 
 /**
  * Represents an entry in the HTTP request/response lifecycle.
@@ -13,7 +13,7 @@ import ca.jolt.routing.context.JoltHttpContext;
  */
 public final class LifecycleEntry {
     private final List<String> paths;
-    private final Consumer<JoltHttpContext> handler;
+    private final Consumer<JoltContext> handler;
 
     /**
      * Creates a new lifecycle entry with the specified paths and handler.
@@ -24,7 +24,7 @@ public final class LifecycleEntry {
      *                Cannot be null.
      * @throws NullPointerException if the handler is null
      */
-    public LifecycleEntry(List<String> paths, Consumer<JoltHttpContext> handler) {
+    public LifecycleEntry(List<String> paths, Consumer<JoltContext> handler) {
         this.paths = (paths == null) ? List.of() : paths;
         this.handler = Objects.requireNonNull(handler, "Handler cannot be null");
     }
@@ -48,7 +48,7 @@ public final class LifecycleEntry {
      *
      * @param ctx The HTTP context for the current request
      */
-    public void execute(JoltHttpContext ctx) {
+    public void execute(JoltContext ctx) {
         handler.accept(ctx);
     }
 }

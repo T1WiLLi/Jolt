@@ -137,6 +137,12 @@ public enum HttpStatus {
     UNSUPPORTED_MEDIA_TYPE(415, "Unsupported Media Type"),
 
     /**
+     * {@code 422 Unprocessable Entity} - The request was well-formed but was unable
+     * to process the contained instructions.
+     */
+    UNPROCESSABLE_ENTITY(422, "Unprocessable Entity"),
+
+    /**
      * {@code 429 Too Many Requests} - The user has sent too many requests in a
      * given amount of time.
      */

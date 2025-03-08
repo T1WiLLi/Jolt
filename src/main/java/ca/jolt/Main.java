@@ -1,6 +1,10 @@
 package ca.jolt;
 
+import java.util.Map;
+
 import ca.jolt.core.JoltApplication;
+import ca.jolt.http.HttpStatus;
+import ca.jolt.routing.context.JoltContext;
 
 public class Main extends JoltApplication {
     public static void main(String[] args) {
@@ -9,6 +13,10 @@ public class Main extends JoltApplication {
 
     @Override
     public void setup() {
-        get("/", ctx -> ctx.html("Hello World!"));
+        get("/", Main::getUser);
+    }
+
+    public static JoltContext getUser(JoltContext ctx) {
+        return ctx.status(HttpStatus.BAD_REQUEST).json(Map.of("name", "John Doe", "age", 30));
     }
 }

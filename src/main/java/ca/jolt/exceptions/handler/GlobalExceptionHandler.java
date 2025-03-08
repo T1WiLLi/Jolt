@@ -1,6 +1,6 @@
 package ca.jolt.exceptions.handler;
 
-import ca.jolt.routing.context.JoltHttpContext;
+import ca.jolt.routing.context.JoltContext;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**
@@ -12,7 +12,7 @@ import jakarta.servlet.http.HttpServletResponse;
 public interface GlobalExceptionHandler {
 
     /**
-     * Handles a thrown exception using the provided {@link JoltHttpContext}.
+     * Handles a thrown exception using the provided {@link JoltContext}.
      * <p>
      * By default, this method delegates to
      * {@link #handle(Throwable, HttpServletResponse)},
@@ -21,7 +21,7 @@ public interface GlobalExceptionHandler {
      * @param t   The thrown exception
      * @param ctx The current request and response context
      */
-    default void handle(Throwable t, JoltHttpContext ctx) {
+    default void handle(Throwable t, JoltContext ctx) {
         handle(t, ctx.getResponse());
     }
 

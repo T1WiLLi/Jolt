@@ -1,5 +1,6 @@
 package ca.jolt.security.config;
 
+import ca.jolt.security.policies.CacheControlPolicy;
 import ca.jolt.security.policies.FrameOptionsPolicy;
 import ca.jolt.security.policies.HstsPolicy;
 import ca.jolt.security.policies.ReferrerPolicy;
@@ -46,6 +47,9 @@ public class HeadersConfiguration {
     private boolean contentSecurityPolicyEnabled = true;
     @Getter
     private String contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self';";
+
+    @Getter
+    private String cacheControlDirective;
 
     // -------------------- XSS Protection --------------------
 
@@ -230,6 +234,23 @@ public class HeadersConfiguration {
     public HeadersConfiguration contentSecurityPolicy(String policy) {
         this.contentSecurityPolicyEnabled = true;
         this.contentSecurityPolicy = policy;
+        return this;
+    }
+
+    /**
+     * Sets the Cache-Control header using a predefined policy.
+     *
+     * @param policy the CacheControlPolicy to apply
+     * @return this HeadersConfiguration for fluent chaining.
+     */
+    public HeadersConfiguration withCacheControl(CacheControlPolicy policy) {
+        this.cacheControlDirective = policy.getValue();
+        return this;
+    }
+
+    // Optionally, you could also provide a raw setter if needed:
+    public HeadersConfiguration withCacheControl(String cacheDirectives) {
+        this.cacheControlDirective = cacheDirectives;
         return this;
     }
 }

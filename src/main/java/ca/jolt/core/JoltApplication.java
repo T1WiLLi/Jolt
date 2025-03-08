@@ -9,7 +9,7 @@ import ca.jolt.injector.JoltContainer;
 import ca.jolt.logging.LogConfigurator;
 import ca.jolt.logging.StartupLog;
 import ca.jolt.routing.RouteHandler;
-import ca.jolt.routing.context.JoltHttpContext;
+import ca.jolt.routing.context.JoltContext;
 import ca.jolt.server.TomcatServer;
 import ca.jolt.server.config.ConfigurationManager;
 import ca.jolt.server.config.ServerConfig;
@@ -165,9 +165,9 @@ public abstract class JoltApplication {
      * Registers a global before-handler for all routes.
      *
      * @param handler A handler that executes before every route. Receives a
-     *                {@link JoltHttpContext} for the current request.
+     *                {@link JoltContext} for the current request.
      */
-    public static void before(Consumer<JoltHttpContext> handler) {
+    public static void before(Consumer<JoltContext> handler) {
         router.before(handler);
     }
 
@@ -175,10 +175,10 @@ public abstract class JoltApplication {
      * Registers a before-handler for the specified routes.
      *
      * @param handler A handler that executes before each matching route.
-     *                Receives a {@link JoltHttpContext} for the current request.
+     *                Receives a {@link JoltContext} for the current request.
      * @param routes  One or more path patterns (e.g., "/doc", "/api").
      */
-    public static void before(Consumer<JoltHttpContext> handler, String... routes) {
+    public static void before(Consumer<JoltContext> handler, String... routes) {
         router.before(handler, routes);
     }
 
@@ -186,9 +186,9 @@ public abstract class JoltApplication {
      * Registers a global after-handler for all routes.
      *
      * @param handler A handler that executes after every route. Receives a
-     *                {@link JoltHttpContext} for the current request.
+     *                {@link JoltContext} for the current request.
      */
-    public static void after(Consumer<JoltHttpContext> handler) {
+    public static void after(Consumer<JoltContext> handler) {
         router.after(handler);
     }
 
@@ -196,10 +196,10 @@ public abstract class JoltApplication {
      * Registers an after-handler for the specified routes.
      *
      * @param handler A handler that executes after each matching route.
-     *                Receives a {@link JoltHttpContext} for the current request.
+     *                Receives a {@link JoltContext} for the current request.
      * @param routes  One or more path patterns (e.g., "/doc", "/api").
      */
-    public static void after(Consumer<JoltHttpContext> handler, String... routes) {
+    public static void after(Consumer<JoltContext> handler, String... routes) {
         router.after(handler, routes);
     }
 
@@ -219,7 +219,7 @@ public abstract class JoltApplication {
      * @param path     The path pattern to match
      * @param supplier A supplier whose {@code get()} method returns the response
      */
-    protected static void get(String path, Supplier<Object> supplier) {
+    protected static void get(String path, Supplier<JoltContext> supplier) {
         router.get(path, supplier);
     }
 
@@ -239,7 +239,7 @@ public abstract class JoltApplication {
      * @param path     The path pattern to match
      * @param supplier A supplier whose {@code get()} method returns the response
      */
-    protected static void post(String path, Supplier<Object> supplier) {
+    protected static void post(String path, Supplier<JoltContext> supplier) {
         router.post(path, supplier);
     }
 
@@ -259,7 +259,7 @@ public abstract class JoltApplication {
      * @param path     The path pattern to match
      * @param supplier A supplier whose {@code get()} method returns the response
      */
-    protected static void put(String path, Supplier<Object> supplier) {
+    protected static void put(String path, Supplier<JoltContext> supplier) {
         router.put(path, supplier);
     }
 
@@ -280,7 +280,7 @@ public abstract class JoltApplication {
      * @param path     The path pattern to match
      * @param supplier A supplier whose {@code get()} method returns the response
      */
-    protected static void delete(String path, Supplier<Object> supplier) {
+    protected static void delete(String path, Supplier<JoltContext> supplier) {
         router.delete(path, supplier);
     }
 

@@ -14,7 +14,7 @@ import java.util.function.Predicate;
  * int page = ctx.query("page").asIntOrDefault(1);
  * }</pre>
  *
- * @see JoltHttpContext
+ * @see JoltContext
  * @see JoltHttpContextValue
  * @author William Beaudin
  * @since 1.0

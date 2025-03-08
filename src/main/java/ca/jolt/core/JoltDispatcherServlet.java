@@ -11,7 +11,7 @@ import ca.jolt.routing.LifecycleEntry;
 import ca.jolt.routing.MimeInterpreter;
 import ca.jolt.routing.RouteHandler;
 import ca.jolt.routing.RouteMatch;
-import ca.jolt.routing.context.JoltHttpContext;
+import ca.jolt.routing.context.JoltContext;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
@@ -102,7 +102,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
     protected void service(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
         long start = System.currentTimeMillis();
         RequestContext context = prepareRequestContext(req, res);
-        JoltHttpContext joltCtx = new JoltHttpContext(req, res, null, Collections.emptyList());
+        JoltContext joltCtx = new JoltContext(req, res, null, Collections.emptyList());
 
         try {
             if (processFilters(context)) {
@@ -166,7 +166,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
                     return order1 != order2 ? Integer.compare(order1, order2) : 0;
                 }).toList();
 
-        JoltHttpContext joltContext = new JoltHttpContext(context.req, context.res, null, Collections.emptyList());
+        JoltContext joltContext = new JoltContext(context.req, context.res, null, Collections.emptyList());
 
         for (JoltFilter filter : filters) {
             if (filterConfig.shouldExcludeRoute(joltContext)) {
@@ -195,7 +195,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
      *
      * @param ctx The JoltHttpContext containing request and response
      */
-    private void executeBeforeHandlers(JoltHttpContext ctx) {
+    private void executeBeforeHandlers(JoltContext ctx) {
         executeHandler(ctx, router.getBeforeHandlers().stream());
     }
 
@@ -204,7 +204,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
      *
      * @param ctx The JoltHttpContext containing request and response
      */
-    private void executeAfterHandlers(JoltHttpContext ctx) {
+    private void executeAfterHandlers(JoltContext ctx) {
         executeHandler(ctx, router.getAfterHandlers().stream());
     }
 
@@ -214,7 +214,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
      * @param ctx      The JoltHttpContext containing request and response
      * @param handlers The stream of handlers to execute
      */
-    private void executeHandler(JoltHttpContext ctx, Stream<LifecycleEntry> handlers) {
+    private void executeHandler(JoltContext ctx, Stream<LifecycleEntry> handlers) {
         try {
             handlers.filter(entry -> entry.matches(ctx.requestPath()))
                     .forEach(entry -> entry.execute(ctx));
@@ -235,7 +235,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
     private boolean handleRoute(RouteMatch match, RequestContext context, long start) throws JoltRoutingException {
         try {
             // Update the context with route information
-            JoltHttpContext routeCtx = new JoltHttpContext(
+            JoltContext routeCtx = new JoltContext(
                     context.req,
                     context.res,
                     match.matcher(),
@@ -244,7 +244,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
             RouteHandler handler = match.route().getHandler();
             Object result = handler.handle(routeCtx);
 
-            if (!context.res.isCommitted() && result != null && !(result instanceof JoltHttpContext)) {
+            if (!context.res.isCommitted() && result != null && !(result instanceof JoltContext)) {
                 if (result instanceof String str) {
                     routeCtx.text(str);
                 } else {

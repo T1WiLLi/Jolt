@@ -17,7 +17,7 @@ import ca.jolt.routing.LifecycleEntry;
 import ca.jolt.routing.Route;
 import ca.jolt.routing.RouteHandler;
 import ca.jolt.routing.RouteMatch;
-import ca.jolt.routing.context.JoltHttpContext;
+import ca.jolt.routing.context.JoltContext;
 import lombok.Getter;
 
 /**
@@ -72,9 +72,9 @@ public final class Router {
      * Registers a "before" handler that applies to all routes.
      *
      * @param handler A handler to run before each route handler.
-     *                Receives a {@link JoltHttpContext} for the current request.
+     *                Receives a {@link JoltContext} for the current request.
      */
-    public void before(Consumer<JoltHttpContext> handler) {
+    public void before(Consumer<JoltContext> handler) {
         beforeHandlers.add(new LifecycleEntry(null, handler));
     }
 
@@ -82,11 +82,11 @@ public final class Router {
      * Registers a "before" handler that applies only to the specified routes.
      *
      * @param handler A handler to run before each matching route.
-     *                Receives a {@link JoltHttpContext} for the current request.
+     *                Receives a {@link JoltContext} for the current request.
      * @param routes  One or more route paths (e.g. "/doc", "/api") where
      *                the handler applies
      */
-    public void before(Consumer<JoltHttpContext> handler, String... routes) {
+    public void before(Consumer<JoltContext> handler, String... routes) {
         beforeHandlers.add(new LifecycleEntry(Arrays.asList(routes), handler));
     }
 
@@ -94,9 +94,9 @@ public final class Router {
      * Registers an "after" handler that applies to all routes.
      *
      * @param handler A handler to run after each route handler.
-     *                Receives a {@link JoltHttpContext} for the current request.
+     *                Receives a {@link JoltContext} for the current request.
      */
-    public void after(Consumer<JoltHttpContext> handler) {
+    public void after(Consumer<JoltContext> handler) {
         afterHandlers.add(new LifecycleEntry(null, handler));
     }
 
@@ -104,11 +104,11 @@ public final class Router {
      * Registers an "after" handler that applies only to the specified routes.
      *
      * @param handler A handler to run after each matching route.
-     *                Receives a {@link JoltHttpContext} for the current request.
+     *                Receives a {@link JoltContext} for the current request.
      * @param routes  One or more route paths (e.g. "/doc", "/api") where
      *                the handler applies
      */
-    public void after(Consumer<JoltHttpContext> handler, String... routes) {
+    public void after(Consumer<JoltContext> handler, String... routes) {
         afterHandlers.add(new LifecycleEntry(Arrays.asList(routes), handler));
     }
 
@@ -133,7 +133,7 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public void get(String path, Supplier<Object> supplier) {
+    public void get(String path, Supplier<JoltContext> supplier) {
         get(path, RouteHandler.fromSupplier(supplier));
     }
 
@@ -158,7 +158,7 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public void post(String path, Supplier<Object> supplier) {
+    public void post(String path, Supplier<JoltContext> supplier) {
         post(path, RouteHandler.fromSupplier(supplier));
     }
 
@@ -183,7 +183,7 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public void put(String path, Supplier<Object> supplier) {
+    public void put(String path, Supplier<JoltContext> supplier) {
         put(path, RouteHandler.fromSupplier(supplier));
     }
 
@@ -208,7 +208,7 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public void delete(String path, Supplier<Object> supplier) {
+    public void delete(String path, Supplier<JoltContext> supplier) {
         delete(path, RouteHandler.fromSupplier(supplier));
     }
 

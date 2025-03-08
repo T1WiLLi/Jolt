@@ -58,7 +58,7 @@ import jakarta.servlet.http.Part;
  * @author William Beaudin
  * @since 1.0
  */
-public final class JoltHttpContext {
+public final class JoltContext {
 
     /**
      * JSON parser for reading and writing JSON in request/response.
@@ -89,7 +89,7 @@ public final class JoltHttpContext {
      *                    The list of named parameters extracted from the route
      *                    definition.
      */
-    public JoltHttpContext(HttpServletRequest req, HttpServletResponse res,
+    public JoltContext(HttpServletRequest req, HttpServletResponse res,
             Matcher pathMatcher, List<String> paramNames) {
         this.req = req;
         this.res = res;
@@ -131,6 +131,37 @@ public final class JoltHttpContext {
     public String requestPath() {
         String p = (req.getPathInfo() != null) ? req.getPathInfo() : req.getServletPath();
         return (p == null || p.isEmpty()) ? "/" : p;
+    }
+
+    /**
+     * This function try to find and retrieve the client's IP address.
+     * <p>
+     * It checks the "X-Forwarded-For" header first, then the "X-Real-IP" header,
+     * and finally if none are found,
+     * it uses the {@link HttpServletRequest#getRemoteAddr()} method to get the IP
+     * address of the client.
+     * 
+     * @return The client's IP address.
+     */
+    public String clientIp() {
+        String ip = header("X-Forwarded-For");
+        if (ip != null && !ip.isBlank()) {
+            return ip.split(",")[0].trim();
+        }
+        ip = header("X-Real-IP");
+        if (ip != null && !ip.isBlank()) {
+            return ip;
+        }
+        return req.getRemoteAddr();
+    }
+
+    /**
+     * Retrieve the value of the User-Agent header.
+     * 
+     * @return The client's user agent.
+     */
+    public String userAgent() {
+        return header("User-Agent");
     }
 
     /**
@@ -346,7 +377,7 @@ public final class JoltHttpContext {
      * @return
      *         This {@code JoltHttpContext}, for fluent chaining.
      */
-    public JoltHttpContext status(HttpStatus status) {
+    public JoltContext status(HttpStatus status) {
         res.setStatus(status.code());
         return this;
     }
@@ -359,7 +390,7 @@ public final class JoltHttpContext {
      * @return
      *         This {@code JoltHttpContext}, for fluent chaining.
      */
-    public JoltHttpContext status(int code) {
+    public JoltContext status(int code) {
         res.setStatus(code);
         return this;
     }
@@ -374,7 +405,7 @@ public final class JoltHttpContext {
      * @return
      *         This {@code JoltHttpContext}, for fluent chaining.
      */
-    public JoltHttpContext header(String name, String value) {
+    public JoltContext header(String name, String value) {
         res.setHeader(name, value);
         return this;
     }
@@ -385,7 +416,7 @@ public final class JoltHttpContext {
      * @param location The new location to redirect to.
      * @return This {@code JoltHttpContext}, for fluent chaining.
      */
-    public JoltHttpContext redirect(String location) {
+    public JoltContext redirect(String location) {
         status(HttpStatus.FOUND);
         res.setHeader("Location", location);
         return this;
@@ -398,7 +429,7 @@ public final class JoltHttpContext {
      * @param redirectedRoute The newly created resource's route.
      * @return This {@code JoltHttpContext}, for fluent chaining.
      */
-    public JoltHttpContext redirect(String location, Runnable redirectedRoute) {
+    public JoltContext redirect(String location, Runnable redirectedRoute) {
         status(HttpStatus.FOUND);
         redirectedRoute.run();
         res.setHeader("Location", location);
@@ -417,7 +448,7 @@ public final class JoltHttpContext {
      * @throws JoltHttpException
      *                           If an I/O error occurs while writing.
      */
-    public JoltHttpContext text(String data) {
+    public JoltContext text(String data) {
         try {
             res.setContentType("text/plain;charset=UTF-8");
             res.getWriter().write(data);
@@ -439,7 +470,7 @@ public final class JoltHttpContext {
      * @throws JoltHttpException
      *                           If an I/O error occurs while writing.
      */
-    public JoltHttpContext json(Map<String, Object> json) {
+    public JoltContext json(Map<String, Object> json) {
         try {
             res.setContentType("application/json;charset=UTF-8");
             JSON_MAPPER.writeValue(res.getWriter(), json);
@@ -461,7 +492,7 @@ public final class JoltHttpContext {
      * @throws JoltHttpException
      *                           If an I/O error occurs while writing.
      */
-    public JoltHttpContext json(Object data) {
+    public JoltContext json(Object data) {
         try {
             res.setContentType("application/json;charset=UTF-8");
             JSON_MAPPER.writeValue(res.getWriter(), data);
@@ -483,7 +514,7 @@ public final class JoltHttpContext {
      * @throws JoltHttpException
      *                           If an I/O error occurs while writing.
      */
-    public JoltHttpContext html(String html) {
+    public JoltContext html(String html) {
         try {
             res.setContentType("text/html;charset=UTF-8");
             res.getWriter().write(html);
@@ -505,7 +536,7 @@ public final class JoltHttpContext {
      *                 "image.png")
      * @return this {@code JoltHttpContext} for fluent chaining.
      */
-    public JoltHttpContext serve(String resource) {
+    public JoltContext serve(String resource) {
         String normalizedResource = resource.startsWith("/") ? resource.substring(1) : resource;
 
         InputStream in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedResource);
@@ -524,6 +555,54 @@ public final class JoltHttpContext {
                     "Error serving static resource: " + e.getMessage(), e);
         }
         return this;
+    }
+
+    /**
+     * Triggers a file download.
+     * Sets the Content-Disposition header so that the browser prompts a download.
+     * 
+     * @param file     The file to download
+     * @param filename The filename to use for the download
+     * @return this {@code JoltHttpContext} for fluent chaining.
+     */
+    public JoltContext download(JoltFile file, String filename) {
+        try {
+            res.setContentType(file.getContentType());
+            res.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+            res.getOutputStream().write(file.getData());
+            res.getOutputStream().flush();
+        } catch (IOException e) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error downloading file: " + e.getMessage(),
+                    e);
+        }
+        return this;
+    }
+
+    /**
+     * Shortand for HTTP Status 200 OK.
+     * 
+     * @return this {@code JoltHttpContext} for fluent chaining.
+     */
+    public JoltContext ok() {
+        return status(HttpStatus.OK);
+    }
+
+    /**
+     * Shortand for HTTP Status 201 Created.
+     * 
+     * @return this {@code JoltHttpContext} for fluent chaining.
+     */
+    public JoltContext created() {
+        return status(HttpStatus.CREATED);
+    }
+
+    /**
+     * Shortand for HTTP Status 204 No Content.
+     * 
+     * @return this {@code JoltHttpContext} for fluent chaining.
+     */
+    public JoltContext noContent() {
+        return status(HttpStatus.NO_CONTENT);
     }
 
     /**
@@ -593,6 +672,24 @@ public final class JoltHttpContext {
      */
     public void abortForbidden(String message) {
         abort(HttpStatus.FORBIDDEN, message);
+    }
+
+    /**
+     * Aborts the request with HTTP status 409 Conflict.
+     *
+     * @param message the error message to send
+     */
+    public void abortConflict(String message) {
+        abort(HttpStatus.CONFLICT, message);
+    }
+
+    /**
+     * Aborts the request with HTTP status 422 Unprocessable Entity.
+     *
+     * @param message the error message to send
+     */
+    public void abortUnprocessableEntity(String message) {
+        abort(HttpStatus.UNPROCESSABLE_ENTITY, message);
     }
 
     /**
@@ -684,7 +781,7 @@ public final class JoltHttpContext {
      * @return
      *         This {@code JoltHttpContext}, for fluent chaining.
      */
-    public JoltHttpContext removeCookie(String name) {
+    public JoltContext removeCookie(String name) {
         Cookie cookie = new Cookie(name, "");
         cookie.setMaxAge(0);
         res.addCookie(cookie);

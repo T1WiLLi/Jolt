@@ -10,7 +10,7 @@ package ca.jolt.routing.context;
  * int userId = ctx.path("id").asInt();
  * }</pre>
  *
- * @see JoltHttpContext
+ * @see JoltContext
  * @see JoltHttpContextValue
  * @author William Beaudin
  * @since 1.0
