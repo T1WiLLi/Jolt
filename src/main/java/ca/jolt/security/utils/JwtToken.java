@@ -41,6 +41,9 @@ public final class JwtToken {
 
     private static final long DEFAULT_EXPIRATION_MS = 1_800_000; // 30 minutes
 
+    /**
+     * Static block prepare the secret key and pepper.
+     */
     static {
         SECRET_KEY = ConfigurationManager.getInstance().getProperty(
                 "server.jwt.secret_key",
@@ -52,10 +55,24 @@ public final class JwtToken {
         );
     }
 
+    /**
+     * Prevent instantiation.
+     */
     private JwtToken() {
         // Prevent instantiation
     }
 
+    /**
+     * Generate a new JWT Token with the given owner and claims.
+     * <p>
+     * This implementation generate a JWS (signed) JWT token. And not a JWE
+     * (encrypted) JWT token. It is signed with the Secret-key and pepper.
+     * 
+     * @param userID       the user ID
+     * @param claims       the claims
+     * @param expirationMs the expiration time in milliseconds
+     * @return the JWT token
+     */
     public static String create(String userID, Map<String, Object> claims, long expirationMs) {
         SecretKey secretKey = getSecretKey();
 
@@ -69,10 +86,25 @@ public final class JwtToken {
         return builder.compact();
     }
 
+    /**
+     * A convenience method to generate a new JWT token with the given owner and
+     * claims with the default expiration time (Same as cookie for JWT) of 30
+     * minutes.
+     * 
+     * @param userID the user ID
+     * @param claims the claims
+     * @return the JWT token
+     */
     public static String create(String userID, Map<String, Object> claims) {
         return create(userID, claims, DEFAULT_EXPIRATION_MS);
     }
 
+    /**
+     * Verify a JWT token expiration, signature and claims.
+     * 
+     * @param token the JWT token
+     * @return True if the token is valid, false otherwise
+     */
     public static boolean verify(String token) {
         try {
             SecretKey secretKey = getSecretKey();
@@ -86,6 +118,12 @@ public final class JwtToken {
         }
     }
 
+    /**
+     * Get the subject of the JWT token.
+     * 
+     * @param token the JWT token
+     * @return the subject (UserID).
+     */
     public static String getOwner(String token) {
         if (verify(token)) {
             return getClaims(token).getSubject();
@@ -93,6 +131,12 @@ public final class JwtToken {
         return null;
     }
 
+    /**
+     * Retrieves the claims from the JWT token.
+     * 
+     * @param token the JWT token
+     * @return the claims
+     */
     public static Claims getClaims(String token) {
         if (verify(token)) {
             try {
@@ -108,6 +152,13 @@ public final class JwtToken {
         return null;
     }
 
+    /**
+     * Retrieve a claim from the JWT token.
+     * 
+     * @param token the JWT token
+     * @param key   the claim key
+     * @return the claim value
+     */
     public static Object getClaim(String token, String key) {
         Claims claims = getClaims(token);
         return (claims != null) ? claims.get(key) : null;
