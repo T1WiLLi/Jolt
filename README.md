@@ -4,7 +4,7 @@
 [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=T1WiLLi_Jolt&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=T1WiLLi_Jolt)
 [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=T1WiLLi_Jolt&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=T1WiLLi_Jolt)
 
-# Jolt [Jolt Icon](./icon.png)
+# Jolt [Jolt Icon](https://github.com/T1WiLLi/Jolt/blob/main/icon.png)
 
 **Jolt** is a lightweight Java-based web application framework.
 
