@@ -415,18 +415,6 @@ public final class Form {
     }
 
     /**
-     * Convenience method to build an entity without excluding any fields.
-     *
-     * @param <T>   The type of the class
-     * @param clazz The class to instantiate
-     * @return An instance of T populated with the form's field values
-     * @throws FormConversionException If conversion fails
-     */
-    public <T> T buildEntity(Class<T> clazz) {
-        return buildEntity(clazz, new String[0]);
-    }
-
-    /**
      * Updates the provided entity instance with values from the form's field
      * values,
      * ignoring any fields specified in the {@code ignoreFields} array.
@@ -458,18 +446,6 @@ public final class Form {
         } catch (Exception e) {
             throw new FormConversionException("Failed to update entity from form", e);
         }
-    }
-
-    /**
-     * Conveniance method to update an entity without excluding any fields.
-     * 
-     * @param <T>    The type of the entity
-     * @param entity The existing entity instance to be updated
-     * @return The updated entity instance
-     * @throws FormConversionException If an error occurs during the update process
-     */
-    public <T> T updateEntity(T entity) {
-        return updateEntity(entity, new String[0]);
     }
 
     /**
