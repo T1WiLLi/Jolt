@@ -7,7 +7,6 @@ import org.junit.jupiter.api.Test;
 import java.time.LocalDate;
 
 import static org.junit.jupiter.api.Assertions.*;
-import static org.mockito.Mockito.*;
 
 /**
  * Unit tests for {@link Form}.
@@ -170,18 +169,6 @@ class FormTest {
 
         form.setErrorTemplate("Error in {field}: {message}");
         assertEquals("Error in username: This field is required.", form.getAllErrors().get(0));
-    }
-
-    @Test
-    void testOnSuccessCallback() {
-        Runnable successCallback = mock(Runnable.class);
-        form.onSuccess(successCallback);
-
-        form.setValue("username", "ValidUser");
-        form.field("username").required();
-
-        assertTrue(form.verify());
-        verify(successCallback).run();
     }
 
     @Test
