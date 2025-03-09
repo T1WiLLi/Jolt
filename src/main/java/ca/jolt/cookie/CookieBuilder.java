@@ -233,6 +233,7 @@ public final class CookieBuilder {
      *
      * @param value  The JWT string value
      * @param maxAge The maximum age of the cookie in seconds
+     * @apiNote By default, JwtToken shouldn't be valid for more than 30 minutes.
      */
     public void jwtCookie(String value, int maxAge) {
         setName(cookieConfig.getJwtCookieName());

@@ -1,1 +1,13 @@
 Package to easily integrate docker (and potentially later docker-compose to have a more complex setup).
+
+JWT built-in support for authentication and authorization. With user provided secret key in the .env and pepper.
+
+String token = JwtToken.createJwe(userID, claims);
+String token = JwtToken.createJws(userID, claims);
+boolean isValid = JwtToken.validateJws(token);
+String userID = JwtToken.getOwner(token);
+
+in application.properties file: 
+
+server.jwt.secret_key={SECRET_KEY}
+server.jwt.pepper={PEPPER}
