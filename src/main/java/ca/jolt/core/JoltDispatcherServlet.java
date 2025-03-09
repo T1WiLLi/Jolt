@@ -22,6 +22,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
@@ -313,9 +315,23 @@ public final class JoltDispatcherServlet extends HttpServlet {
      */
     private boolean tryServeStaticResource(String path, HttpServletResponse res) {
         try {
+            // Validate the path to ensure it does not contain ".." or path separators
+            if (path.contains("..") || path.contains("/") || path.contains("\\")) {
+                throw new IllegalArgumentException("Invalid path");
+            }
+
             String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
 
-            InputStream in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedPath);
+            // Resolve the path against the "static" directory
+            Path basePath = Paths.get("static").toAbsolutePath().normalize();
+            Path resolvedPath = basePath.resolve(normalizedPath).normalize();
+
+            // Ensure the resolved path is within the "static" directory
+            if (!resolvedPath.startsWith(basePath)) {
+                throw new IllegalArgumentException("Invalid path");
+            }
+
+            InputStream in = getClass().getClassLoader().getResourceAsStream(resolvedPath.toString());
 
             if (in == null && (normalizedPath.isEmpty() || normalizedPath.equals("/"))) {
                 normalizedPath = "index.html";
