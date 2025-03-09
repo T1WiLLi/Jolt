@@ -14,6 +14,7 @@ public class Main extends JoltApplication {
     @Override
     public void setup() {
         get("/", Main::getUser);
+        get("/login", ctx -> ctx.serve("login.html"));
     }
 
     public static JoltContext getUser(JoltContext ctx) {

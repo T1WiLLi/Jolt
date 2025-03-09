@@ -2,6 +2,7 @@ package ca.jolt.security.utils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
+import java.util.Collections;
 import java.util.Date;
 import java.util.Map;
 
@@ -97,6 +98,16 @@ public final class JwtToken {
      */
     public static String create(String userID, Map<String, Object> claims) {
         return create(userID, claims, DEFAULT_EXPIRATION_MS);
+    }
+
+    /**
+     * A convenience method to generate a new JWT token with the given owner only.
+     * 
+     * @param userID the user ID
+     * @return the JWT token
+     */
+    public static String create(String userID) {
+        return create(userID, Collections.emptyMap(), DEFAULT_EXPIRATION_MS);
     }
 
     /**
