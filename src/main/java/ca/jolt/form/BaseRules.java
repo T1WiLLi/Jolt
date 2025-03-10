@@ -359,6 +359,17 @@ final class BaseRules {
     }
 
     /**
+     * A conveniance method for checking a regex pattern without modifiers
+     * 
+     * @param pattern      The regex pattern string
+     * @param errorMessage The error message if this rule fails
+     * @return A {@link Rule} enforcing the specified regex
+     */
+    static Rule regex(String pattern, String errorMessage) {
+        return regex(pattern, errorMessage, "");
+    }
+
+    /**
      * Helper method to check if a string can be interpreted as numeric.
      */
     private static boolean isNumeric(String data) {

@@ -502,6 +502,44 @@ public final class FieldValidator {
     }
 
     /**
+     * Specifies that the field must comply with a regular expression pattern.
+     * 
+     * @param pattern      The regular expression pattern to match
+     * @param modifiers    The regular expression modifiers to apply
+     * @param errorMessage A custom error message upon validation failure
+     * @return This {@code FieldValidator} (for fluent chaining)
+     */
+    public FieldValidator pattern(String pattern, String modifiers, String errorMessage) {
+        addRule(BaseRules.regex(pattern, errorMessage, modifiers));
+        return this;
+    }
+
+    /**
+     * Specifies that the field must comply with a regular expression pattern,
+     * without any modifiers.
+     * 
+     * @param pattern      The regular expression pattern to match
+     * @param errorMessage A custom error message upon validation failure
+     * @return This {@code FieldValidator} (for fluent chaining)
+     */
+    public FieldValidator pattern(String pattern, String errorMessage) {
+        return pattern(pattern, errorMessage);
+    }
+
+    /**
+     * Specifies that the field must comply with a regular expression pattern, using
+     * a default error message.
+     * <p>
+     * Default error message is: "Value must match the pattern: {@code pattern}".
+     * 
+     * @param pattern The regular expression pattern to match
+     * @return This {@code FieldValidator} (for fluent chaining)
+     */
+    public FieldValidator pattern(String pattern) {
+        return pattern(pattern, "Value must match the pattern " + pattern + ".");
+    }
+
+    /**
      * Adds a transformer to be applied on the field's value before validation.
      *
      * @param transformer A {@link UnaryOperator} that transforms the field value
