@@ -1,6 +1,5 @@
 package ca.jolt.cookie;
 
-import ca.jolt.injector.JoltContainer;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -81,22 +80,12 @@ public final class CookieBuilder {
     private String sameSite;
 
     /**
-     * The configuration for the cookie.
-     */
-    private static CookieConfiguration cookieConfig;
-
-    /**
      * Creates a new cookie builder for the given HTTP response.
      *
      * @param res The HTTP response to which the cookie will be added
      */
     public CookieBuilder(HttpServletResponse res) {
         this.res = res;
-        try {
-            cookieConfig = JoltContainer.getInstance().getBean(CookieConfiguration.class);
-        } catch (Exception e) {
-            // Ignore and use default configuration
-        }
     }
 
     /**
@@ -214,39 +203,6 @@ public final class CookieBuilder {
     }
 
     /**
-     * Creates a session cookie with secure and HTTP-only flags enabled.
-     *
-     * @param value The cookie value to store
-     */
-    public void sessionCookie(String value) {
-        setName(cookieConfig.getSessionCookieName());
-        setValue(value);
-        secure(true);
-        httpOnly(true);
-        path(cookieConfig.getSessionCookiePath());
-        sameSite(cookieConfig.getSessionSameSitePolicy());
-        build();
-    }
-
-    /**
-     * Creates a JWT cookie with secure and HTTP-only flags enabled.
-     *
-     * @param value  The JWT string value
-     * @param maxAge The maximum age of the cookie in seconds
-     * @apiNote By default, JwtToken shouldn't be valid for more than 30 minutes.
-     */
-    public void jwtCookie(String value, int maxAge) {
-        setName(cookieConfig.getJwtCookieName());
-        setValue(value);
-        secure(true);
-        httpOnly(true);
-        path(cookieConfig.getJwtCookiePath());
-        sameSite(cookieConfig.getJwtSameSitePolicy());
-        maxAge(maxAge);
-        build();
-    }
-
-    /**
      * Creates an unsecure cookie with minimal security settings.
      * <p>
      * <strong>Warning!</strong> This cookie is accessible via JavaScript.
@@ -262,34 +218,5 @@ public final class CookieBuilder {
         path("/");
         sameSite("Lax");
         build();
-    }
-
-    /*-----------------------------------
-     * COOKIE CONFIGURATION VALUES ACCESS
-     * ----------------------------------
-     */
-
-    public static String sessionCookieName() {
-        return cookieConfig.getSessionCookieName();
-    }
-
-    public static String jwtCookieName() {
-        return cookieConfig.getJwtCookieName();
-    }
-
-    public static String sessionCookiePath() {
-        return cookieConfig.getSessionCookiePath();
-    }
-
-    public static String jwtCookiePath() {
-        return cookieConfig.getJwtCookiePath();
-    }
-
-    public static String sessionCookieDomain() {
-        return cookieConfig.getSessionSameSitePolicy();
-    }
-
-    public static String jwtSameSitePolicy() {
-        return cookieConfig.getJwtSameSitePolicy();
     }
 }

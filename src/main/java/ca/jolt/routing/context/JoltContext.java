@@ -706,35 +706,6 @@ public final class JoltContext {
     }
 
     /**
-     * Retrieves the session cookie from the current context.
-     * <p>
-     * Delegates to {@link #getCookie(String)} to fetch the cookie identified by
-     * the "JSESSIONID" key, typically used to manage user session state.
-     *
-     * @return The {@link Cookie} object representing the session cookie, or
-     *         {@code null}
-     *         if no such cookie exists.
-     */
-    public Cookie getSessionCookie() {
-        return getCookie(CookieBuilder.sessionCookieName());
-    }
-
-    /**
-     * Retrieves the JWT token cookie from the current context.
-     * <p>
-     * Delegates to {@link #getCookie(String)} to fetch the cookie identified by
-     * the "JWT-TOKEN" key, typically used to store a JSON Web Token for
-     * authentication.
-     *
-     * @return The {@link Cookie} object representing the JWT token cookie, or
-     *         {@code null}
-     *         if no such cookie exists.
-     */
-    public Cookie getJwtToken() {
-        return getCookie(CookieBuilder.jwtCookieName());
-    }
-
-    /**
      * Returns a {@link CookieBuilder} preconfigured to attach cookies to this
      * response.
      * <p>

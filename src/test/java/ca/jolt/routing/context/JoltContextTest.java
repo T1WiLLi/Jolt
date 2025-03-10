@@ -305,27 +305,6 @@ class JoltContextTest {
     }
 
     @Test
-    void testGetSessionCookie() {
-        Cookie sessionCookie = new Cookie("session", "abc123");
-        when(mockRequest.getCookies()).thenReturn(new Cookie[] { sessionCookie });
-
-        Cookie result = context.getSessionCookie();
-        assertNotNull(result);
-        assertEquals("session", result.getName());
-        assertEquals("abc123", result.getValue());
-    }
-
-    @Test
-    void testGetJwtToken() {
-        Cookie jwtCookie = new Cookie("jwt_token", "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...");
-        when(mockRequest.getCookies()).thenReturn(new Cookie[] { jwtCookie });
-
-        Cookie result = context.getJwtToken();
-        assertNotNull(result);
-        assertEquals("jwt_token", result.getName());
-    }
-
-    @Test
     void testAddCookie() {
         CookieBuilder builder = context.addCookie();
         assertNotNull(builder);

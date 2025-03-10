@@ -23,9 +23,4 @@ public enum ConfigurationType {
      * Represents a bean configured to act as a filter.
      */
     FILTER,
-
-    /**
-     * Represents a bean configured to manage cookies.
-     */
-    COOKIE
 }
