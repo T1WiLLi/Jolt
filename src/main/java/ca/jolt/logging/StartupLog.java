@@ -11,7 +11,7 @@ import java.time.format.DateTimeFormatter;
  * Shows essential system information and a distinctive ASCII art logo.
  */
 public final class StartupLog {
-    private static final String VERSION = "1.0.0";
+    private static final String VERSION = "1.5.0";
     private static final DateTimeFormatter FORMATTER = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss")
             .withZone(ZoneId.systemDefault());
 

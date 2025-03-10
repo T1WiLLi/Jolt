@@ -47,11 +47,11 @@ public final class JwtToken {
      */
     static {
         SECRET_KEY = ConfigurationManager.getInstance().getProperty(
-                "server.jwt.secret_key",
+                "server.security.secret_key",
                 Cryptography.randomBase64(32) // 256 bits
         );
         PEPPER = ConfigurationManager.getInstance().getProperty(
-                "server.jwt.pepper",
+                "server.security.pepper",
                 Cryptography.randomBase64(32) // 256 bits
         );
     }
