@@ -7,7 +7,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
 
-import ca.jolt.cookie.CookieConfiguration;
 import ca.jolt.exceptions.JoltDIException;
 import ca.jolt.exceptions.handler.GlobalExceptionHandler;
 import ca.jolt.filters.FilterConfiguration;
@@ -130,12 +129,6 @@ final class ConfigurationManager {
                     throw new JoltDIException(
                             "Configuration for EXCEPTION_HANDLER must implement GlobalExceptionHandler: " +
                                     configClass.getName());
-                }
-                break;
-            case COOKIE:
-                if (!CookieConfiguration.class.isAssignableFrom(configClass)) {
-                    throw new JoltDIException("Configuration for COOKIE must implement CookieConfiguration: " +
-                            configClass.getName());
                 }
                 break;
             case FILTER:
