@@ -2,6 +2,8 @@ package ca.jolt.server.config;
 
 import java.util.Properties;
 
+import ca.jolt.database.core.DatabaseConfiguration;
+
 /**
  * A singleton class that manages application configuration.
  * <p>
@@ -34,7 +36,7 @@ public final class ConfigurationManager {
     /**
      * The database-specific configuration object.
      */
-    private DatabaseConfig databaseConfig;
+    private DatabaseConfiguration databaseConfig;
 
     /**
      * Private constructor to initialize the configuration manager.
@@ -75,7 +77,7 @@ public final class ConfigurationManager {
      */
     private void loadConfigs() {
         serverConfig = ServerConfig.fromProperties(properties);
-        databaseConfig = DatabaseConfig.fromProperties(properties);
+        databaseConfig = DatabaseConfiguration.fromProperties(properties);
     }
 
     /**
@@ -94,7 +96,7 @@ public final class ConfigurationManager {
      * @return The {@link DatabaseConfig} instance containing database-specific
      *         settings.
      */
-    public DatabaseConfig getDatabaseConfig() {
+    public DatabaseConfiguration getDatabaseConfig() {
         return databaseConfig;
     }
 

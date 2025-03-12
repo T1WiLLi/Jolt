@@ -1,4 +1,4 @@
-package ca.jolt.server.config;
+package ca.jolt.database.core;
 
 import java.util.Properties;
 
@@ -9,10 +9,8 @@ import java.util.Properties;
  * password, and driver. It provides a factory method to create instances from
  * a {@link Properties} object, using default values if specific properties are
  * not provided.
- * </p>
  */
-public class DatabaseConfig {
-
+public final class DatabaseConfiguration {
     /**
      * Default database URL used when not specified in properties.
      */
@@ -29,9 +27,9 @@ public class DatabaseConfig {
     private static final String DEFAULT_PASSWORD = "Na/Default";
 
     /**
-     * Default database driver used when not specified in properties.
+     * Default database max connections used when not specified in properties.
      */
-    private static final String DEFAULT_DRIVER = "Na/Default";
+    private static final int DEFAULT_MAX_CONNECTIONS = 10;
 
     /**
      * The database connection URL.
@@ -54,6 +52,11 @@ public class DatabaseConfig {
     private final String driver;
 
     /**
+     * The maximum number of connections to the database.
+     */
+    private final int maxConnections;
+
+    /**
      * Constructs a new DatabaseConfig with the specified settings.
      *
      * @param url      The database connection URL.
@@ -61,11 +64,12 @@ public class DatabaseConfig {
      * @param password The password for database authentication.
      * @param driver   The JDBC driver class name for the database.
      */
-    private DatabaseConfig(String url, String username, String password, String driver) {
+    private DatabaseConfiguration(String url, String username, String password, int maxConnections) {
         this.url = url;
         this.username = username;
         this.password = password;
-        this.driver = driver;
+        this.driver = SQLDialect.getDriver(url);
+        this.maxConnections = maxConnections;
     }
 
     /**
@@ -84,12 +88,13 @@ public class DatabaseConfig {
      *              settings.
      * @return A new {@code DatabaseConfig} instance with the loaded settings.
      */
-    public static DatabaseConfig fromProperties(Properties props) {
+    public static DatabaseConfiguration fromProperties(Properties props) {
         String url = props.getProperty("db.url", DEFAULT_URL);
         String username = props.getProperty("db.username", DEFAULT_USERNAME);
         String password = props.getProperty("db.password", DEFAULT_PASSWORD);
-        String driver = props.getProperty("db.driver", DEFAULT_DRIVER);
-        return new DatabaseConfig(url, username, password, driver);
+        int maxConnections = Integer
+                .parseInt(props.getProperty("db.maxConnections", String.valueOf(DEFAULT_MAX_CONNECTIONS)));
+        return new DatabaseConfiguration(url, username, password, maxConnections);
     }
 
     /**
@@ -126,5 +131,9 @@ public class DatabaseConfig {
      */
     public String getDriver() {
         return driver;
+    }
+
+    public int getMaxConnections() {
+        return maxConnections;
     }
 }
