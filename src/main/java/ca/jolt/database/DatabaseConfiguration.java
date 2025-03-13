@@ -1,4 +1,4 @@
-package ca.jolt.database.core;
+package ca.jolt.database;
 
 import java.util.Properties;
 
@@ -47,11 +47,6 @@ public final class DatabaseConfiguration {
     private final String password;
 
     /**
-     * The JDBC driver class name for the database.
-     */
-    private final String driver;
-
-    /**
      * The maximum number of connections to the database.
      */
     private final int maxConnections;
@@ -68,7 +63,6 @@ public final class DatabaseConfiguration {
         this.url = url;
         this.username = username;
         this.password = password;
-        this.driver = SQLDialect.getDriver(url);
         this.maxConnections = maxConnections;
     }
 
@@ -122,15 +116,6 @@ public final class DatabaseConfiguration {
      */
     public String getPassword() {
         return password;
-    }
-
-    /**
-     * Returns the JDBC driver class name for the database.
-     *
-     * @return The driver class name used to establish the database connection.
-     */
-    public String getDriver() {
-        return driver;
     }
 
     public int getMaxConnections() {

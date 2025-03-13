@@ -2,7 +2,7 @@ package ca.jolt.server.config;
 
 import java.util.Properties;
 
-import ca.jolt.database.core.DatabaseConfiguration;
+import ca.jolt.database.DatabaseConfiguration;
 
 /**
  * A singleton class that manages application configuration.
