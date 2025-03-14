@@ -11,3 +11,5 @@ in application.properties file:
 
 server.jwt.secret_key={SECRET_KEY}
 server.jwt.pepper={PEPPER}
+
+remove asInt() or asAny other for Path, doesnt make sense, we can assume from the type {id:type}

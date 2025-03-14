@@ -137,7 +137,7 @@ public final class FieldValidator {
      * @return This {@code FieldValidator} (for fluent chaining)
      */
     public FieldValidator required() {
-        return required("This field is required.");
+        return required(fieldName + " is required.");
     }
 
     /**

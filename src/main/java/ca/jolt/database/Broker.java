@@ -75,7 +75,7 @@ public abstract class Broker<K, T> {
                 return update(entity);
             }
         } catch (IllegalAccessException | SQLException e) {
-            throw new DatabaseException("Error in save", e);
+            throw new DatabaseException("Error in save: " + e.getMessage(), e);
         }
     }
 

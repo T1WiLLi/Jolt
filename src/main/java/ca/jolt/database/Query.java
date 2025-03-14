@@ -59,7 +59,7 @@ public class Query<T> {
             }
             return list;
         } catch (SQLException e) {
-            throw new DatabaseException("Error executing query: " + getSql(), e);
+            throw new DatabaseException("Error executing query: " + getSql() + e.getMessage(), e);
         }
     }
 
@@ -147,7 +147,7 @@ public class Query<T> {
             }
             return objectMapper.convertValue(row, entityClass);
         } catch (Exception e) {
-            throw new SQLException("Error mapping result set to " + entityClass.getName(), e);
+            throw new SQLException("Error mapping result set to " + entityClass.getName() + e.getMessage(), e);
         }
     }
 
