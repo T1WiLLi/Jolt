@@ -70,11 +70,17 @@ public abstract class Broker<K, T> {
         try {
             Object id = idField.get(entity);
             if (id == null) {
-                return insert(entity);
+                return executeInTransaction(conn -> insert(entity, conn));
             } else {
-                return update(entity);
+                return executeInTransaction(conn -> {
+                    try {
+                        return update(entity, conn);
+                    } catch (IllegalAccessException e) {
+                        throw new DatabaseException("Error in update: " + e.getMessage(), e);
+                    }
+                });
             }
-        } catch (IllegalAccessException | SQLException e) {
+        } catch (IllegalAccessException e) {
             throw new DatabaseException("Error in save: " + e.getMessage(), e);
         }
     }
@@ -83,17 +89,23 @@ public abstract class Broker<K, T> {
         try {
             Object id = idField.get(entity);
             if (id != null) {
-                new Query<>(entityClass, "DELETE FROM " + tableName + " WHERE " + idColumnName + " = ?", false, id)
-                        .executeUpdate();
+                executeInTransaction(conn -> {
+                    try (PreparedStatement ps = conn.prepareStatement(
+                            "DELETE FROM " + tableName + " WHERE " + idColumnName + " = ?")) {
+                        ps.setObject(1, id);
+                        ps.executeUpdate();
+                        return null;
+                    }
+                });
             }
         } catch (IllegalAccessException e) {
             throw new DatabaseException("Error in delete", e);
         }
     }
 
-    // --- Private Insert/Update Implementation ---
+    // --- Private Insert/Update Implementation with Transaction Support ---
 
-    private T insert(T entity) throws SQLException {
+    private T insert(T entity, Connection conn) throws SQLException {
         List<String> columns = new ArrayList<>();
         List<Object> values = new ArrayList<>();
         for (Field field : entityClass.getDeclaredFields()) {
@@ -110,8 +122,8 @@ public abstract class Broker<K, T> {
         String colStr = String.join(", ", columns);
         String placeholders = String.join(", ", Collections.nCopies(values.size(), "?"));
         String sql = "INSERT INTO " + tableName + " (" + colStr + ") VALUES (" + placeholders + ")";
-        try (Connection conn = Database.getInstance().getConnection();
-                PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
+
+        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             for (int i = 0; i < values.size(); i++) {
                 ps.setObject(i + 1, values.get(i));
             }
@@ -131,7 +143,7 @@ public abstract class Broker<K, T> {
         return entity;
     }
 
-    private T update(T entity) throws SQLException, IllegalArgumentException, IllegalAccessException {
+    private T update(T entity, Connection conn) throws SQLException, IllegalArgumentException, IllegalAccessException {
         List<String> setClauses = new ArrayList<>();
         List<Object> values = new ArrayList<>();
         for (Field field : entityClass.getDeclaredFields()) {
@@ -147,8 +159,8 @@ public abstract class Broker<K, T> {
         }
         String sql = "UPDATE " + tableName + " SET " + String.join(", ", setClauses)
                 + " WHERE " + idColumnName + " = ?";
-        try (Connection conn = Database.getInstance().getConnection();
-                PreparedStatement ps = conn.prepareStatement(sql)) {
+
+        try (PreparedStatement ps = conn.prepareStatement(sql)) {
             for (int i = 0; i < values.size(); i++) {
                 ps.setObject(i + 1, values.get(i));
             }
@@ -182,20 +194,38 @@ public abstract class Broker<K, T> {
     }
 
     /**
-     * Executes an update or other modifying query using raw SQL.
+     * Executes an update or other modifying query using raw SQL within a
+     * transaction.
      * Example: update("SET email = ? WHERE id = ?", newEmail, id);
      */
     protected int update(String sqlClause, Object... params) {
-        return new Query<>(entityClass, "UPDATE " + tableName + " " + sqlClause, false, params)
-                .executeUpdate();
+        return executeInTransaction(conn -> {
+            try (PreparedStatement ps = conn.prepareStatement("UPDATE " + tableName + " " + sqlClause)) {
+                for (int i = 0; i < params.length; i++) {
+                    ps.setObject(i + 1, params[i]);
+                }
+                return ps.executeUpdate();
+            }
+        });
     }
 
     /**
-     * Executes a raw SQL query.
+     * Executes a raw SQL query within a transaction if it's a modifying query.
      */
     protected int sql(String rawSql, Object... params) {
         boolean isSelect = rawSql.trim().toUpperCase().startsWith("SELECT");
-        return new Query<>(entityClass, rawSql, isSelect, params).executeUpdate();
+        if (isSelect) {
+            return new Query<>(entityClass, rawSql, true, params).executeUpdate();
+        } else {
+            return executeInTransaction(conn -> {
+                try (PreparedStatement ps = conn.prepareStatement(rawSql)) {
+                    for (int i = 0; i < params.length; i++) {
+                        ps.setObject(i + 1, params[i]);
+                    }
+                    return ps.executeUpdate();
+                }
+            });
+        }
     }
 
     /**
@@ -229,23 +259,43 @@ public abstract class Broker<K, T> {
     }
 
     /**
-     * Executes the given callback within a transaction.
-     * Commits if successful; otherwise, rolls back.
+     * Generic method to execute any operation within a transaction.
+     * All modifying operations automatically use this.
      */
-    protected <R> R withTransaction(TransactionCallback<R> callback) {
+    protected <R> R executeInTransaction(TransactionCallback<R> callback) {
         try (Connection conn = Database.getInstance().getConnection()) {
+            boolean originalAutoCommit = conn.getAutoCommit();
             try {
                 conn.setAutoCommit(false);
                 R result = callback.doInTransaction(conn);
                 conn.commit();
                 return result;
             } catch (SQLException e) {
-                conn.rollback();
-                throw new DatabaseException("Transaction failed", e);
+                try {
+                    conn.rollback();
+                } catch (SQLException rollbackEx) {
+                    throw new DatabaseException("Failed to rollback transaction: " + rollbackEx.getMessage(),
+                            rollbackEx);
+                }
+                throw new DatabaseException("Transaction failed: " + e.getMessage(), e);
+            } finally {
+                try {
+                    conn.setAutoCommit(originalAutoCommit);
+                } catch (SQLException resetEx) {
+                    // Log warning but continue, as the connection is being closed anyway
+                    System.err.println("Warning: Failed to reset auto-commit: " + resetEx.getMessage());
+                }
             }
         } catch (SQLException e) {
-            throw new DatabaseException("Error handling transaction", e);
+            throw new DatabaseException("Error obtaining database connection: " + e.getMessage(), e);
         }
+    }
+
+    /**
+     * For backward compatibility - delegates to executeInTransaction
+     */
+    protected <R> R withTransaction(TransactionCallback<R> callback) {
+        return executeInTransaction(callback);
     }
 
     @FunctionalInterface
