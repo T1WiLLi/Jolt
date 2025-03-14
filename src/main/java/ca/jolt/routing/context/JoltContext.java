@@ -15,6 +15,7 @@ import java.util.regex.Matcher;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
 import ca.jolt.cookie.CookieBuilder;
 import ca.jolt.exceptions.JoltBadRequestException;
@@ -63,7 +64,7 @@ public final class JoltContext {
     /**
      * JSON parser for reading and writing JSON in request/response.
      */
-    private static final ObjectMapper JSON_MAPPER = new ObjectMapper();
+    private static final ObjectMapper JSON_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
 
     private final HttpServletRequest req;
     private final HttpServletResponse res;
@@ -497,7 +498,8 @@ public final class JoltContext {
             res.setContentType("application/json;charset=UTF-8");
             JSON_MAPPER.writeValue(res.getWriter(), data);
         } catch (IOException e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing JSON response", e);
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error writing JSON response " + e.getMessage(), e);
         }
         return this;
     }

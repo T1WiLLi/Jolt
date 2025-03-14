@@ -25,6 +25,7 @@ public class Main extends JoltApplication {
         Database.init();
         get("/", Main::getUser);
         group("/user", () -> {
+            get("/{name}", ctx -> ctx.json(new UserBroker().findByName(ctx.path("name").get()).get()));
             get("", ctx -> ctx.json(new UserBroker().findAll()));
             post("", ctx -> {
                 Form form = ctx.buildForm();
