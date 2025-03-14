@@ -14,17 +14,17 @@ public final class DatabaseConfiguration {
     /**
      * Default database URL used when not specified in properties.
      */
-    private static final String DEFAULT_URL = "Na/Default";
+    private static final String DEFAULT_URL = "Na";
 
     /**
      * Default database username used when not specified in properties.
      */
-    private static final String DEFAULT_USERNAME = "Na/Default";
+    private static final String DEFAULT_USERNAME = "Na";
 
     /**
      * Default database password used when not specified in properties.
      */
-    private static final String DEFAULT_PASSWORD = "Na/Default";
+    private static final String DEFAULT_PASSWORD = "Na";
 
     /**
      * Default database max connections used when not specified in properties.

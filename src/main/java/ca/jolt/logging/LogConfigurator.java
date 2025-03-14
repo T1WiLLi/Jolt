@@ -49,7 +49,9 @@ public final class LogConfigurator {
             "org.apache.coyote", // Tomcat
             "org.apache.tomcat", // Tomcat
             "org.apache.jasper", // Tomcat
-            "ca.jolt" // Jolt
+            "ca.jolt", // Jolt
+            "com.zaxxer.hikari", // HikariCP
+            "org.slf4j"
     };
 
     private LogConfigurator() {

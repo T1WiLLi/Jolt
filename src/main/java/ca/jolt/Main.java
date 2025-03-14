@@ -1,6 +1,7 @@
 package ca.jolt;
 
 import java.util.Map;
+import java.util.Optional;
 
 import ca.jolt.core.JoltApplication;
 import ca.jolt.database.Broker;
@@ -52,7 +53,9 @@ public class Main extends JoltApplication {
     }
 
     public static class UserBroker extends Broker<Integer, User> {
-
+        public Optional<User> findByName(String name) {
+            return selectSingle("WHERE name = ?", name);
+        }
     }
 
     @NoArgsConstructor

@@ -2,6 +2,7 @@ package ca.jolt.database;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.logging.Logger;
 
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
@@ -11,6 +12,7 @@ import ca.jolt.server.config.ConfigurationManager;
 public class Database {
     private static Database instance;
     private final HikariDataSource dataSource;
+    private static final Logger logger = Logger.getLogger(Database.class.getName());
 
     private Database() {
         DatabaseConfiguration config = ConfigurationManager.getInstance().getDatabaseConfig();
@@ -20,6 +22,8 @@ public class Database {
         hikariConfig.setPassword(config.getPassword());
         hikariConfig.setDriverClassName("org.postgresql.Driver");
         hikariConfig.setMaximumPoolSize(config.getMaxConnections());
+
+        logger.info("Initializing database connection pool");
         this.dataSource = new HikariDataSource(hikariConfig);
     }
 
