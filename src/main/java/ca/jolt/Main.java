@@ -39,6 +39,7 @@ public class Main extends JoltApplication {
                         .required()
                         .minLength(3);
                 if (!form.verify()) {
+                    return ctx.status(HttpStatus.BAD_REQUEST).json(form.getErrors());
                 }
 
                 User user = new UserBroker().findById(ctx.path("id").asInt()).get();
