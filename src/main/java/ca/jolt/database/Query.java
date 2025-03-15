@@ -2,15 +2,19 @@ package ca.jolt.database;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-import ca.jolt.exceptions.DatabaseException;
+import ca.jolt.exceptions.JoltHttpException;
+import ca.jolt.http.HttpStatus;
 
 import java.sql.*;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
+import java.util.logging.Logger;
 
 public class Query<T> {
+
+    private static Logger logger = Logger.getLogger(Query.class.getName());
 
     private final Class<T> entityClass;
     private final StringBuilder sqlBuilder;
@@ -59,7 +63,8 @@ public class Query<T> {
             }
             return list;
         } catch (SQLException e) {
-            throw new DatabaseException("Error executing query: " + getSql() + e.getMessage(), e);
+            logger.severe(() -> "Error executing query: " + getSql() + ", " + e.getMessage());
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
         }
     }
 
@@ -80,7 +85,8 @@ public class Query<T> {
                 PreparedStatement ps = prepareStatement(conn)) {
             return ps.executeUpdate();
         } catch (SQLException e) {
-            throw new DatabaseException("Error executing update: " + getSql(), e);
+            logger.severe(() -> "Error executing update query: " + getSql() + " " + e.getMessage());
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
         }
     }
 
@@ -113,7 +119,8 @@ public class Query<T> {
                 return new QueryResult<>(null, affected, lastInserted, execTime);
             }
         } catch (SQLException e) {
-            throw new DatabaseException("Error executing query: " + getSql(), e);
+            logger.severe(() -> "Error executing query: " + getSql() + " " + e.getMessage());
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
         }
     }
 
@@ -147,7 +154,8 @@ public class Query<T> {
             }
             return objectMapper.convertValue(row, entityClass);
         } catch (Exception e) {
-            throw new SQLException("Error mapping result set to " + entityClass.getName() + e.getMessage(), e);
+            logger.severe(() -> "Error mapping result set to " + entityClass.getName() + " " + e.getMessage());
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
         }
     }
 

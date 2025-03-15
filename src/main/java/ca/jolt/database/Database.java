@@ -11,20 +11,40 @@ import ca.jolt.server.config.ConfigurationManager;
 
 public class Database {
     private static Database instance;
-    private final HikariDataSource dataSource;
+    private HikariDataSource dataSource;
     private static final Logger logger = Logger.getLogger(Database.class.getName());
+    private boolean initialized = false;
 
     private Database() {
-        DatabaseConfiguration config = ConfigurationManager.getInstance().getDatabaseConfig();
-        HikariConfig hikariConfig = new HikariConfig();
-        hikariConfig.setJdbcUrl(config.getUrl());
-        hikariConfig.setUsername(config.getUsername());
-        hikariConfig.setPassword(config.getPassword());
-        hikariConfig.setDriverClassName("org.postgresql.Driver");
-        hikariConfig.setMaximumPoolSize(config.getMaxConnections());
+        try {
+            DatabaseConfiguration config = ConfigurationManager.getInstance().getDatabaseConfig();
 
-        logger.info("Initializing database connection pool");
-        this.dataSource = new HikariDataSource(hikariConfig);
+            if (config.getUrl() == null || config.getUrl().trim().isEmpty()) {
+                logger.warning("Database URL not configured. Database functionality will be disabled.");
+                return;
+            }
+
+            try {
+                Class.forName("org.postgresql.Driver");
+            } catch (ClassNotFoundException e) {
+                logger.warning("PostgreSQL driver not found in classpath. Database functionality will be disabled.");
+                return;
+            }
+
+            HikariConfig hikariConfig = new HikariConfig();
+            hikariConfig.setJdbcUrl(config.getUrl());
+            hikariConfig.setUsername(config.getUsername());
+            hikariConfig.setPassword(config.getPassword());
+            hikariConfig.setMaximumPoolSize(config.getMaxConnections());
+
+            logger.info("Initializing database connection pool");
+            this.dataSource = new HikariDataSource(hikariConfig);
+            this.initialized = true;
+            logger.info("Database connection pool initialized successfully");
+        } catch (Exception e) {
+            logger.warning(() -> "Failed to initialize database: " + e.getMessage() +
+                    ". Database functionality will be disabled.");
+        }
     }
 
     public static synchronized void init() {
@@ -41,7 +61,14 @@ public class Database {
     }
 
     public Connection getConnection() throws SQLException {
+        if (!initialized || dataSource == null) {
+            throw new SQLException("Database is not initialized or disabled");
+        }
         return dataSource.getConnection();
+    }
+
+    public boolean isInitialized() {
+        return initialized;
     }
 
     public void releaseConnection(Connection connection) {
@@ -50,12 +77,12 @@ public class Database {
                 connection.close();
             }
         } catch (SQLException e) {
-            e.printStackTrace();
+            logger.warning(() -> "Error closing database connection: " + e.getMessage());
         }
     }
 
     public void close() {
-        if (dataSource != null && !dataSource.isClosed()) {
+        if (initialized && dataSource != null && !dataSource.isClosed()) {
             dataSource.close();
         }
     }

@@ -6,7 +6,6 @@ import java.util.Optional;
 
 import ca.jolt.core.JoltApplication;
 import ca.jolt.database.Broker;
-import ca.jolt.database.Database;
 import ca.jolt.database.annotation.Id;
 import ca.jolt.database.annotation.Table;
 import ca.jolt.form.Form;
@@ -23,7 +22,6 @@ public class Main extends JoltApplication {
 
     @Override
     public void setup() {
-        Database.init();
         get("/", Main::getUser);
         group("/user", () -> {
             get("/{name}", ctx -> ctx.json(new UserBroker().findByName(ctx.path("name").get()).get()));

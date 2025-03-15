@@ -4,6 +4,7 @@ import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.logging.Logger;
 
+import ca.jolt.database.Database;
 import ca.jolt.exceptions.ServerException;
 import ca.jolt.injector.JoltContainer;
 import ca.jolt.logging.LogConfigurator;
@@ -106,6 +107,7 @@ public abstract class JoltApplication {
             if (!scan.equals("ca.jolt") && !scan.isEmpty()) {
                 JoltContainer.getInstance().scan(scan);
             }
+            Database.init();
             JoltContainer.getInstance().initialize();
             router = JoltContainer.getInstance().getBean(Router.class);
             instance.setup();

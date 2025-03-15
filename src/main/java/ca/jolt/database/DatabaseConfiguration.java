@@ -11,20 +11,6 @@ import java.util.Properties;
  * not provided.
  */
 public final class DatabaseConfiguration {
-    /**
-     * Default database URL used when not specified in properties.
-     */
-    private static final String DEFAULT_URL = "Na";
-
-    /**
-     * Default database username used when not specified in properties.
-     */
-    private static final String DEFAULT_USERNAME = "Na";
-
-    /**
-     * Default database password used when not specified in properties.
-     */
-    private static final String DEFAULT_PASSWORD = "Na";
 
     /**
      * Default database max connections used when not specified in properties.
@@ -83,9 +69,9 @@ public final class DatabaseConfiguration {
      * @return A new {@code DatabaseConfig} instance with the loaded settings.
      */
     public static DatabaseConfiguration fromProperties(Properties props) {
-        String url = props.getProperty("db.url", DEFAULT_URL);
-        String username = props.getProperty("db.username", DEFAULT_USERNAME);
-        String password = props.getProperty("db.password", DEFAULT_PASSWORD);
+        String url = props.getProperty("db.url", null);
+        String username = props.getProperty("db.username", null);
+        String password = props.getProperty("db.password", null);
         int maxConnections = Integer
                 .parseInt(props.getProperty("db.maxConnections", String.valueOf(DEFAULT_MAX_CONNECTIONS)));
         return new DatabaseConfiguration(url, username, password, maxConnections);

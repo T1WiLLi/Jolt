@@ -34,6 +34,11 @@ public class ServerConfig {
     private static final boolean DEFAULT_DIRECTORY_LISTING = false;
 
     /**
+     * Default directory listing path
+     */
+    private static final String DEFAULT_DIRECTORY_LISTING_PATH = "/directory";
+
+    /**
      * Default SSL enabled state (false).
      */
     private static final boolean DEFAULT_SSL_ENABLED = false;
@@ -117,6 +122,11 @@ public class ServerConfig {
     private final boolean directoryListing;
 
     /**
+     * The directory listing path.
+     */
+    private final String directoryListingPath;
+
+    /**
      * Indicates whether SSL is enabled for the server.
      */
     private final boolean sslEnabled;
@@ -191,6 +201,7 @@ public class ServerConfig {
         this.port = builder.port;
         this.tempDir = builder.tempDir;
         this.directoryListing = builder.directoryListing;
+        this.directoryListingPath = builder.directoryListingPath;
         this.sslEnabled = builder.sslEnabled;
         this.sslPort = builder.sslPort;
         this.keyStore = builder.keyStore;
@@ -234,6 +245,15 @@ public class ServerConfig {
      */
     public boolean isDirectoryListingEnabled() {
         return directoryListing;
+    }
+
+    /**
+     * Returns the path to the directory listing file.
+     * 
+     * @return The path to the directory listing.
+     */
+    public String getDirectoryListingPath() {
+        return directoryListingPath;
     }
 
     /**
@@ -363,6 +383,7 @@ public class ServerConfig {
         private int port = DEFAULT_PORT;
         private String tempDir = DEFAULT_TEMP_DIR;
         private boolean directoryListing = DEFAULT_DIRECTORY_LISTING;
+        private String directoryListingPath = DEFAULT_DIRECTORY_LISTING_PATH;
         private boolean sslEnabled = DEFAULT_SSL_ENABLED;
         private int sslPort = DEFAULT_SSL_PORT;
         private String keyStore = DEFAULT_KEYSTORE;
@@ -401,6 +422,11 @@ public class ServerConfig {
 
         public Builder directoryListing(boolean directoryListing) {
             this.directoryListing = directoryListing;
+            return this;
+        }
+
+        public Builder directoryListingPath(String directoryListingPath) {
+            this.directoryListingPath = directoryListingPath;
             return this;
         }
 
@@ -576,6 +602,8 @@ public class ServerConfig {
         builder.directoryListing(
                 Boolean.parseBoolean(
                         props.getProperty("server.directory.listing", String.valueOf(DEFAULT_DIRECTORY_LISTING))));
+        builder.directoryListingPath(
+                props.getProperty("server.directory.listing.path", DEFAULT_DIRECTORY_LISTING_PATH));
         builder.sslEnabled(
                 Boolean.parseBoolean(props.getProperty("server.ssl.enabled", String.valueOf(DEFAULT_SSL_ENABLED))));
         builder.sslPort(Integer.parseInt(props.getProperty("server.ssl.port", String.valueOf(DEFAULT_SSL_PORT))));

@@ -12,6 +12,7 @@ import ca.jolt.routing.MimeInterpreter;
 import ca.jolt.routing.RouteHandler;
 import ca.jolt.routing.RouteMatch;
 import ca.jolt.routing.context.JoltContext;
+import ca.jolt.utils.DirectoryListingHtmlTemplateBuilder;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
@@ -106,6 +107,11 @@ public final class JoltDispatcherServlet extends HttpServlet {
 
         try {
             if (processFilters(context)) {
+                executeAfterHandlers(joltCtx);
+                return;
+            }
+
+            if (DirectoryListingHtmlTemplateBuilder.tryServeDirectoryListing(context.path, context.res)) {
                 executeAfterHandlers(joltCtx);
                 return;
             }
@@ -315,14 +321,16 @@ public final class JoltDispatcherServlet extends HttpServlet {
      */
     private boolean tryServeStaticResource(String path, HttpServletResponse res) {
         try {
-            String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
-            InputStream in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedPath);
-
-            if (in == null && (normalizedPath.isEmpty() || normalizedPath.equals("/"))) {
-                normalizedPath = "index.html";
-                in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedPath);
+            if (path.equals("/") || path.equals("")) {
+                return false;
             }
 
+            String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
+            if (normalizedPath.contains("..")) {
+                return false;
+            }
+
+            InputStream in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedPath);
             if (in != null) {
                 byte[] data = in.readAllBytes();
                 int dotIndex = normalizedPath.lastIndexOf('.');
