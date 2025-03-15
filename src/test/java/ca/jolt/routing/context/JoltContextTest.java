@@ -142,7 +142,7 @@ class JoltContextTest {
                 "limit", new String[] { "10" });
         when(mockRequest.getParameterMap()).thenReturn(parameterMap);
 
-        Map<String, List<String>> result = context.query();
+        Map<String, List<String>> result = context.queries();
         assertEquals(2, result.size());
         assertEquals(List.of("2"), result.get("page"));
         assertEquals(List.of("10"), result.get("limit"));
@@ -219,7 +219,7 @@ class JoltContextTest {
     @Test
     void testHeader() {
         when(mockRequest.getHeader("Content-Type")).thenReturn("application/json");
-        assertEquals("application/json", context.header("Content-Type"));
+        assertEquals("application/json", context.getHeader("Content-Type"));
     }
 
     @Test
