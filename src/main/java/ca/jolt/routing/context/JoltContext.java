@@ -68,6 +68,9 @@ public final class JoltContext {
 
     private final HttpServletRequest req;
     private final HttpServletResponse res;
+    private final ResponseBuffer buffer = new ResponseBuffer();
+
+    private boolean committed = false;
 
     /**
      * A map of named path parameters extracted from the route path pattern.
@@ -379,7 +382,11 @@ public final class JoltContext {
      *         This {@code JoltHttpContext}, for fluent chaining.
      */
     public JoltContext status(HttpStatus status) {
-        res.setStatus(status.code());
+        if (committed) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Cannot set header after response has been committed");
+        }
+        buffer.setStatus(status);
         return this;
     }
 
@@ -392,7 +399,11 @@ public final class JoltContext {
      *         This {@code JoltHttpContext}, for fluent chaining.
      */
     public JoltContext status(int code) {
-        res.setStatus(code);
+        if (committed) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Cannot set header after response has been committed");
+        }
+        buffer.setStatus(HttpStatus.fromCode(code));
         return this;
     }
 
@@ -407,7 +418,11 @@ public final class JoltContext {
      *         This {@code JoltHttpContext}, for fluent chaining.
      */
     public JoltContext header(String name, String value) {
-        res.setHeader(name, value);
+        if (committed) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Cannot set header after response has been committed");
+        }
+        buffer.setHeader(name, value);
         return this;
     }
 
@@ -418,8 +433,12 @@ public final class JoltContext {
      * @return This {@code JoltHttpContext}, for fluent chaining.
      */
     public JoltContext redirect(String location) {
+        if (committed) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Cannot set header after response has been committed");
+        }
         status(HttpStatus.FOUND);
-        res.setHeader("Location", location);
+        buffer.setHeader("Location", location);
         return this;
     }
 
@@ -431,6 +450,10 @@ public final class JoltContext {
      * @return This {@code JoltHttpContext}, for fluent chaining.
      */
     public JoltContext redirect(String location, Runnable redirectedRoute) {
+        if (committed) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Cannot set header after response has been committed");
+        }
         status(HttpStatus.FOUND);
         redirectedRoute.run();
         res.setHeader("Location", location);
@@ -450,34 +473,12 @@ public final class JoltContext {
      *                           If an I/O error occurs while writing.
      */
     public JoltContext text(String data) {
-        try {
-            res.setContentType("text/plain;charset=UTF-8");
-            res.getWriter().write(data);
-        } catch (IOException e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing text response", e);
+        if (committed) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Cannot write text after response has been committed");
         }
-        return this;
-    }
-
-    /**
-     * Writes a JSON response using a {@link Map}.
-     * <p>
-     * Sets the Content-Type to {@code "application/json;charset=UTF-8"}.
-     *
-     * @param json
-     *             A {@link Map} to serialize as JSON.
-     * @return
-     *         This {@code JoltHttpContext}, for fluent chaining.
-     * @throws JoltHttpException
-     *                           If an I/O error occurs while writing.
-     */
-    public JoltContext json(Map<String, Object> json) {
-        try {
-            res.setContentType("application/json;charset=UTF-8");
-            JSON_MAPPER.writeValue(res.getWriter(), json);
-        } catch (IOException e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing JSON response", e);
-        }
+        buffer.setContentType("text/plain;charset=UTF-8");
+        buffer.setTextBody(data);
         return this;
     }
 
@@ -494,13 +495,12 @@ public final class JoltContext {
      *                           If an I/O error occurs while writing.
      */
     public JoltContext json(Object data) {
-        try {
-            res.setContentType("application/json;charset=UTF-8");
-            JSON_MAPPER.writeValue(res.getWriter(), data);
-        } catch (IOException e) {
+        if (committed) {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error writing JSON response " + e.getMessage(), e);
+                    "Cannot write JSON after response has been committed");
         }
+        buffer.setContentType("application/json;charset=UTF-8");
+        buffer.setJsonBody(data);
         return this;
     }
 
@@ -517,11 +517,20 @@ public final class JoltContext {
      *                           If an I/O error occurs while writing.
      */
     public JoltContext html(String html) {
+        if (committed) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Cannot write HTML after response has been committed");
+        }
+        buffer.setContentType("text/html;charset=UTF-8");
+        buffer.setTextBody(html);
+        return this;
+    }
+
+    public JoltContext write(Object data) {
         try {
-            res.setContentType("text/html;charset=UTF-8");
-            res.getWriter().write(html);
+            res.getWriter().write(data.toString());
         } catch (IOException e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing HTML response", e);
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing response", e);
         }
         return this;
     }
@@ -569,13 +578,12 @@ public final class JoltContext {
      */
     public JoltContext download(JoltFile file, String filename) {
         try {
-            res.setContentType(file.getContentType());
-            res.setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-            res.getOutputStream().write(file.getData());
-            res.getOutputStream().flush();
-        } catch (IOException e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error downloading file: " + e.getMessage(),
-                    e);
+            header("Content-Type", file.getContentType());
+            header("Content-Disposition", "attachment; filename=\"" + filename + "\"");
+            buffer.setBinaryBody(file.getData());
+        } catch (Exception e) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error preparing file download: " + e.getMessage(), e);
         }
         return this;
     }
@@ -777,6 +785,46 @@ public final class JoltContext {
     }
 
     /**
+     * <strong>WARNING!</strong> This method doesn't need to be call, but won't
+     * result in any errors if it is.
+     * 
+     * @return The commited JoltContext response.
+     */
+    public JoltContext commit() {
+        if (committed) {
+            return this;
+        }
+
+        res.setStatus(buffer.status.code());
+
+        for (Map.Entry<String, String> header : buffer.headers.entrySet()) {
+            res.setHeader(header.getKey(), header.getValue());
+        }
+
+        if (buffer.contentType != null) {
+            res.setContentType(buffer.contentType);
+        }
+
+        try {
+            if (buffer.body != null) {
+                if (buffer.isJsonBody) {
+                    JSON_MAPPER.writeValue(res.getWriter(), buffer.body);
+                } else {
+                    res.getWriter().write((String) buffer.body);
+                }
+            } else if (buffer.isBinaryBody && buffer.binaryData != null) {
+                res.getOutputStream().write(buffer.binaryData);
+            }
+        } catch (IOException e) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error writing response: " + e.getMessage(), e);
+        }
+
+        committed = true;
+        return this;
+    }
+
+    /**
      * Adds query or form-encoded parameters from the HTTP request to the provided
      * form data map.
      *
@@ -843,5 +891,45 @@ public final class JoltContext {
             }
         }
         return params;
+    }
+
+    private static class ResponseBuffer {
+        private HttpStatus status = HttpStatus.OK;
+        private Map<String, String> headers = new HashMap<>();
+        private String contentType = null;
+        private Object body = null;
+        private boolean isJsonBody = false;
+        private boolean isBinaryBody = false;
+        private byte[] binaryData = null;
+
+        public void setStatus(HttpStatus status) {
+            this.status = status;
+        }
+
+        public void setHeader(String name, String value) {
+            headers.put(name, value);
+        }
+
+        public void setContentType(String contentType) {
+            this.contentType = contentType;
+        }
+
+        public void setTextBody(String body) {
+            this.body = body;
+            this.isJsonBody = false;
+            this.isBinaryBody = false;
+        }
+
+        public void setJsonBody(Object body) {
+            this.body = body;
+            this.isJsonBody = true;
+            this.isBinaryBody = false;
+        }
+
+        public void setBinaryBody(byte[] binaryData) {
+            this.body = binaryData;
+            this.isBinaryBody = true;
+            this.isJsonBody = false;
+        }
     }
 }

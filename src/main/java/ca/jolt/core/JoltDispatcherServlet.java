@@ -124,7 +124,8 @@ public final class JoltDispatcherServlet extends HttpServlet {
             log.warning(() -> "Error in request processing: " + e.getMessage());
             exceptionHandler.handle(e, context.res);
         } finally {
-            if (!context.res.isCommitted()) {
+            if (!context.res.isCommitted() && joltCtx != null) {
+                joltCtx.commit();
                 executeAfterHandlers(joltCtx);
             }
         }
@@ -254,6 +255,9 @@ public final class JoltDispatcherServlet extends HttpServlet {
 
             long duration = System.currentTimeMillis() - start;
             log.info(() -> context.path + " handled successfully in " + duration + "ms");
+            if (!context.res.isCommitted() && result instanceof JoltContext joltContext) {
+                joltContext.commit();
+            }
             return true;
         } catch (JoltRoutingException e) {
             log.warning(() -> "Error in route handler: " + e.getMessage());
