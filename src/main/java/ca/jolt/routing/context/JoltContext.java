@@ -560,7 +560,7 @@ public final class JoltContext {
             String extension = (dotIndex != -1) ? resource.substring(dotIndex) : "";
             String mimeType = MimeInterpreter.getMime(extension);
             header("Content-Type", mimeType);
-            res.getOutputStream().write(data);
+            buffer.setBinaryBody(data);
         } catch (IOException e) {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error serving static resource: " + e.getMessage(), e);
@@ -927,7 +927,7 @@ public final class JoltContext {
         }
 
         public void setBinaryBody(byte[] binaryData) {
-            this.body = binaryData;
+            this.binaryData = binaryData;
             this.isBinaryBody = true;
             this.isJsonBody = false;
         }
