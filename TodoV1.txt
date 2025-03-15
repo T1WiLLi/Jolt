@@ -29,3 +29,4 @@ Separate Broker class into two different class BaseBroker and RestBroker , to ma
 Separate JoltContext class into 3 differnt Class : JoltContext, but res and req now have wrapper RequestContext and ResponseContext, and they have their own logic within themselve to make JoltContext less bloated.
 Rename certain function of the JoltContext to make more sense, for example for request instead of header() -> setHeader(); ect. 
 Remove abusive logging of static serving of files.
+fix directory listing.

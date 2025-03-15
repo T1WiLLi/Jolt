@@ -115,10 +115,10 @@ public final class JoltDispatcherServlet extends HttpServlet {
             RouteMatch match = router.match(context.method, context.path);
             if (match != null) {
                 if (!handleRoute(match, context, start)) {
-                    handleStaticResourceOrError(context, start);
+                    handleStaticResourceOrError(context);
                 }
             } else {
-                handleStaticResourceOrError(context, start);
+                handleStaticResourceOrError(context);
             }
         } catch (Exception e) {
             log.warning(() -> "Error in request processing: " + e.getMessage());
@@ -275,10 +275,8 @@ public final class JoltDispatcherServlet extends HttpServlet {
      * @throws JoltHttpException if an I/O error occurs during static resource
      *                           serving
      */
-    private boolean handleStaticResourceOrError(RequestContext context, long start) throws JoltHttpException {
+    private boolean handleStaticResourceOrError(RequestContext context) throws JoltHttpException {
         if (tryServeStaticResource(context.path, context.res) && context.method.equals("GET")) {
-            long duration = System.currentTimeMillis() - start;
-            log.info(() -> "Static resource " + context.path + " served successfully in " + duration + "ms");
             return true;
         }
 
@@ -318,7 +316,6 @@ public final class JoltDispatcherServlet extends HttpServlet {
     private boolean tryServeStaticResource(String path, HttpServletResponse res) {
         try {
             String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
-
             InputStream in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedPath);
 
             if (in == null && (normalizedPath.isEmpty() || normalizedPath.equals("/"))) {

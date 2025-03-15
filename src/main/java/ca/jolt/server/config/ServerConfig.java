@@ -29,6 +29,11 @@ public class ServerConfig {
     private static final String DEFAULT_TEMP_DIR = "tmp/tomcat";
 
     /**
+     * Default directory listing enabled state (false).
+     */
+    private static final boolean DEFAULT_DIRECTORY_LISTING = false;
+
+    /**
      * Default SSL enabled state (false).
      */
     private static final boolean DEFAULT_SSL_ENABLED = false;
@@ -107,6 +112,11 @@ public class ServerConfig {
     private final String tempDir;
 
     /**
+     * The directory listing enabled flag.
+     */
+    private final boolean directoryListing;
+
+    /**
      * Indicates whether SSL is enabled for the server.
      */
     private final boolean sslEnabled;
@@ -180,6 +190,7 @@ public class ServerConfig {
     private ServerConfig(Builder builder) {
         this.port = builder.port;
         this.tempDir = builder.tempDir;
+        this.directoryListing = builder.directoryListing;
         this.sslEnabled = builder.sslEnabled;
         this.sslPort = builder.sslPort;
         this.keyStore = builder.keyStore;
@@ -213,6 +224,16 @@ public class ServerConfig {
      */
     public String getTempDir() {
         return tempDir;
+    }
+
+    /**
+     * Indicates whether directory listing is enabled.
+     * 
+     * @return {@code True} if directory listing is enabled, {@code False}
+     *         otherwise.
+     */
+    public boolean isDirectoryListingEnabled() {
+        return directoryListing;
     }
 
     /**
@@ -341,6 +362,7 @@ public class ServerConfig {
     public static class Builder {
         private int port = DEFAULT_PORT;
         private String tempDir = DEFAULT_TEMP_DIR;
+        private boolean directoryListing = DEFAULT_DIRECTORY_LISTING;
         private boolean sslEnabled = DEFAULT_SSL_ENABLED;
         private int sslPort = DEFAULT_SSL_PORT;
         private String keyStore = DEFAULT_KEYSTORE;
@@ -374,6 +396,11 @@ public class ServerConfig {
          */
         public Builder tempDir(String tempDir) {
             this.tempDir = tempDir;
+            return this;
+        }
+
+        public Builder directoryListing(boolean directoryListing) {
+            this.directoryListing = directoryListing;
             return this;
         }
 
@@ -546,6 +573,9 @@ public class ServerConfig {
         Builder builder = new Builder();
         builder.port(Integer.parseInt(props.getProperty("server.port", String.valueOf(DEFAULT_PORT))));
         builder.tempDir(props.getProperty("server.tempDir", DEFAULT_TEMP_DIR));
+        builder.directoryListing(
+                Boolean.parseBoolean(
+                        props.getProperty("server.directory.listing", String.valueOf(DEFAULT_DIRECTORY_LISTING))));
         builder.sslEnabled(
                 Boolean.parseBoolean(props.getProperty("server.ssl.enabled", String.valueOf(DEFAULT_SSL_ENABLED))));
         builder.sslPort(Integer.parseInt(props.getProperty("server.ssl.port", String.valueOf(DEFAULT_SSL_PORT))));
