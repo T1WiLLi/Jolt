@@ -27,3 +27,5 @@ Add auto-scanning of packages for the CID Container, to make it easy to add new 
 Improve JoltFile system, to make it easy to create file, in any given directory, to write to it, and to read from it.
 Separate Broker class into two different class BaseBroker and RestBroker , to make it easier to use and to make it more flexible.
 Separate JoltContext class into 3 differnt Class : JoltContext, but res and req now have wrapper RequestContext and ResponseContext, and they have their own logic within themselve to make JoltContext less bloated.
+Rename certain function of the JoltContext to make more sense, for example for request instead of header() -> setHeader(); ect. 
+Remove abusive logging of static serving of files.
