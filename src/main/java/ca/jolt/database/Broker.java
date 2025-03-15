@@ -13,7 +13,7 @@ import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 
-public abstract class Broker<K, T> {
+public abstract class Broker<ID, T> {
 
     private final Class<T> entityClass;
     private final String tableName;
@@ -57,7 +57,7 @@ public abstract class Broker<K, T> {
 
     // --- Basic CRUD Operations ---
 
-    public Optional<T> findById(K id) {
+    public Optional<T> findById(ID id) {
         return new Query<>(entityClass, "SELECT * FROM " + tableName + " WHERE " + idColumnName + " = ?", true, id)
                 .selectSingle();
     }
@@ -85,7 +85,7 @@ public abstract class Broker<K, T> {
         }
     }
 
-    public void delete(T entity) {
+    public boolean delete(T entity) {
         try {
             Object id = idField.get(entity);
             if (id != null) {
@@ -94,13 +94,25 @@ public abstract class Broker<K, T> {
                             "DELETE FROM " + tableName + " WHERE " + idColumnName + " = ?")) {
                         ps.setObject(1, id);
                         ps.executeUpdate();
-                        return null;
+                        return true;
                     }
                 });
             }
         } catch (IllegalAccessException e) {
             throw new DatabaseException("Error in delete", e);
         }
+        return false;
+    }
+
+    public boolean deleteById(ID id) {
+        return executeInTransaction(conn -> {
+            try (PreparedStatement ps = conn
+                    .prepareStatement("DELETE FROM " + tableName + " WHERE " + idColumnName + " = ?")) {
+                ps.setObject(1, id);
+                int rowsAffected = ps.executeUpdate();
+                return rowsAffected > 0;
+            }
+        });
     }
 
     // --- Private Insert/Update Implementation with Transaction Support ---
@@ -254,7 +266,7 @@ public abstract class Broker<K, T> {
     /**
      * Checks if an entity exists by its ID.
      */
-    public boolean exists(K id) {
+    public boolean exists(ID id) {
         return findById(id).isPresent();
     }
 

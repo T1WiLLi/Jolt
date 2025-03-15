@@ -23,10 +23,6 @@ Implement automatic migration of database schema when the application is started
 Implement JsonIgnore annotation to ignore certains fields during serialization in both the Form package and the Json process.
 Add Session management to the framework and make it secure and easy to use, built on top of Jakarta HttpSession, and also add a simple authentication mechanism.
 Add an email service to the framework, which will allow testing and sending emails.
-Add auto-scanning of packages for the CID Container, to make it easy to add new components without having to manually add them to the CID Container
-Improve JoltFile system, to make it easy to create file, in any given directory, to write to it, and to read from it.
-Separate Broker class into two different class BaseBroker and RestBroker , to make it easier to use and to make it more flexible.
-Separate JoltContext class into 3 differnt Class : JoltContext, but res and req now have wrapper RequestContext and ResponseContext, and they have their own logic within themselve to make JoltContext less bloated.
-Rename certain function of the JoltContext to make more sense, for example for request instead of header() -> setHeader(); ect. 
+Add auto-scanning of packages for the CID Container, to make it easy to add new components without having to manually add them to the CID Container.
 Remove abusive logging of static serving of files.
 fix directory listing.
