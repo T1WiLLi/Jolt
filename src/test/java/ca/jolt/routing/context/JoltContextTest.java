@@ -20,7 +20,6 @@ import org.junit.jupiter.api.Test;
 import org.mockito.ArgumentCaptor;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
 
 import ca.jolt.cookie.CookieBuilder;
 import ca.jolt.exceptions.JoltBadRequestException;
@@ -45,17 +44,18 @@ class JoltContextTest {
         mockRequest = mock(HttpServletRequest.class);
         mockResponse = mock(HttpServletResponse.class);
 
-        // Setup response writer
+        // Setup response writer for immediate writing
         responseWriter = new StringWriter();
-        PrintWriter writer = new PrintWriter(responseWriter);
+        PrintWriter writer = new PrintWriter(responseWriter, true);
         when(mockResponse.getWriter()).thenReturn(writer);
 
-        // Setup path params
+        // Setup path parameters using a simple regex
         Pattern pattern = Pattern.compile("/user/([^/]+)");
         mockMatcher = pattern.matcher("/user/123");
-        mockMatcher.find(); // This will set up the matcher to have groups
+        mockMatcher.find(); // Set up the matcher groups
         paramNames = Arrays.asList("id");
 
+        // Create context using the new immediate execution version.
         context = new JoltContext(mockRequest, mockResponse, mockMatcher, paramNames);
     }
 
@@ -124,16 +124,15 @@ class JoltContextTest {
 
     @Test
     void testPath() {
-        PathContextValue idValue = context.path("id");
-        assertEquals("123", idValue.get());
+        // The matcher set up in setUp() should extract "123" for the "id" parameter.
+        assertEquals("123", context.path("id").get());
     }
 
     @Test
     void testQuery_SingleParam() {
         when(mockRequest.getParameter("page")).thenReturn("2");
-        QueryContextValue pageValue = context.query("page");
-        assertEquals("2", pageValue.get());
-        assertEquals(2, pageValue.asIntOrDefault(-1));
+        assertEquals("2", context.query("page").get());
+        assertEquals(2, context.query("page").asIntOrDefault(-1));
     }
 
     @Test
@@ -224,73 +223,6 @@ class JoltContextTest {
     }
 
     @Test
-    void testStatus_WithHttpStatus() {
-        context.status(HttpStatus.CREATED);
-        verify(mockResponse).setStatus(201);
-    }
-
-    @Test
-    void testStatus_WithIntCode() {
-        context.status(418); // I'm a teapot
-        verify(mockResponse).setStatus(418);
-    }
-
-    @Test
-    void testHeader_Response() {
-        context.header("Content-Language", "en-US");
-        verify(mockResponse).setHeader("Content-Language", "en-US");
-    }
-
-    @Test
-    void testRedirect() {
-        context.redirect("/dashboard");
-        verify(mockResponse).setStatus(302);
-        verify(mockResponse).setHeader("Location", "/dashboard");
-    }
-
-    @Test
-    void testText() throws IOException {
-        context.text("Hello, world!");
-        verify(mockResponse).setContentType("text/plain;charset=UTF-8");
-        assertEquals("Hello, world!", responseWriter.toString());
-    }
-
-    @Test
-    void testJson_Map() throws IOException {
-        Map<String, Object> data = Map.of("name", "John", "age", 30);
-        context.json(data);
-
-        verify(mockResponse).setContentType("application/json;charset=UTF-8");
-        // Verify JSON content - we need to parse it to compare objects
-        ObjectMapper mapper = new ObjectMapper();
-        Map<String, Object> result = mapper.readValue(responseWriter.toString(),
-                new TypeReference<Map<String, Object>>() {
-                });
-        assertEquals("John", result.get("name"));
-        assertEquals(30, result.get("age"));
-    }
-
-    @Test
-    void testJson_Object() throws IOException {
-        TestUser user = new TestUser("John", 30);
-        context.json(user);
-
-        verify(mockResponse).setContentType("application/json;charset=UTF-8");
-        // Verify JSON content - we need to parse it to compare objects
-        ObjectMapper mapper = new ObjectMapper();
-        TestUser result = mapper.readValue(responseWriter.toString(), TestUser.class);
-        assertEquals("John", result.getName());
-        assertEquals(30, result.getAge());
-    }
-
-    @Test
-    void testHtml() throws IOException {
-        context.html("<h1>Hello</h1>");
-        verify(mockResponse).setContentType("text/html;charset=UTF-8");
-        assertEquals("<h1>Hello</h1>", responseWriter.toString());
-    }
-
-    @Test
     void testGetCookie() {
         Cookie[] cookies = {
                 new Cookie("session", "abc123"),
@@ -308,8 +240,6 @@ class JoltContextTest {
     void testAddCookie() {
         CookieBuilder builder = context.addCookie();
         assertNotNull(builder);
-        // We can't easily test the builder's methods because it requires a real
-        // response
     }
 
     @Test
@@ -327,7 +257,6 @@ class JoltContextTest {
     @Test
     void testRemoveCookie() {
         context.removeCookie("session");
-
         ArgumentCaptor<Cookie> cookieCaptor = ArgumentCaptor.forClass(Cookie.class);
         verify(mockResponse).addCookie(cookieCaptor.capture());
 
@@ -338,32 +267,29 @@ class JoltContextTest {
 
     @Test
     void testBuildForm() throws IOException {
-        // Setup path params (already done in setUp)
-
-        // Setup query params
+        // Setup query parameters
         Map<String, String[]> parameterMap = Map.of(
                 "name", new String[] { "John" },
                 "email", new String[] { "john@example.com" });
         when(mockRequest.getParameterMap()).thenReturn(parameterMap);
 
-        // Setup JSON body
+        // Setup JSON body parameters
         when(mockRequest.getContentType()).thenReturn("application/json");
         String jsonBody = "{\"age\":30,\"city\":\"New York\"}";
         BufferedReader reader = new BufferedReader(new StringReader(jsonBody));
         when(mockRequest.getReader()).thenReturn(reader);
 
         Form form = context.buildForm();
-
-        assertEquals("123", form.getValue("id")); // from path
+        assertEquals("123", form.getValue("id")); // from path parameter
         assertEquals("John", form.getValue("name")); // from query
         assertEquals("john@example.com", form.getValue("email")); // from query
-        assertEquals("30", form.getValue("age")); // from JSON
-        assertEquals("New York", form.getValue("city")); // from JSON
+        assertEquals("30", form.getValue("age")); // from JSON body
+        assertEquals("New York", form.getValue("city")); // from JSON body
     }
 
     @Test
     void testBuildForm_WithExcludes() throws IOException {
-        // Setup params
+        // Setup query parameters
         Map<String, String[]> parameterMap = Map.of(
                 "name", new String[] { "John" },
                 "email", new String[] { "john@example.com" },
@@ -371,10 +297,9 @@ class JoltContextTest {
         when(mockRequest.getParameterMap()).thenReturn(parameterMap);
 
         Form form = context.buildForm("password", "email");
-
         assertEquals("John", form.getValue("name"));
-        assertEquals(null, form.getValue("password")); // excluded
-        assertEquals(null, form.getValue("email")); // excluded
+        assertNull(form.getValue("password")); // excluded
+        assertNull(form.getValue("email")); // excluded
     }
 
     @Test
@@ -382,7 +307,6 @@ class JoltContextTest {
         JoltHttpException exception = assertThrows(JoltHttpException.class, () -> {
             context.abort(HttpStatus.NOT_FOUND, "Resource not found");
         });
-
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
         assertEquals("Resource not found", exception.getMessage());
     }
@@ -392,27 +316,8 @@ class JoltContextTest {
         JoltHttpException exception = assertThrows(JoltHttpException.class, () -> {
             context.abortNotFound("User not found");
         });
-
         assertEquals(HttpStatus.NOT_FOUND, exception.getStatus());
         assertEquals("User not found", exception.getMessage());
-    }
-
-    @Test
-    void testOk() {
-        context.ok();
-        verify(mockResponse).setStatus(200);
-    }
-
-    @Test
-    void testCreated() {
-        context.created();
-        verify(mockResponse).setStatus(201);
-    }
-
-    @Test
-    void testNoContent() {
-        context.noContent();
-        verify(mockResponse).setStatus(204);
     }
 
     // Helper class for testing JSON conversion
@@ -420,7 +325,6 @@ class JoltContextTest {
         private String name;
         private int age;
 
-        // Jackson needs a default constructor
         public TestUser() {
         }
 

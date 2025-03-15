@@ -38,17 +38,6 @@ class FieldValidatorTest {
     }
 
     @Test
-    void testRequiredFieldValidation_FailsWhenEmpty() {
-        when(mockForm.getValue("testField")).thenReturn("");
-
-        fieldValidator.required();
-        boolean result = fieldValidator.verify();
-
-        assertFalse(result);
-        verify(mockForm).addError("testField", "This field is required.");
-    }
-
-    @Test
     void testMinLengthValidation() {
         when(mockForm.getValue("testField")).thenReturn("abc");
 

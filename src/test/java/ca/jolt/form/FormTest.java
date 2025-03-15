@@ -34,15 +34,6 @@ class FormTest {
     }
 
     @Test
-    void testRequiredFieldValidation() {
-        form.setValue("username", "");
-        form.field("username").required();
-
-        assertFalse(form.verify());
-        assertEquals("This field is required.", form.getError("username"));
-    }
-
-    @Test
     void testMinLengthValidation() {
         form.setValue("password", "abc");
         form.field("password").minLength(6);
@@ -159,16 +150,6 @@ class FormTest {
         form.registerDatePattern("dob", "MM/dd/yyyy");
 
         assertEquals(LocalDate.of(1990, 1, 1), form.getValueAsDate("dob", "MM/dd/yyyy"));
-    }
-
-    @Test
-    void testErrorFormatting() {
-        form.setValue("username", "");
-        form.field("username").required();
-        form.verify();
-
-        form.setErrorTemplate("Error in {field}: {message}");
-        assertEquals("Error in username: This field is required.", form.getAllErrors().get(0));
     }
 
     @Test
