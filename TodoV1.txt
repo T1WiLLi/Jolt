@@ -12,8 +12,6 @@ in application.properties file:
 server.jwt.secret_key={SECRET_KEY}
 server.jwt.pepper={PEPPER}
 
-remove asInt() or asAny other for Path, doesnt make sense, we can assume from the type {id:type}
-Add automatic transaction managment on updating query in Database package.
 Improve overall design for database.
 Improve CID Container to make it more flexible and allow injection in none-bean object classes.
 Implement freemarker template to generate HTML pages and make it easy to integrate within the framework. 
@@ -26,3 +24,4 @@ Implement JsonIgnore annotation to ignore certains fields during serialization i
 Add Session management to the framework and make it secure and easy to use, built on top of Jakarta HttpSession, and also add a simple authentication mechanism.
 Add an email service to the framework, which will allow testing and sending emails.
 Add auto-scanning of packages for the CID Container, to make it easy to add new components without having to manually add them to the CID Container
+Improve JoltFile system, to make it easy to create file, in any given directory, to write to it, and to read from it.

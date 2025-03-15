@@ -1,9 +1,12 @@
 package ca.jolt.files;
 
 import java.io.ByteArrayInputStream;
+import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.file.Files;
 
+import ca.jolt.exceptions.JoltException;
 import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.http.HttpStatus;
 import ca.jolt.routing.MimeInterpreter;
@@ -90,5 +93,25 @@ public class JoltFile {
      */
     public InputStream getInputStream() {
         return new ByteArrayInputStream(data);
+    }
+
+    public File toFile() throws IOException { // Check for resources leaks.
+        File temp = new File(System.getProperty("java.io.tmpdir"), getFileName());
+        Files.write(temp.toPath(), getData());
+        return temp;
+    }
+
+    public boolean save(String path) {
+        try {
+            File file = new File(path);
+            File parent = file.getParentFile();
+            if (parent != null && !parent.exists() && !parent.mkdirs()) {
+                throw new IOException("Unable to create directory '" + parent + "'");
+            }
+            Files.write(file.toPath(), getData());
+        } catch (IOException e) {
+            throw new JoltException("Failed to save file to path: " + path, e);
+        }
+        return false;
     }
 }
