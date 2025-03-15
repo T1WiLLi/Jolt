@@ -1,12 +1,6 @@
 package ca.jolt.routing.context;
 
-import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.InputStream;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -23,11 +17,9 @@ import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.files.JoltFile;
 import ca.jolt.form.Form;
 import ca.jolt.http.HttpStatus;
-import ca.jolt.routing.MimeInterpreter;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
-import jakarta.servlet.http.Part;
 
 /**
  * Provides an HTTP context object that encapsulates request and response
@@ -66,9 +58,8 @@ public final class JoltContext {
      */
     private static final ObjectMapper JSON_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
 
-    private final HttpServletRequest req;
-    private final HttpServletResponse res;
-    private final ResponseBuffer buffer = new ResponseBuffer();
+    private final RequestContext requestContext;
+    private final ResponseContext responseContext;
 
     private boolean committed = false;
 
@@ -95,8 +86,8 @@ public final class JoltContext {
      */
     public JoltContext(HttpServletRequest req, HttpServletResponse res,
             Matcher pathMatcher, List<String> paramNames) {
-        this.req = req;
-        this.res = res;
+        this.requestContext = new RequestContext(req);
+        this.responseContext = new ResponseContext(res);
         this.pathParams = extractPathParams(pathMatcher, paramNames);
     }
 
@@ -111,7 +102,7 @@ public final class JoltContext {
      *         The raw servlet request.
      */
     public HttpServletRequest getRequest() {
-        return req;
+        return requestContext.getRequest();
     }
 
     /**
@@ -121,7 +112,7 @@ public final class JoltContext {
      *         A string representing the HTTP method.
      */
     public String method() {
-        return req.getMethod();
+        return requestContext.method();
     }
 
     /**
@@ -133,8 +124,7 @@ public final class JoltContext {
      *         The normalized request path, never empty.
      */
     public String requestPath() {
-        String p = (req.getPathInfo() != null) ? req.getPathInfo() : req.getServletPath();
-        return (p == null || p.isEmpty()) ? "/" : p;
+        return requestContext.getPath();
     }
 
     /**
@@ -148,15 +138,7 @@ public final class JoltContext {
      * @return The client's IP address.
      */
     public String clientIp() {
-        String ip = header("X-Forwarded-For");
-        if (ip != null && !ip.isBlank()) {
-            return ip.split(",")[0].trim();
-        }
-        ip = header("X-Real-IP");
-        if (ip != null && !ip.isBlank()) {
-            return ip;
-        }
-        return req.getRemoteAddr();
+        return requestContext.clientIp();
     }
 
     /**
@@ -165,7 +147,7 @@ public final class JoltContext {
      * @return The client's user agent.
      */
     public String userAgent() {
-        return header("User-Agent");
+        return getHeader("User-Agent");
     }
 
     /**
@@ -195,7 +177,7 @@ public final class JoltContext {
      *         A {@link QueryContextValue} object.
      */
     public QueryContextValue query(String name) {
-        return new QueryContextValue(req.getParameter(name));
+        return new QueryContextValue(requestContext.getParameter(name));
     }
 
     /**
@@ -207,10 +189,8 @@ public final class JoltContext {
      *         A map of query parameters, possibly empty if no query parameters
      *         exist.
      */
-    public Map<String, List<String>> query() {
-        Map<String, List<String>> map = new HashMap<>();
-        req.getParameterMap().forEach((key, values) -> map.put(key, Arrays.asList(values)));
-        return map;
+    public Map<String, List<String>> queries() {
+        return requestContext.getAllQuery();
     }
 
     /**
@@ -231,11 +211,7 @@ public final class JoltContext {
      *         an empty {@link Optional}
      */
     public Optional<String> bearerToken() {
-        String authHeader = req.getHeader("Authorization");
-        if (authHeader != null && authHeader.toLowerCase().startsWith("bearer ")) {
-            return Optional.of(authHeader.substring(7).trim());
-        }
-        return Optional.empty();
+        return requestContext.bearerToken();
     }
 
     /**
@@ -248,16 +224,7 @@ public final class JoltContext {
      *                                 If an I/O error occurs while reading.
      */
     public String bodyRaw() {
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = req.getReader()) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append("\n");
-            }
-        } catch (IOException e) {
-            throw new JoltBadRequestException("Failed to read request body: " + e.getMessage());
-        }
-        return sb.toString().trim();
+        return requestContext.bodyRaw();
     }
 
     /**
@@ -275,15 +242,7 @@ public final class JoltContext {
      *                                 If parsing fails.
      */
     public <T> T body(Class<T> type) {
-        try {
-            String raw = bodyRaw();
-            if (raw.isEmpty()) {
-                return null;
-            }
-            return JSON_MAPPER.readValue(raw, type);
-        } catch (IOException e) {
-            throw new JoltBadRequestException("Failed to parse JSON body: " + e.getMessage());
-        }
+        return requestContext.body(JSON_MAPPER, type);
     }
 
     /**
@@ -302,15 +261,7 @@ public final class JoltContext {
      *                                 If parsing fails.
      */
     public <T> T body(TypeReference<T> typeRef) {
-        String raw = bodyRaw();
-        if (raw.isEmpty()) {
-            return null;
-        }
-        try {
-            return JSON_MAPPER.readValue(raw, typeRef);
-        } catch (IOException e) {
-            throw new JoltBadRequestException("Failed to parse JSON body: " + e.getMessage());
-        }
+        return requestContext.body(JSON_MAPPER, typeRef);
     }
 
     /**
@@ -322,28 +273,7 @@ public final class JoltContext {
      * @return List<{@link JoltFile}> of JoltFile objects.
      */
     public List<JoltFile> getFiles() {
-        List<JoltFile> files = new ArrayList<>();
-        try {
-            Collection<Part> parts = req.getParts();
-            if (parts != null) {
-                for (Part part : parts) {
-                    String submittedFileName = part.getSubmittedFileName();
-                    if (submittedFileName != null && !submittedFileName.trim().isEmpty()) {
-                        byte[] data = part.getInputStream().readAllBytes();
-                        if (data.length > 0) {
-                            files.add(new JoltFile(
-                                    submittedFileName,
-                                    part.getContentType(),
-                                    data.length,
-                                    data));
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            throw new JoltBadRequestException("Failed to retrieve uploaded files: " + e.getMessage());
-        }
-        return files;
+        return requestContext.getFiles();
     }
 
     /**
@@ -354,8 +284,8 @@ public final class JoltContext {
      * @return
      *         The header value, or {@code null} if it does not exist.
      */
-    public String header(String n) {
-        return req.getHeader(n);
+    public String getHeader(String n) {
+        return requestContext.getHeader(n);
     }
 
     // -------------------------------------------------------
@@ -369,7 +299,7 @@ public final class JoltContext {
      *         The raw servlet response.
      */
     public HttpServletResponse getResponse() {
-        return res;
+        return responseContext.getResponse();
     }
 
     /**
@@ -386,7 +316,7 @@ public final class JoltContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot set header after response has been committed");
         }
-        buffer.setStatus(status);
+        responseContext.setStatus(status);
         return this;
     }
 
@@ -403,7 +333,7 @@ public final class JoltContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot set header after response has been committed");
         }
-        buffer.setStatus(HttpStatus.fromCode(code));
+        responseContext.setStatus(code);
         return this;
     }
 
@@ -417,12 +347,12 @@ public final class JoltContext {
      * @return
      *         This {@code JoltHttpContext}, for fluent chaining.
      */
-    public JoltContext header(String name, String value) {
+    public JoltContext setHeader(String name, String value) {
         if (committed) {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot set header after response has been committed");
         }
-        buffer.setHeader(name, value);
+        responseContext.setHeader(name, value);
         return this;
     }
 
@@ -437,8 +367,7 @@ public final class JoltContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot set header after response has been committed");
         }
-        status(HttpStatus.FOUND);
-        buffer.setHeader("Location", location);
+        responseContext.redirect(location);
         return this;
     }
 
@@ -454,9 +383,8 @@ public final class JoltContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot set header after response has been committed");
         }
-        status(HttpStatus.FOUND);
         redirectedRoute.run();
-        res.setHeader("Location", location);
+        responseContext.redirect(location);
         return this;
     }
 
@@ -477,8 +405,7 @@ public final class JoltContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot write text after response has been committed");
         }
-        buffer.setContentType("text/plain;charset=UTF-8");
-        buffer.setTextBody(data);
+        responseContext.text(data);
         return this;
     }
 
@@ -499,8 +426,7 @@ public final class JoltContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot write JSON after response has been committed");
         }
-        buffer.setContentType("application/json;charset=UTF-8");
-        buffer.setJsonBody(data);
+        responseContext.json(data);
         return this;
     }
 
@@ -521,14 +447,13 @@ public final class JoltContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot write HTML after response has been committed");
         }
-        buffer.setContentType("text/html;charset=UTF-8");
-        buffer.setTextBody(html);
+        responseContext.html(html);
         return this;
     }
 
     public JoltContext write(Object data) {
         try {
-            res.getWriter().write(data.toString());
+            responseContext.write(data);
         } catch (IOException e) {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing response", e);
         }
@@ -548,23 +473,7 @@ public final class JoltContext {
      * @return this {@code JoltHttpContext} for fluent chaining.
      */
     public JoltContext serve(String resource) {
-        String normalizedResource = resource.startsWith("/") ? resource.substring(1) : resource;
-
-        InputStream in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedResource);
-        if (in == null) {
-            throw new JoltHttpException(HttpStatus.NOT_FOUND, "Static resource not found: " + resource);
-        }
-        try {
-            byte[] data = in.readAllBytes();
-            int dotIndex = resource.lastIndexOf('.');
-            String extension = (dotIndex != -1) ? resource.substring(dotIndex) : "";
-            String mimeType = MimeInterpreter.getMime(extension);
-            header("Content-Type", mimeType);
-            buffer.setBinaryBody(data);
-        } catch (IOException e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error serving static resource: " + e.getMessage(), e);
-        }
+        responseContext.serve(resource);
         return this;
     }
 
@@ -577,14 +486,7 @@ public final class JoltContext {
      * @return this {@code JoltHttpContext} for fluent chaining.
      */
     public JoltContext download(JoltFile file, String filename) {
-        try {
-            header("Content-Type", file.getContentType());
-            header("Content-Disposition", "attachment; filename=\"" + filename + "\"");
-            buffer.setBinaryBody(file.getData());
-        } catch (Exception e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error preparing file download: " + e.getMessage(), e);
-        }
+        responseContext.download(file, filename);
         return this;
     }
 
@@ -704,15 +606,7 @@ public final class JoltContext {
      *         The matching {@link Cookie}, or {@code null} if not found.
      */
     public Cookie getCookie(String name) {
-        Cookie[] cookies = req.getCookies();
-        if (cookies != null) {
-            for (Cookie cookie : cookies) {
-                if (cookie.getName().equals(name)) {
-                    return cookie;
-                }
-            }
-        }
-        return null;
+        return requestContext.getCookie(name);
     }
 
     /**
@@ -733,7 +627,7 @@ public final class JoltContext {
      *         A new {@link CookieBuilder} for building and adding cookies.
      */
     public CookieBuilder addCookie() {
-        return new CookieBuilder(this.res);
+        return responseContext.addCookie();
     }
 
     /**
@@ -743,7 +637,7 @@ public final class JoltContext {
      *         A list of cookies, or an empty list if none are present.
      */
     public List<Cookie> getCookies() {
-        return req.getCookies() != null ? Arrays.asList(req.getCookies()) : Collections.emptyList();
+        return requestContext.getCookies();
     }
 
     /**
@@ -756,9 +650,7 @@ public final class JoltContext {
      *         This {@code JoltHttpContext}, for fluent chaining.
      */
     public JoltContext removeCookie(String name) {
-        Cookie cookie = new Cookie(name, "");
-        cookie.setMaxAge(0);
-        res.addCookie(cookie);
+        responseContext.removeCookie(name);
         return this;
     }
 
@@ -794,32 +686,7 @@ public final class JoltContext {
         if (committed) {
             return this;
         }
-
-        res.setStatus(buffer.status.code());
-
-        for (Map.Entry<String, String> header : buffer.headers.entrySet()) {
-            res.setHeader(header.getKey(), header.getValue());
-        }
-
-        if (buffer.contentType != null) {
-            res.setContentType(buffer.contentType);
-        }
-
-        try {
-            if (buffer.body != null) {
-                if (buffer.isJsonBody) {
-                    JSON_MAPPER.writeValue(res.getWriter(), buffer.body);
-                } else {
-                    res.getWriter().write((String) buffer.body);
-                }
-            } else if (buffer.isBinaryBody && buffer.binaryData != null) {
-                res.getOutputStream().write(buffer.binaryData);
-            }
-        } catch (IOException e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error writing response: " + e.getMessage(), e);
-        }
-
+        responseContext.commit();
         committed = true;
         return this;
     }
@@ -832,7 +699,7 @@ public final class JoltContext {
      * @param excludes The fields to exclude.
      */
     private void addQueryParameters(Map<String, String> formData, String... excludes) {
-        req.getParameterMap().forEach((key, values) -> {
+        requestContext.getRequest().getParameterMap().forEach((key, values) -> {
             if (values != null && values.length > 0 && !shouldExclude(key, excludes)) {
                 formData.put(key, values[0]);
             }
@@ -848,7 +715,7 @@ public final class JoltContext {
      * @throws JoltBadRequestException If the JSON body cannot be parsed.
      */
     private void addJsonBodyParameters(Map<String, String> formData, String... excludes) {
-        String contentType = req.getContentType();
+        String contentType = requestContext.getRequest().getContentType();
         if (contentType != null && contentType.startsWith("application/json")) {
             String raw = bodyRaw();
             if (!raw.isEmpty()) {
@@ -891,45 +758,5 @@ public final class JoltContext {
             }
         }
         return params;
-    }
-
-    private static class ResponseBuffer {
-        private HttpStatus status = HttpStatus.OK;
-        private Map<String, String> headers = new HashMap<>();
-        private String contentType = null;
-        private Object body = null;
-        private boolean isJsonBody = false;
-        private boolean isBinaryBody = false;
-        private byte[] binaryData = null;
-
-        public void setStatus(HttpStatus status) {
-            this.status = status;
-        }
-
-        public void setHeader(String name, String value) {
-            headers.put(name, value);
-        }
-
-        public void setContentType(String contentType) {
-            this.contentType = contentType;
-        }
-
-        public void setTextBody(String body) {
-            this.body = body;
-            this.isJsonBody = false;
-            this.isBinaryBody = false;
-        }
-
-        public void setJsonBody(Object body) {
-            this.body = body;
-            this.isJsonBody = true;
-            this.isBinaryBody = false;
-        }
-
-        public void setBinaryBody(byte[] binaryData) {
-            this.binaryData = binaryData;
-            this.isBinaryBody = true;
-            this.isJsonBody = false;
-        }
     }
 }

@@ -92,25 +92,25 @@ final class RequestContext {
         return sb.toString().trim();
     }
 
-    public <T> T body(Class<T> type) {
+    public <T> T body(ObjectMapper mapper, Class<T> type) {
         try {
             String raw = bodyRaw();
             if (raw.isEmpty()) {
                 return null;
             }
-            return new ObjectMapper().readValue(raw, type);
+            return mapper.readValue(raw, type);
         } catch (IOException e) {
             throw new JoltBadRequestException("Failed to parse JSON body: " + e.getMessage());
         }
     }
 
-    public <T> T body(TypeReference<T> typeRef) {
+    public <T> T body(ObjectMapper mapper, TypeReference<T> typeRef) {
         String raw = bodyRaw();
         if (raw.isEmpty()) {
             return null;
         }
         try {
-            return new ObjectMapper().readValue(raw, typeRef);
+            return mapper.readValue(raw, typeRef);
         } catch (IOException e) {
             throw new JoltBadRequestException("Failed to parse JSON body: " + e.getMessage());
         }

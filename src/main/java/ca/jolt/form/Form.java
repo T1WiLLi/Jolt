@@ -74,9 +74,17 @@ public final class Form {
     private final Map<String, FieldValidator> fieldValidators = new LinkedHashMap<>();
 
     /**
-     * Stores error messages for fields that fail validation.
+     * Stores all error messages for fields that fail validation.
+     * Each field can have multiple error messages (one for each failed rule).
      */
-    private final Map<String, String> errors = new LinkedHashMap<>();
+    private final Map<String, List<String>> allErrors = new LinkedHashMap<>();
+
+    /**
+     * Stores the first error message for each field that fails validation.
+     * This is used for backward compatibility with code that expects only one error
+     * per field.
+     */
+    private final Map<String, String> firstErrors = new LinkedHashMap<>();
 
     /**
      * Holds any custom date patterns for fields, used in date
@@ -156,7 +164,8 @@ public final class Form {
      *         {@code false} otherwise
      */
     public boolean verify(String... excludedFields) {
-        errors.clear();
+        allErrors.clear();
+        firstErrors.clear();
         boolean isValid = true;
         Set<String> excludeSet = new HashSet<>(Arrays.asList(excludedFields));
 
@@ -179,7 +188,7 @@ public final class Form {
         String logMessage = "Form verification " + buildVerificationLog();
         logger.info(() -> logMessage);
         if (!isValid) {
-            logger.info(() -> "Form validation failed with errors: " + errors.toString());
+            logger.info(() -> "Form validation failed with errors: " + firstErrors.toString());
         }
     }
 
@@ -192,9 +201,9 @@ public final class Form {
         for (var entry : fieldValidators.entrySet()) {
             String fieldName = entry.getKey();
             String value = fieldValues.get(fieldName);
-            if (errors.containsKey(fieldName)) {
+            if (firstErrors.containsKey(fieldName)) {
                 sb.append("[").append(fieldName)
-                        .append(" => ERROR: ").append(errors.get(fieldName)).append("], ");
+                        .append(" => ERROR: ").append(firstErrors.get(fieldName)).append("], ");
             } else {
                 sb.append("[").append(fieldName)
                         .append(" => \"").append(value).append("\"], ");
@@ -208,54 +217,64 @@ public final class Form {
     }
 
     /**
-     * Returns a map of all errors produced during the last validation call
-     * ({@link #verify(String[])} or {@link #verifyAsync(String[])}).
+     * Returns a map of the first error for each field produced during the last
+     * validation call.
+     * This method is for backwards compatibility with code expecting only one error
+     * per field.
      *
-     * @return A map from field names to error messages
+     * @return A map from field names to their first error message
      */
     public Map<String, String> getErrors() {
-        return errors;
+        return firstErrors;
     }
 
     /**
-     * Returns the error message for the given field, or {@code null} if
+     * Returns the first error message for the given field, or {@code null} if
      * no error is present.
      *
      * @param fieldName The name of the field
-     * @return The error message, or {@code null} if no error exists
+     * @return The first error message, or {@code null} if no error exists
      */
     public String getError(String fieldName) {
-        return errors.get(fieldName);
+        return firstErrors.get(fieldName);
     }
 
     /**
-     * Returns all errors formatted using {@link #errorTemplate}.
-     * <p>
-     * Each error is a string where <code>{field}</code> is replaced by the
-     * field name and <code>{message}</code> is replaced by the associated
-     * error message.
+     * Returns a map containing all error messages for all fields that failed
+     * validation.
+     * Each field can have multiple errors if multiple validation rules failed.
      *
-     * @return A list of formatted error strings
+     * @return A map from field names to lists of error messages
      */
-    public List<String> getAllErrors() {
-        List<String> allErrors = new ArrayList<>();
-        for (var entry : errors.entrySet()) {
-            String formatted = errorTemplate
-                    .replace("{field}", entry.getKey())
-                    .replace("{message}", entry.getValue());
-            allErrors.add(formatted);
+    public Map<String, List<String>> getAllErrors() {
+        Map<String, List<String>> formattedErrors = new LinkedHashMap<>();
+
+        for (var entry : allErrors.entrySet()) {
+            List<String> formatted = new ArrayList<>();
+            for (String message : entry.getValue()) {
+                String formattedMessage = errorTemplate
+                        .replace("{field}", entry.getKey())
+                        .replace("{message}", message);
+                formatted.add(formattedMessage);
+            }
+            formattedErrors.put(entry.getKey(), formatted);
         }
-        return allErrors;
+
+        return formattedErrors;
     }
 
     /**
-     * Manually adds an error for the given field.
+     * Adds an error for the given field. This method stores both the first error
+     * for backward compatibility and adds to the complete list of all errors.
      *
      * @param fieldName    The name of the field that failed validation
      * @param errorMessage The error message describing why validation failed
      */
     public void addError(String fieldName, String errorMessage) {
-        errors.put(fieldName, errorMessage);
+        allErrors.computeIfAbsent(fieldName, k -> new ArrayList<>()).add(errorMessage);
+        if (!firstErrors.containsKey(fieldName)) {
+            firstErrors.put(fieldName, errorMessage);
+        }
     }
 
     /**
