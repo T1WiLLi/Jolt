@@ -1,5 +1,7 @@
 package ca.jolt;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
+
 import ca.jolt.database.annotation.Column;
 import ca.jolt.database.annotation.GenerationType;
 import ca.jolt.database.annotation.Id;
@@ -22,6 +24,7 @@ public class Product {
     @Column(value = "description", nullable = true)
     private String description;
 
+    @JsonIgnore
     @Column(value = "price", nullable = false)
     private Double price;
 }

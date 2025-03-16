@@ -108,8 +108,6 @@ public final class SchemaManager {
      * more sophisticated checks (type changes, constraints, etc).
      */
     private static <T> void updateTableSchema(Connection conn, TableMetadata<T> metadata) throws SQLException {
-        logger.info("Checking for missing columns for table: " + metadata.getTableName());
-
         DatabaseMetaData meta = conn.getMetaData();
         Map<String, Boolean> existingColumns = new HashMap<>();
 
@@ -147,7 +145,6 @@ public final class SchemaManager {
 
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute(createIdxSql);
-                logger.info(() -> "Ensured index exists: " + indexName);
             }
         }
 
@@ -158,7 +155,6 @@ public final class SchemaManager {
 
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute(createIdxSql);
-                logger.info(() -> "Ensured unique index exists: " + indexName);
             }
         }
     }
