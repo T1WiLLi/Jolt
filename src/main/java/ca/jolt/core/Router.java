@@ -12,6 +12,7 @@ import java.util.regex.Matcher;
 import java.util.logging.Logger;
 
 import ca.jolt.exceptions.DuplicateRouteException;
+import ca.jolt.http.HttpMethod;
 import ca.jolt.injector.annotation.JoltBean;
 import ca.jolt.routing.LifecycleEntry;
 import ca.jolt.routing.Route;
@@ -210,6 +211,17 @@ public final class Router {
      */
     public void delete(String path, Supplier<JoltContext> supplier) {
         delete(path, RouteHandler.fromSupplier(supplier));
+    }
+
+    /**
+     * Register a new HTTP route with the specified method and path.
+     * 
+     * @param method  The HTTP method (e.g. {@code GET}, {@code POST}, etc.)
+     * @param path    The path pattern to match
+     * @param handler A {@link RouteHandler} to process the request
+     */
+    public void route(HttpMethod method, String path, RouteHandler handler) {
+        addRoute(new Route(method.toString(), fullPath(path), handler));
     }
 
     /**

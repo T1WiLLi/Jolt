@@ -6,6 +6,7 @@ import java.util.logging.Logger;
 
 import ca.jolt.database.Database;
 import ca.jolt.exceptions.ServerException;
+import ca.jolt.http.HttpMethod;
 import ca.jolt.injector.JoltContainer;
 import ca.jolt.logging.LogConfigurator;
 import ca.jolt.logging.StartupLog;
@@ -284,6 +285,17 @@ public abstract class JoltApplication {
      */
     protected static void delete(String path, Supplier<JoltContext> supplier) {
         router.delete(path, supplier);
+    }
+
+    /**
+     * Defines an HTTP route with a specified handler, method, and path.
+     * 
+     * @param method  The HTTP method to match
+     * @param path    The path pattern to match
+     * @param handler A {@link RouteHandler} that processes the request
+     */
+    protected static void route(HttpMethod method, String path, RouteHandler handler) {
+        router.route(method, path, handler);
     }
 
     /**
