@@ -80,16 +80,19 @@ final class RequestContext {
     }
 
     public String bodyRaw() {
-        StringBuilder sb = new StringBuilder();
-        try (BufferedReader reader = request.getReader()) {
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line).append("\n");
+        try {
+            request.setCharacterEncoding("UTF-8");
+            StringBuilder sb = new StringBuilder();
+            try (BufferedReader reader = request.getReader()) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    sb.append(line).append("\n");
+                }
             }
+            return sb.toString().trim();
         } catch (IOException e) {
             throw new JoltBadRequestException("Failed to read request body: " + e.getMessage());
         }
-        return sb.toString().trim();
     }
 
     public <T> T body(ObjectMapper mapper, Class<T> type) {

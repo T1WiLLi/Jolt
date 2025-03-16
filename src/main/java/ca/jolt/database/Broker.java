@@ -1,10 +1,9 @@
 package ca.jolt.database;
 
+import ca.jolt.database.exception.DatabaseErrorType;
+import ca.jolt.database.exception.DatabaseException;
+import ca.jolt.database.exception.DatabaseExceptionMapper;
 import ca.jolt.database.models.TableMetadata;
-import ca.jolt.exceptions.DatabaseException;
-import ca.jolt.exceptions.JoltHttpException;
-import ca.jolt.http.HttpStatus;
-import ca.jolt.utils.HelpMethods;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -75,14 +74,19 @@ public abstract class Broker<ID, T> {
                 return executeInTransaction(conn -> {
                     try {
                         return update(entity, conn);
-                    } catch (IllegalAccessException e) {
-                        throw new DatabaseException("Error in update: " + e.getMessage(), e);
+                    } catch (IllegalArgumentException | IllegalAccessException e) {
+                        DatabaseException dbException = new DatabaseException(DatabaseErrorType.MAPPING_ERROR,
+                                "Error while updating entity : " + entity.getClass().getName(), e.getMessage(), e);
+                        logger.severe(() -> dbException.getTechnicalDetails());
+                        throw dbException;
                     }
                 });
             }
         } catch (IllegalAccessException e) {
-            logger.severe(() -> "Error in save: " + e.getMessage());
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
+            DatabaseException dbException = new DatabaseException(
+                    DatabaseErrorType.MAPPING_ERROR, "Error in save: " + e.getMessage(), e.getMessage(), e);
+            logger.severe(() -> dbException.getTechnicalDetails());
+            throw dbException;
         }
     }
 
@@ -100,9 +104,11 @@ public abstract class Broker<ID, T> {
                 });
             }
         } catch (IllegalAccessException e) {
-            logger.severe(() -> "Error in delete: " + e.getMessage() + ", Stack trace: "
-                    + HelpMethods.stackTraceElementToString(e.getStackTrace()));
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
+            DatabaseException dbException = new DatabaseException(
+                    DatabaseErrorType.MAPPING_ERROR, "Error while deleting entity : " + entity.getClass().getName(),
+                    e.getMessage(), e);
+            logger.severe(() -> dbException.getTechnicalDetails());
+            throw dbException;
         }
         return false;
     }
@@ -137,9 +143,11 @@ public abstract class Broker<ID, T> {
                 field.setAccessible(true);
                 values.add(field.get(entity));
             } catch (IllegalAccessException e) {
-                logger.severe(() -> "Failed to access field " + field.getName() + ": " + e.getMessage());
-                throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        HttpStatus.INTERNAL_SERVER_ERROR.reason());
+                DatabaseException dbException = new DatabaseException(
+                        DatabaseErrorType.MAPPING_ERROR,
+                        "Failed to access field " + field.getName() + ": " + e.getMessage(), e.getMessage(), e);
+                logger.severe(() -> dbException.getTechnicalDetails());
+                throw dbException;
             }
         }
 
@@ -163,10 +171,11 @@ public abstract class Broker<ID, T> {
                     idField.set(entity, generatedId);
                 }
             } catch (IllegalAccessException e) {
-                logger.severe(() -> "Failed to set generated ID: " + e.getMessage() + ", Stack Trace: "
-                        + HelpMethods.stackTraceElementToString(e.getStackTrace()));
-                throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        HttpStatus.INTERNAL_SERVER_ERROR.reason());
+                DatabaseException dbException = new DatabaseException(
+                        DatabaseErrorType.MAPPING_ERROR, "Failed to set generated ID: " + e.getMessage(),
+                        e.getMessage(), e);
+                logger.severe(() -> dbException.getTechnicalDetails());
+                throw dbException;
             }
         }
         return entity;
@@ -265,9 +274,9 @@ public abstract class Broker<ID, T> {
                 }
             }
         } catch (SQLException e) {
-            logger.severe(() -> "Error executing count : " + e.getMessage() + ", Stack Trace: "
-                    + HelpMethods.stackTraceElementToString(e.getStackTrace()));
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
+            DatabaseException dbException = DatabaseExceptionMapper.map(e, sql, metadata.getTableName());
+            logger.severe(() -> dbException.getTechnicalDetails());
+            throw dbException;
         }
         return 0L;
     }
@@ -288,16 +297,14 @@ public abstract class Broker<ID, T> {
                 try {
                     conn.rollback();
                 } catch (SQLException rollbackEx) {
-                    logger.severe(() -> "Failed to rollback transaction: " + rollbackEx.getMessage()
-                            + ", Stack Trace: "
-                            + HelpMethods.stackTraceElementToString(rollbackEx.getStackTrace()));
-                    throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                            HttpStatus.INTERNAL_SERVER_ERROR.reason());
+                    DatabaseException dbException = DatabaseExceptionMapper.map(rollbackEx, "Transaction rollback",
+                            metadata.getTableName());
+                    logger.severe(() -> dbException.getTechnicalDetails());
+                    throw dbException;
                 }
-                logger.severe(() -> "Transaction failed: " + e.getMessage() + ", Stack Trace: "
-                        + HelpMethods.stackTraceElementToString(e.getStackTrace()));
-                throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        HttpStatus.INTERNAL_SERVER_ERROR.reason());
+                DatabaseException dbException = DatabaseExceptionMapper.map(e, "Transaction", metadata.getTableName());
+                logger.severe(() -> dbException.getTechnicalDetails());
+                throw dbException;
             } finally {
                 try {
                     conn.setAutoCommit(originalAutoCommit);
@@ -306,9 +313,9 @@ public abstract class Broker<ID, T> {
                 }
             }
         } catch (SQLException e) {
-            logger.severe(() -> "Error obtaining database connection: " + e.getMessage());
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    HttpStatus.INTERNAL_SERVER_ERROR.reason());
+            DatabaseException dbException = DatabaseExceptionMapper.map(e, "Connection", metadata.getTableName());
+            logger.severe(() -> dbException.getTechnicalDetails());
+            throw dbException;
         }
     }
 

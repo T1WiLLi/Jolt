@@ -48,7 +48,7 @@ public final class DefaultGlobalExceptionHandler implements GlobalExceptionHandl
      */
     @Override
     public void handle(Throwable t, HttpServletResponse res) {
-        HttpStatus status = HttpStatus.INTERNAL_SERVER_ERROR;
+        HttpStatus status = HttpStatus.fromCode(res.getStatus());
         String message = t.getMessage();
 
         if (t instanceof JoltHttpException jhe) {

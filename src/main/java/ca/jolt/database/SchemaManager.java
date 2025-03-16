@@ -15,8 +15,9 @@ import java.util.logging.Logger;
 import ca.jolt.database.annotation.Column;
 import ca.jolt.database.annotation.GenerationType;
 import ca.jolt.database.annotation.Id;
+import ca.jolt.database.exception.DatabaseException;
+import ca.jolt.database.exception.DatabaseExceptionMapper;
 import ca.jolt.database.models.TableMetadata;
-import ca.jolt.exceptions.DatabaseException;
 
 public final class SchemaManager {
     private static final Logger logger = Logger.getLogger(SchemaManager.class.getName());
@@ -30,8 +31,10 @@ public final class SchemaManager {
             }
             manageIndexes(conn, metadata);
         } catch (SQLException e) {
-            logger.severe(() -> "Error validating table schema: " + e.getMessage());
-            throw new DatabaseException("Failed to validate database schema", e);
+            DatabaseException dbException = DatabaseExceptionMapper.map(e,
+                    "Schema validation for table " + metadata.getTableName(), metadata.getTableName());
+            logger.severe(() -> dbException.getTechnicalDetails());
+            throw dbException;
         }
     }
 
@@ -67,7 +70,9 @@ public final class SchemaManager {
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute(seqSql);
             } catch (SQLException e) {
-                logger.severe(() -> "Error creating sequence: " + e.getMessage());
+                DatabaseException dbException = DatabaseExceptionMapper.map(e, seqSql, metadata.getTableName());
+                logger.severe(() -> dbException.getTechnicalDetails());
+                throw dbException;
             }
         }
 
@@ -75,7 +80,10 @@ public final class SchemaManager {
             stmt.execute(createSql.toString());
             logger.info(() -> "Created table: " + metadata.getTableName());
         } catch (SQLException e) {
-            logger.severe(() -> "Error creating table: " + e.getMessage());
+            DatabaseException dbException = DatabaseExceptionMapper.map(e, createSql.toString(),
+                    metadata.getTableName());
+            logger.severe(() -> dbException.getTechnicalDetails());
+            throw dbException;
         }
     }
 
@@ -146,9 +154,14 @@ public final class SchemaManager {
                 try (Statement stmt = conn.createStatement()) {
                     stmt.execute(alterSql);
                     logger.info("Added column " + colName + " to table " + metadata.getTableName());
+                } catch (SQLException e) {
+                    DatabaseException dbException = DatabaseExceptionMapper.map(e, alterSql, metadata.getTableName());
+                    logger.severe(() -> dbException.getTechnicalDetails());
+                    throw dbException;
                 }
             }
         }
+
     }
 
     /**
@@ -165,6 +178,10 @@ public final class SchemaManager {
                     + " ON " + metadata.getTableName() + " (" + indexCol + ")";
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute(createIdxSql);
+            } catch (SQLException e) {
+                DatabaseException dbException = DatabaseExceptionMapper.map(e, createIdxSql, metadata.getTableName());
+                logger.severe(() -> dbException.getTechnicalDetails());
+                throw dbException;
             }
         }
     }

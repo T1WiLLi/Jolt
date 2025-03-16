@@ -11,7 +11,8 @@ import ca.jolt.database.annotation.Column;
 import ca.jolt.database.annotation.GenerationType;
 import ca.jolt.database.annotation.Id;
 import ca.jolt.database.annotation.Table;
-import ca.jolt.exceptions.DatabaseException;
+import ca.jolt.database.exception.DatabaseErrorType;
+import ca.jolt.database.exception.DatabaseException;
 import lombok.Getter;
 
 @Getter
@@ -97,7 +98,11 @@ public class TableMetadata<T> {
                 f.setAccessible(true);
                 map.put(columnName, f);
             } catch (NoSuchFieldException e) {
-                throw new DatabaseException("Error building column->field map for field " + fieldName, e);
+                throw new DatabaseException(
+                        DatabaseErrorType.DATA_INTEGRITY_ERROR,
+                        "Error building column->field map for field " + fieldName,
+                        e.getMessage(),
+                        e);
             }
         });
         return map;

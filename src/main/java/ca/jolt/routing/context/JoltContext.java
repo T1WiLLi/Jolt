@@ -337,6 +337,10 @@ public final class JoltContext {
         return this;
     }
 
+    public HttpStatus getStatus() {
+        return responseContext.getStatus();
+    }
+
     /**
      * Sets a header on the response.
      *

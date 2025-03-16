@@ -2,7 +2,9 @@ package ca.jolt;
 
 import java.util.Map;
 
+import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.form.Form;
+import ca.jolt.http.HttpStatus;
 import ca.jolt.routing.context.JoltContext;
 
 public class ProductController {
@@ -25,7 +27,7 @@ public class ProductController {
     public static JoltContext updateProduct(JoltContext context) {
         Form form = context.buildForm();
         Product product = new ProductBroker().findById(context.path("id").asInt())
-                .orElseThrow(() -> new RuntimeException("Product not found"));
+                .orElseThrow(() -> new JoltHttpException(HttpStatus.NOT_FOUND, "Product Not Found"));
         product = form.updateEntity(product);
         new ProductBroker().save(product);
         return context.json(product);

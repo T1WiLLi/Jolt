@@ -88,6 +88,7 @@ public final class TomcatServer {
     private Connector createAndConfigureConnector() throws ServerException {
         Connector connector = new Connector();
         connector.setPort(config.getPort());
+        connector.setURIEncoding("UTF-8");
         if (config.isSslEnabled()) {
             validateSslConfig();
             connector.setSecure(true);

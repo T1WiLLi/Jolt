@@ -35,6 +35,10 @@ final class ResponseContext {
         buffer.setStatus(HttpStatus.fromCode(code));
     }
 
+    public HttpStatus getStatus() {
+        return buffer.status;
+    }
+
     public void setHeader(String name, String value) {
         buffer.setHeader(name, value);
     }
