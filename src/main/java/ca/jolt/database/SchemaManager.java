@@ -12,11 +12,13 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import ca.jolt.database.annotation.CheckEnum;
 import ca.jolt.database.annotation.Column;
 import ca.jolt.database.annotation.GenerationType;
 import ca.jolt.database.annotation.Id;
 import ca.jolt.database.exception.DatabaseException;
 import ca.jolt.database.exception.DatabaseExceptionMapper;
+import ca.jolt.database.models.CheckEnumConstraintRegistry;
 import ca.jolt.database.models.TableMetadata;
 
 public final class SchemaManager {
@@ -98,15 +100,23 @@ public final class SchemaManager {
         Column columnAnno = field.getAnnotation(Column.class);
         String columnName = metadata.getFieldToColumn().get(field.getName());
 
-        String sqlType;
-        if (field.getType().equals(String.class)) {
-            if (columnAnno != null && columnAnno.length() > 0) {
-                sqlType = "VARCHAR(" + columnAnno.length() + ")";
-            } else {
-                sqlType = "TEXT";
+        String sqlType = DatabaseUtils.getSqlTypeForJavaType(field.getType(), columnAnno);
+
+        CheckEnum enumAnno = field.getAnnotation(CheckEnum.class);
+        if (enumAnno != null) {
+            String[] allowedValues = enumAnno.values();
+            String constraintName = metadata.getTableName() + "_" + columnName + "_check";
+            StringBuilder checkSql = new StringBuilder();
+            checkSql.append(" CHECK (").append(columnName).append(" IN (");
+            for (int i = 0; i < allowedValues.length; i++) {
+                checkSql.append("'").append(allowedValues[i]).append("'");
+                if (i < allowedValues.length - 1) {
+                    checkSql.append(", ");
+                }
             }
-        } else {
-            sqlType = DatabaseUtils.getSqlTypeForJavaType(field.getType(), columnAnno);
+            checkSql.append("))");
+            sqlType += " " + checkSql.toString();
+            CheckEnumConstraintRegistry.register(constraintName, String.join(", ", allowedValues));
         }
 
         StringBuilder sb = new StringBuilder();

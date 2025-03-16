@@ -38,3 +38,5 @@ Thing to fix with schema creator :
 - Add support for ManyToOne, OneToMany, ManyToMany relationships annotation
 - Add support for Enum annotation using @Enum(values = {"value1", "value2", "value3"})
 - Add support to better handle circular references.
+
+- Fix error msg when constraint CHECK IN fails.

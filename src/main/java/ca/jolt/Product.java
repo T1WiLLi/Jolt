@@ -1,5 +1,6 @@
 package ca.jolt;
 
+import ca.jolt.database.annotation.CheckEnum;
 import ca.jolt.database.annotation.Column;
 import ca.jolt.database.annotation.GenerationType;
 import ca.jolt.database.annotation.Id;
@@ -24,4 +25,8 @@ public class Product {
 
     @Column(value = "price", nullable = false)
     private Double price;
+
+    @CheckEnum(values = { "AVAILABLE", "UNAVAILABLE" })
+    @Column(value = "status", nullable = true)
+    private String status;
 }

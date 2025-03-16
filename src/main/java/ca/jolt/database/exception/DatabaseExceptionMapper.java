@@ -3,10 +3,14 @@ package ca.jolt.database.exception;
 import java.sql.SQLException;
 import java.util.regex.Pattern;
 
+import ca.jolt.database.models.CheckEnumConstraintRegistry;
+
 public class DatabaseExceptionMapper {
 
     private static final Pattern UNIQUE_CONSTRAINT_PATTERN = Pattern
             .compile("Key \\((.+?)\\)=\\((.+?)\\) already exists");
+    private static final Pattern CHECK_CONSTRAINT_NAME_PATTERN = Pattern
+            .compile("violates check constraint");
 
     public static DatabaseException map(SQLException e, String sql, String entityName) {
         String sqlState = e.getSQLState();
@@ -38,6 +42,22 @@ public class DatabaseExceptionMapper {
                         e);
             }
             if (lowerMsg.contains("check constraint")) {
+                var matcher = CHECK_CONSTRAINT_NAME_PATTERN.matcher(errorMessage);
+                if (matcher.find()) {
+                    String constraintName = matcher.group();
+                    String allowedValues = CheckEnumConstraintRegistry.getAllowedValues(constraintName);
+                    if (allowedValues != null) {
+                        return new DatabaseException(
+                                DatabaseErrorType.DATA_INTEGRITY_ERROR,
+                                String.format(
+                                        "Invalid value provided. Please adjust the field '%s' to one of the following: %s.",
+                                        constraintName.replace("chk_" + entityName.toLowerCase() + "_", ""),
+                                        allowedValues),
+                                String.format("Check constraint violation: %s, SQL: %s", errorMessage,
+                                        sanitizeSql(sql)),
+                                e);
+                    }
+                }
                 return new DatabaseException(
                         DatabaseErrorType.DATA_INTEGRITY_ERROR,
                         "The data provided doesn't meet the required constraints.",
