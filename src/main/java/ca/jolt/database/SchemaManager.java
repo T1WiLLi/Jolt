@@ -3,6 +3,7 @@ package ca.jolt.database;
 import java.lang.reflect.Field;
 import java.sql.Connection;
 import java.sql.DatabaseMetaData;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
@@ -32,6 +33,7 @@ public final class SchemaManager {
                 updateTableSchema(conn, metadata);
             }
             manageIndexes(conn, metadata);
+            loadAllConstraints(conn, metadata.getTableName());
         } catch (SQLException e) {
             DatabaseException dbException = DatabaseExceptionMapper.map(e,
                     "Schema validation for table " + metadata.getTableName(), metadata.getTableName());
@@ -116,6 +118,7 @@ public final class SchemaManager {
             }
             checkSql.append("))");
             sqlType += " " + checkSql.toString();
+            System.out.println("Name: " + constraintName);
             CheckEnumConstraintRegistry.register(constraintName, String.join(", ", allowedValues));
         }
 
@@ -193,6 +196,47 @@ public final class SchemaManager {
                 logger.severe(() -> dbException.getTechnicalDetails());
                 throw dbException;
             }
+        }
+    }
+
+    public static <T> void loadAllConstraints(Connection conn, String tableName) {
+        try {
+            String sql = "SELECT constraint_name, check_clause FROM information_schema.check_constraints " +
+                    "JOIN information_schema.constraint_column_usage USING (constraint_name) " +
+                    "WHERE constraint_name LIKE ? AND constraint_name LIKE '%_check'";
+
+            try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+                pstmt.setString(1, tableName + "_%");
+
+                try (ResultSet rs = pstmt.executeQuery()) {
+                    while (rs.next()) {
+                        String constraintName = rs.getString("constraint_name");
+                        String checkClause = rs.getString("check_clause");
+
+                        if (checkClause.contains("ANY (ARRAY[")) {
+                            int startIdx = checkClause.indexOf("ARRAY[") + 6;
+                            int endIdx = checkClause.lastIndexOf("]");
+                            if (startIdx > 0 && endIdx > startIdx) {
+                                String valuesList = checkClause.substring(startIdx, endIdx);
+                                valuesList = valuesList.replace("'::text", "").replace("'", "").replace(", ", ",");
+                                System.out.println("NAME: " + constraintName);
+                                CheckEnumConstraintRegistry.register(constraintName, valuesList);
+                            }
+                        } else if (checkClause.contains(" IN (")) {
+                            int startIdx = checkClause.indexOf("(") + 1;
+                            int endIdx = checkClause.lastIndexOf(")");
+                            if (startIdx > 0 && endIdx > startIdx) {
+                                String valuesList = checkClause.substring(startIdx, endIdx);
+                                valuesList = valuesList.replace("'", "").replace(", ", ",");
+                                System.out.println("NAME: " + constraintName);
+                                CheckEnumConstraintRegistry.register(constraintName, valuesList);
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (SQLException e) {
+            logger.severe("Failed to load check constraints for table " + tableName + ": " + e.getMessage());
         }
     }
 

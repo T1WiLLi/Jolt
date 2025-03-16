@@ -10,7 +10,7 @@ public class DatabaseExceptionMapper {
     private static final Pattern UNIQUE_CONSTRAINT_PATTERN = Pattern
             .compile("Key \\((.+?)\\)=\\((.+?)\\) already exists");
     private static final Pattern CHECK_CONSTRAINT_NAME_PATTERN = Pattern
-            .compile("violates check constraint");
+            .compile("violates check constraint \"([^\"]+)\"");
 
     public static DatabaseException map(SQLException e, String sql, String entityName) {
         String sqlState = e.getSQLState();
@@ -42,9 +42,10 @@ public class DatabaseExceptionMapper {
                         e);
             }
             if (lowerMsg.contains("check constraint")) {
+                System.out.println(lowerMsg);
                 var matcher = CHECK_CONSTRAINT_NAME_PATTERN.matcher(errorMessage);
                 if (matcher.find()) {
-                    String constraintName = matcher.group();
+                    String constraintName = matcher.group(1);
                     String allowedValues = CheckEnumConstraintRegistry.getAllowedValues(constraintName);
                     if (allowedValues != null) {
                         return new DatabaseException(
