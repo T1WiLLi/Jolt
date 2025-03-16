@@ -1,8 +1,8 @@
-package ca.jolt.database;
+package ca.jolt.database.models;
 
 import java.util.List;
 
-public class QueryResult<T> {
+public final class QueryResult<T> {
     private final List<T> result;
     private final int affectedRowCount;
     private final Object lastInsertedId;

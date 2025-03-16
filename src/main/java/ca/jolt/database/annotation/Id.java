@@ -9,4 +9,7 @@ import java.lang.annotation.*;
 @Target(ElementType.FIELD)
 public @interface Id {
     // In the future, you can add attributes for generation strategy.
+    GenerationType generationType() default GenerationType.IDENTITY;
+
+    String sequence() default "";
 }

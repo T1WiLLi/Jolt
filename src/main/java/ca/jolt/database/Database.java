@@ -9,7 +9,7 @@ import com.zaxxer.hikari.HikariDataSource;
 
 import ca.jolt.server.config.ConfigurationManager;
 
-public class Database {
+public final class Database {
     private static Database instance;
     private HikariDataSource dataSource;
     private static final Logger logger = Logger.getLogger(Database.class.getName());

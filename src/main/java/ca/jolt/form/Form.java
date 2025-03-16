@@ -15,6 +15,7 @@ import java.util.logging.Logger;
 
 import com.fasterxml.jackson.databind.DeserializationFeature;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
 import ca.jolt.exceptions.FormConversionException;
 
@@ -420,7 +421,7 @@ public final class Form {
      * @throws FormConversionException If conversion fails
      */
     public <T> T buildEntity(Class<T> clazz, String... ignoreFields) {
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper().registerModule(new Jdk8Module());
         try {
             Map<String, String> data = new HashMap<>(fieldValues);
             for (String ignore : ignoreFields) {
@@ -453,7 +454,7 @@ public final class Form {
      * @throws FormConversionException If an error occurs during the update process.
      */
     public <T> T updateEntity(T entity, String... ignoreFields) {
-        ObjectMapper mapper = new ObjectMapper();
+        ObjectMapper mapper = new ObjectMapper().registerModule(new Jdk8Module());
         mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         try {
             Map<String, String> data = new HashMap<>(fieldValues);

@@ -1,7 +1,6 @@
 package ca.jolt.database;
 
-import ca.jolt.database.annotation.Id;
-import ca.jolt.database.annotation.Table;
+import ca.jolt.database.models.TableMetadata;
 import ca.jolt.exceptions.DatabaseException;
 import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.http.HttpStatus;
@@ -17,23 +16,28 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 
+/**
+ * A generic data-access class for an entity, providing common CRUD operations.
+ * It leverages TableMetadata (for table/column reflection) and SchemaManager
+ * (for schema creation/migration).
+ */
 public abstract class Broker<ID, T> {
 
-    private static Logger logger = Logger.getLogger(Broker.class.getName());
+    private static final Logger logger = Logger.getLogger(Broker.class.getName());
 
-    private final Class<T> entityClass;
-    private final String tableName;
-    private final Field idField;
-    private final String idColumnName;
+    protected final TableMetadata<T> metadata;
+    protected final Class<T> entityClass;
+    protected final Field idField;
 
     protected Broker() {
         this.entityClass = resolveEntityClass();
-        Table tableAnno = entityClass.getAnnotation(Table.class);
-        this.tableName = (tableAnno != null && !tableAnno.table().isEmpty())
-                ? tableAnno.table()
-                : toSnakeCase(entityClass.getSimpleName());
-        this.idField = resolveIdField();
-        this.idColumnName = toSnakeCase(idField.getName());
+        this.metadata = new TableMetadata<>(entityClass);
+        this.idField = metadata.getId();
+
+        executeInTransaction(conn -> {
+            SchemaManager.validateTable(conn, metadata);
+            return null;
+        });
     }
 
     @SuppressWarnings("unchecked")
@@ -47,29 +51,19 @@ public abstract class Broker<ID, T> {
                 "Could not resolve entity class. Ensure your repository directly extends Broker.");
     }
 
-    private Field resolveIdField() {
-        for (Field field : entityClass.getDeclaredFields()) {
-            if (field.isAnnotationPresent(Id.class)) {
-                field.setAccessible(true);
-                return field;
-            }
-        }
-        throw new IllegalStateException("Entity " + entityClass.getName() + " does not have an @Id annotated field.");
-    }
-
-    private String toSnakeCase(String input) {
-        return input.replaceAll("([a-z])([A-Z])", "$1_$2").toLowerCase();
-    }
-
-    // --- Basic CRUD Operations ---
-
     public Optional<T> findById(ID id) {
-        return new Query<>(entityClass, "SELECT * FROM " + tableName + " WHERE " + idColumnName + " = ?", true, id)
-                .selectSingle();
+        return new Query<>(
+                entityClass,
+                "SELECT * FROM " + metadata.getTableName() + " WHERE " + metadata.getIdColumn() + " = ?",
+                true,
+                id).selectSingle();
     }
 
     public List<T> findAll() {
-        return new Query<>(entityClass, "SELECT * FROM " + tableName, true).selectList();
+        return new Query<>(
+                entityClass,
+                "SELECT * FROM " + metadata.getTableName(),
+                true).selectList();
     }
 
     public T save(T entity) {
@@ -98,7 +92,7 @@ public abstract class Broker<ID, T> {
             if (id != null) {
                 executeInTransaction(conn -> {
                     try (PreparedStatement ps = conn.prepareStatement(
-                            "DELETE FROM " + tableName + " WHERE " + idColumnName + " = ?")) {
+                            "DELETE FROM " + metadata.getTableName() + " WHERE " + metadata.getIdColumn() + " = ?")) {
                         ps.setObject(1, id);
                         ps.executeUpdate();
                         return true;
@@ -115,8 +109,8 @@ public abstract class Broker<ID, T> {
 
     public boolean deleteById(ID id) {
         return executeInTransaction(conn -> {
-            try (PreparedStatement ps = conn
-                    .prepareStatement("DELETE FROM " + tableName + " WHERE " + idColumnName + " = ?")) {
+            try (PreparedStatement ps = conn.prepareStatement(
+                    "DELETE FROM " + metadata.getTableName() + " WHERE " + metadata.getIdColumn() + " = ?")) {
                 ps.setObject(1, id);
                 int rowsAffected = ps.executeUpdate();
                 return rowsAffected > 0;
@@ -124,27 +118,34 @@ public abstract class Broker<ID, T> {
         });
     }
 
-    // --- Private Insert/Update Implementation with Transaction Support ---
-
     private T insert(T entity, Connection conn) throws SQLException {
         List<String> columns = new ArrayList<>();
         List<Object> values = new ArrayList<>();
+
         for (Field field : entityClass.getDeclaredFields()) {
             if (field.equals(idField)) {
                 continue;
             }
-            columns.add(toSnakeCase(field.getName()));
+
+            String colName = metadata.getFieldToColumn().get(field.getName());
+            if (colName == null) {
+                continue;
+            }
+            columns.add(colName);
+
             try {
+                field.setAccessible(true);
                 values.add(field.get(entity));
             } catch (IllegalAccessException e) {
-                logger.severe(() -> "Failed to access field " + field.getName() + ", " + e.getMessage());
+                logger.severe(() -> "Failed to access field " + field.getName() + ": " + e.getMessage());
                 throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                         HttpStatus.INTERNAL_SERVER_ERROR.reason());
             }
         }
+
         String colStr = String.join(", ", columns);
         String placeholders = String.join(", ", Collections.nCopies(values.size(), "?"));
-        String sql = "INSERT INTO " + tableName + " (" + colStr + ") VALUES (" + placeholders + ")";
+        String sql = "INSERT INTO " + metadata.getTableName() + " (" + colStr + ") VALUES (" + placeholders + ")";
 
         try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
             for (int i = 0; i < values.size(); i++) {
@@ -152,11 +153,13 @@ public abstract class Broker<ID, T> {
             }
             int affected = ps.executeUpdate();
             if (affected == 0) {
-                logger.warning(() -> "Insert may have failed, no rows affected");
+                logger.warning(() -> "Insert may have failed; no rows affected");
             }
+
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) {
                     Object generatedId = rs.getObject(1);
+                    idField.setAccessible(true);
                     idField.set(entity, generatedId);
                 }
             } catch (IllegalAccessException e) {
@@ -172,63 +175,59 @@ public abstract class Broker<ID, T> {
     private T update(T entity, Connection conn) throws SQLException, IllegalArgumentException, IllegalAccessException {
         List<String> setClauses = new ArrayList<>();
         List<Object> values = new ArrayList<>();
+
         for (Field field : entityClass.getDeclaredFields()) {
             if (field.equals(idField)) {
                 continue;
             }
-            setClauses.add(toSnakeCase(field.getName()) + " = ?");
-            try {
-                values.add(field.get(entity));
-            } catch (IllegalAccessException e) {
-                logger.severe(() -> "Failed to access field: " + field.getName() + " " + e.getMessage());
-                throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        HttpStatus.INTERNAL_SERVER_ERROR.reason());
+            String colName = metadata.getFieldToColumn().get(field.getName());
+            if (colName == null) {
+                continue;
             }
+            setClauses.add(colName + " = ?");
+
+            field.setAccessible(true);
+            values.add(field.get(entity));
         }
-        String sql = "UPDATE " + tableName + " SET " + String.join(", ", setClauses)
-                + " WHERE " + idColumnName + " = ?";
+
+        String sql = "UPDATE " + metadata.getTableName() + " SET " + String.join(", ", setClauses)
+                + " WHERE " + metadata.getIdColumn() + " = ?";
 
         try (PreparedStatement ps = conn.prepareStatement(sql)) {
             for (int i = 0; i < values.size(); i++) {
                 ps.setObject(i + 1, values.get(i));
             }
+            idField.setAccessible(true);
             ps.setObject(values.size() + 1, idField.get(entity));
+
             int affected = ps.executeUpdate();
             if (affected == 0) {
-                logger.warning(() -> "Update may have failed, no rows affected");
+                logger.warning(() -> "Update may have failed; no rows affected");
             }
         }
         return entity;
     }
 
-    // --- Protected Helper Methods for Custom Queries ---
-
-    /**
-     * Executes a custom SELECT query and returns a single Optional result.
-     * Example: selectSingle("WHERE username = ?", username);
-     */
     protected Optional<T> selectSingle(String whereClause, Object... params) {
-        return new Query<>(entityClass, "SELECT * FROM " + tableName + " " + whereClause, true, params)
-                .selectSingle();
+        return new Query<>(
+                entityClass,
+                "SELECT * FROM " + metadata.getTableName() + " " + whereClause,
+                true,
+                params).selectSingle();
     }
 
-    /**
-     * Executes a custom SELECT query and returns a list of results.
-     * Example: select("WHERE age > ?", 20);
-     */
     protected List<T> select(String whereClause, Object... params) {
-        return new Query<>(entityClass, "SELECT * FROM " + tableName + " " + whereClause, true, params)
-                .selectList();
+        return new Query<>(
+                entityClass,
+                "SELECT * FROM " + metadata.getTableName() + " " + whereClause,
+                true,
+                params).selectList();
     }
 
-    /**
-     * Executes an update or other modifying query using raw SQL within a
-     * transaction.
-     * Example: update("SET email = ? WHERE id = ?", newEmail, id);
-     */
     protected int update(String sqlClause, Object... params) {
         return executeInTransaction(conn -> {
-            try (PreparedStatement ps = conn.prepareStatement("UPDATE " + tableName + " " + sqlClause)) {
+            String sql = "UPDATE " + metadata.getTableName() + " " + sqlClause;
+            try (PreparedStatement ps = conn.prepareStatement(sql)) {
                 for (int i = 0; i < params.length; i++) {
                     ps.setObject(i + 1, params[i]);
                 }
@@ -237,9 +236,6 @@ public abstract class Broker<ID, T> {
         });
     }
 
-    /**
-     * Executes a raw SQL query within a transaction if it's a modifying query.
-     */
     protected int sql(String rawSql, Object... params) {
         boolean isSelect = rawSql.trim().toUpperCase().startsWith("SELECT");
         if (isSelect) {
@@ -256,13 +252,8 @@ public abstract class Broker<ID, T> {
         }
     }
 
-    /**
-     * Convenience method to count rows in the table (optionally with a WHERE
-     * clause).
-     * Example: count("WHERE active = ?", true);
-     */
     public long count(String whereClause, Object... params) {
-        String sql = "SELECT COUNT(*) AS total FROM " + tableName + " " + whereClause;
+        String sql = "SELECT COUNT(*) AS total FROM " + metadata.getTableName() + " " + whereClause;
         try (Connection conn = Database.getInstance().getConnection();
                 PreparedStatement ps = conn.prepareStatement(sql)) {
             for (int i = 0; i < params.length; i++) {
@@ -276,23 +267,15 @@ public abstract class Broker<ID, T> {
         } catch (SQLException e) {
             logger.severe(() -> "Error executing count : " + e.getMessage() + ", Stack Trace: "
                     + HelpMethods.stackTraceElementToString(e.getStackTrace()));
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    HttpStatus.INTERNAL_SERVER_ERROR.reason());
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
         }
         return 0L;
     }
 
-    /**
-     * Checks if an entity exists by its ID.
-     */
     public boolean exists(ID id) {
         return findById(id).isPresent();
     }
 
-    /**
-     * Generic method to execute any operation within a transaction.
-     * All modifying operations automatically use this.
-     */
     protected <R> R executeInTransaction(TransactionCallback<R> callback) {
         try (Connection conn = Database.getInstance().getConnection()) {
             boolean originalAutoCommit = conn.getAutoCommit();
@@ -305,12 +288,13 @@ public abstract class Broker<ID, T> {
                 try {
                     conn.rollback();
                 } catch (SQLException rollbackEx) {
-                    logger.severe(() -> "Failed to rollback transaction: " + rollbackEx.getMessage() + ", Stack Trace: "
+                    logger.severe(() -> "Failed to rollback transaction: " + rollbackEx.getMessage()
+                            + ", Stack Trace: "
                             + HelpMethods.stackTraceElementToString(rollbackEx.getStackTrace()));
                     throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                             HttpStatus.INTERNAL_SERVER_ERROR.reason());
                 }
-                logger.severe(() -> "Transaction failed: " + e.getMessage() + "Stack Trace: "
+                logger.severe(() -> "Transaction failed: " + e.getMessage() + ", Stack Trace: "
                         + HelpMethods.stackTraceElementToString(e.getStackTrace()));
                 throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                         HttpStatus.INTERNAL_SERVER_ERROR.reason());
@@ -328,9 +312,6 @@ public abstract class Broker<ID, T> {
         }
     }
 
-    /**
-     * For backward compatibility - delegates to executeInTransaction
-     */
     protected <R> R withTransaction(TransactionCallback<R> callback) {
         return executeInTransaction(callback);
     }

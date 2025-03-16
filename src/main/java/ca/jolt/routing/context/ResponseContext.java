@@ -6,6 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
 import ca.jolt.cookie.CookieBuilder;
 import ca.jolt.exceptions.JoltHttpException;
@@ -115,7 +116,7 @@ final class ResponseContext {
         try {
             if (buffer.body != null) {
                 if (buffer.isJsonBody) {
-                    new ObjectMapper().writeValue(response.getWriter(), buffer.body);
+                    new ObjectMapper().registerModule(new Jdk8Module()).writeValue(response.getWriter(), buffer.body);
                 } else {
                     response.getWriter().write((String) buffer.body);
                 }

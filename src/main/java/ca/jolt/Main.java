@@ -47,6 +47,13 @@ public class Main extends JoltApplication {
                 return ctx.ok().json(Map.of("Message", "User update"));
             });
         });
+        group("/product", () -> {
+            get("", ProductController::getProducts);
+            get("/{id:int}", ProductController::getProduct);
+            post("", ProductController::createProduct);
+            put("/{id:int}", ProductController::updateProduct);
+            delete("/{id:int}", ProductController::deleteProduct);
+        });
     }
 
     public static JoltContext getUser(JoltContext ctx) {

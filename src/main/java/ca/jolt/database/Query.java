@@ -1,7 +1,9 @@
 package ca.jolt.database;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
+import ca.jolt.database.models.QueryResult;
 import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.http.HttpStatus;
 
@@ -20,7 +22,7 @@ public class Query<T> {
     private final StringBuilder sqlBuilder;
     private final List<Object> parameters;
     private final boolean isSelect;
-    private final ObjectMapper objectMapper = new ObjectMapper();
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
 
     public Query(Class<T> entityClass, String initialSql, boolean isSelect, Object... initialParams) {
         this.entityClass = entityClass;
