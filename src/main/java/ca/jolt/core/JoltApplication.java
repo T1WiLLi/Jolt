@@ -165,16 +165,6 @@ public abstract class JoltApplication {
     protected abstract void setup();
 
     /**
-     * Registers a global before-handler for all routes.
-     *
-     * @param handler A handler that executes before every route. Receives a
-     *                {@link JoltContext} for the current request.
-     */
-    public static void before(Consumer<JoltContext> handler) {
-        router.before(handler);
-    }
-
-    /**
      * Registers a before-handler for the specified routes.
      *
      * @param handler A handler that executes before each matching route.
@@ -183,16 +173,6 @@ public abstract class JoltApplication {
      */
     public static void before(Consumer<JoltContext> handler, String... routes) {
         router.before(handler, routes);
-    }
-
-    /**
-     * Registers a global after-handler for all routes.
-     *
-     * @param handler A handler that executes after every route. Receives a
-     *                {@link JoltContext} for the current request.
-     */
-    public static void after(Consumer<JoltContext> handler) {
-        router.after(handler);
     }
 
     /**
@@ -217,16 +197,6 @@ public abstract class JoltApplication {
     }
 
     /**
-     * Defines an HTTP GET route that uses a {@link Supplier} to produce responses.
-     *
-     * @param path     The path pattern to match
-     * @param supplier A supplier whose {@code get()} method returns the response
-     */
-    protected static void get(String path, Supplier<JoltContext> supplier) {
-        router.get(path, supplier);
-    }
-
-    /**
      * Defines an HTTP POST route with a specified handler.
      *
      * @param path    The path pattern to match
@@ -234,16 +204,6 @@ public abstract class JoltApplication {
      */
     protected static void post(String path, RouteHandler handler) {
         router.post(path, handler);
-    }
-
-    /**
-     * Defines an HTTP POST route that uses a {@link Supplier} to produce responses.
-     *
-     * @param path     The path pattern to match
-     * @param supplier A supplier whose {@code get()} method returns the response
-     */
-    protected static void post(String path, Supplier<JoltContext> supplier) {
-        router.post(path, supplier);
     }
 
     /**
@@ -257,16 +217,6 @@ public abstract class JoltApplication {
     }
 
     /**
-     * Defines an HTTP PUT route that uses a {@link Supplier} to produce responses.
-     *
-     * @param path     The path pattern to match
-     * @param supplier A supplier whose {@code get()} method returns the response
-     */
-    protected static void put(String path, Supplier<JoltContext> supplier) {
-        router.put(path, supplier);
-    }
-
-    /**
      * Defines an HTTP DELETE route with a specified handler.
      *
      * @param path    The path pattern to match
@@ -274,17 +224,6 @@ public abstract class JoltApplication {
      */
     protected static void delete(String path, RouteHandler handler) {
         router.delete(path, handler);
-    }
-
-    /**
-     * Defines an HTTP DELETE route that uses a {@link Supplier} to produce
-     * responses.
-     *
-     * @param path     The path pattern to match
-     * @param supplier A supplier whose {@code get()} method returns the response
-     */
-    protected static void delete(String path, Supplier<JoltContext> supplier) {
-        router.delete(path, supplier);
     }
 
     /**

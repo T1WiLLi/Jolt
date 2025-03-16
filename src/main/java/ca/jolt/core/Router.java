@@ -70,16 +70,6 @@ public final class Router {
     private final Deque<String> prefixes = new ArrayDeque<>();
 
     /**
-     * Registers a "before" handler that applies to all routes.
-     *
-     * @param handler A handler to run before each route handler.
-     *                Receives a {@link JoltContext} for the current request.
-     */
-    public void before(Consumer<JoltContext> handler) {
-        beforeHandlers.add(new LifecycleEntry(null, handler));
-    }
-
-    /**
      * Registers a "before" handler that applies only to the specified routes.
      *
      * @param handler A handler to run before each matching route.
@@ -89,16 +79,6 @@ public final class Router {
      */
     public void before(Consumer<JoltContext> handler, String... routes) {
         beforeHandlers.add(new LifecycleEntry(Arrays.asList(routes), handler));
-    }
-
-    /**
-     * Registers an "after" handler that applies to all routes.
-     *
-     * @param handler A handler to run after each route handler.
-     *                Receives a {@link JoltContext} for the current request.
-     */
-    public void after(Consumer<JoltContext> handler) {
-        afterHandlers.add(new LifecycleEntry(null, handler));
     }
 
     /**
@@ -126,19 +106,6 @@ public final class Router {
     }
 
     /**
-     * Registers a new HTTP {@code GET} route that returns a response
-     * from a {@link Supplier}.
-     *
-     * @param path     The path pattern to match
-     * @param supplier A supplier providing the response object
-     * @throws DuplicateRouteException If a route with the same method and path
-     *                                 exists
-     */
-    public void get(String path, Supplier<JoltContext> supplier) {
-        get(path, RouteHandler.fromSupplier(supplier));
-    }
-
-    /**
      * Registers a new HTTP {@code POST} route.
      *
      * @param path    The path pattern to match
@@ -148,19 +115,6 @@ public final class Router {
      */
     public void post(String path, RouteHandler handler) {
         addRoute(new Route("POST", fullPath(path), handler));
-    }
-
-    /**
-     * Registers a new HTTP {@code POST} route that returns a response
-     * from a {@link Supplier}.
-     *
-     * @param path     The path pattern to match
-     * @param supplier A supplier providing the response object
-     * @throws DuplicateRouteException If a route with the same method and path
-     *                                 exists
-     */
-    public void post(String path, Supplier<JoltContext> supplier) {
-        post(path, RouteHandler.fromSupplier(supplier));
     }
 
     /**
@@ -176,19 +130,6 @@ public final class Router {
     }
 
     /**
-     * Registers a new HTTP {@code PUT} route that returns a response
-     * from a {@link Supplier}.
-     *
-     * @param path     The path pattern to match
-     * @param supplier A supplier providing the response object
-     * @throws DuplicateRouteException If a route with the same method and path
-     *                                 exists
-     */
-    public void put(String path, Supplier<JoltContext> supplier) {
-        put(path, RouteHandler.fromSupplier(supplier));
-    }
-
-    /**
      * Registers a new HTTP {@code DELETE} route.
      *
      * @param path    The path pattern to match
@@ -198,19 +139,6 @@ public final class Router {
      */
     public void delete(String path, RouteHandler handler) {
         addRoute(new Route("DELETE", fullPath(path), handler));
-    }
-
-    /**
-     * Registers a new HTTP {@code DELETE} route that returns a response
-     * from a {@link Supplier}.
-     *
-     * @param path     The path pattern to match
-     * @param supplier A supplier providing the response object
-     * @throws DuplicateRouteException If a route with the same method and path
-     *                                 exists
-     */
-    public void delete(String path, Supplier<JoltContext> supplier) {
-        delete(path, RouteHandler.fromSupplier(supplier));
     }
 
     /**
