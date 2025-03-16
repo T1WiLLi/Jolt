@@ -1,7 +1,6 @@
 package ca.jolt.core;
 
 import java.util.function.Consumer;
-import java.util.function.Supplier;
 import java.util.logging.Logger;
 
 import ca.jolt.database.Database;

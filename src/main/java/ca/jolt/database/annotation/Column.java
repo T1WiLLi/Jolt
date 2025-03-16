@@ -20,7 +20,7 @@ public @interface Column {
      * 
      * @return The maximum length
      */
-    int length() default 255;
+    int length() default -1;
 
     /**
      * Whether the column can contain NULL values

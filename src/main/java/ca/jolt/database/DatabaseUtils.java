@@ -22,8 +22,7 @@ class DatabaseUtils {
 
     public static String getSqlTypeForJavaType(Class<?> type, Column column) {
         if (type == String.class) {
-            int length = column != null ? column.length() : 255;
-            return "VARCHAR(" + length + ")";
+            return (column.length() != -1) ? "VARCHAR(" + column.length() + ")" : "TEXT";
         } else if (type == Integer.class || type == int.class) {
             return "INTEGER";
         } else if (type == Long.class || type == long.class) {

@@ -66,23 +66,40 @@ public final class SchemaManager {
             String seqSql = "CREATE SEQUENCE IF NOT EXISTS " + metadata.getTableName() + "_id_seq";
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute(seqSql);
+            } catch (SQLException e) {
+                logger.severe(() -> "Error creating sequence: " + e.getMessage());
             }
         }
 
         try (Statement stmt = conn.createStatement()) {
             stmt.execute(createSql.toString());
             logger.info(() -> "Created table: " + metadata.getTableName());
+        } catch (SQLException e) {
+            logger.severe(() -> "Error creating table: " + e.getMessage());
         }
     }
 
     /**
-     * Builds the DDL piece for a single column, including PK/Identity if needed.
+     * Builds the DDL for a single column, including primary key and identity
+     * settings.
+     * For String types, if no positive length is provided via the @Column
+     * annotation,
+     * the SQL type will default to TEXT.
      */
     private static <T> String buildColumnDefinition(Field field, TableMetadata<T> metadata) {
         Column columnAnno = field.getAnnotation(Column.class);
         String columnName = metadata.getFieldToColumn().get(field.getName());
 
-        String sqlType = DatabaseUtils.getSqlTypeForJavaType(field.getType(), columnAnno);
+        String sqlType;
+        if (field.getType().equals(String.class)) {
+            if (columnAnno != null && columnAnno.length() > 0) {
+                sqlType = "VARCHAR(" + columnAnno.length() + ")";
+            } else {
+                sqlType = "TEXT";
+            }
+        } else {
+            sqlType = DatabaseUtils.getSqlTypeForJavaType(field.getType(), columnAnno);
+        }
 
         StringBuilder sb = new StringBuilder();
         sb.append(columnName).append(" ").append(sqlType);
@@ -93,7 +110,6 @@ public final class SchemaManager {
 
         if (field.isAnnotationPresent(Id.class)) {
             sb.append(" PRIMARY KEY");
-
             if (metadata.getIdGenerationType() == GenerationType.IDENTITY) {
                 sb.append(" GENERATED ALWAYS AS IDENTITY");
             }
@@ -103,9 +119,7 @@ public final class SchemaManager {
     }
 
     /**
-     * Naive example: checks for missing columns and adds them. Real world usage may
-     * need
-     * more sophisticated checks (type changes, constraints, etc).
+     * Checks the existing table schema and adds any missing columns.
      */
     private static <T> void updateTableSchema(Connection conn, TableMetadata<T> metadata) throws SQLException {
         DatabaseMetaData meta = conn.getMetaData();
@@ -137,22 +151,18 @@ public final class SchemaManager {
         }
     }
 
+    /**
+     * Manages indexes while avoiding duplicate index creation.
+     */
     private static <T> void manageIndexes(Connection conn, TableMetadata<T> metadata) throws SQLException {
         for (String indexCol : metadata.getIndexes()) {
+            if (metadata.getUnique().contains(indexCol) ||
+                    indexCol.equals(metadata.getFieldToColumn().get(metadata.getId().getName()))) {
+                continue;
+            }
             String indexName = "idx_" + metadata.getTableName() + "_" + indexCol;
             String createIdxSql = "CREATE INDEX IF NOT EXISTS " + indexName
                     + " ON " + metadata.getTableName() + " (" + indexCol + ")";
-
-            try (Statement stmt = conn.createStatement()) {
-                stmt.execute(createIdxSql);
-            }
-        }
-
-        for (String uniqueCol : metadata.getUnique()) {
-            String indexName = "uk_" + metadata.getTableName() + "_" + uniqueCol;
-            String createIdxSql = "CREATE UNIQUE INDEX IF NOT EXISTS " + indexName
-                    + " ON " + metadata.getTableName() + " (" + uniqueCol + ")";
-
             try (Statement stmt = conn.createStatement()) {
                 stmt.execute(createIdxSql);
             }
