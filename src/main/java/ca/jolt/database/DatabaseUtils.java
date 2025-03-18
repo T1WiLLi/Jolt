@@ -9,7 +9,7 @@ import ca.jolt.database.annotation.Column;
 import ca.jolt.database.annotation.Id;
 import ca.jolt.database.annotation.Table;
 
-class DatabaseUtils {
+public final class DatabaseUtils {
 
     public static final List<String> RESERVED_KEYWORDS = List.of(
             "ABSOLUTE", "ACTION", "ADD", "ADMIN", "AFTER", "ALL", "ALLOCATE", "ALTER", "AND", "ANY", "ARE", "ARRAY",
