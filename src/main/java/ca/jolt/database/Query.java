@@ -15,7 +15,7 @@ import java.util.logging.Logger;
 
 public class Query<T> {
 
-    private static Logger logger = Logger.getLogger(Query.class.getName());
+    private static final Logger logger = Logger.getLogger(Query.class.getName());
     private final Class<T> entityClass;
     private final StringBuilder sqlBuilder;
     private final List<Object> parameters;
@@ -23,6 +23,11 @@ public class Query<T> {
     private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
 
     public Query(Class<T> entityClass, String initialSql, boolean isSelect, Object... initialParams) {
+        if (!SqlSecurity.isValidRawSql(initialSql)) {
+            logger.severe(() -> "Potential SQL injection detected: " + initialSql);
+            throw new IllegalArgumentException("Invalid SQL statement detected");
+        }
+
         this.entityClass = entityClass;
         this.sqlBuilder = new StringBuilder(initialSql);
         this.parameters = new ArrayList<>();
@@ -31,12 +36,59 @@ public class Query<T> {
     }
 
     public Query<T> with(String clause, Object... params) {
+        if (!SqlSecurity.isValidRawSql(clause)) {
+            logger.severe(() -> "Potential SQL injection detected in clause: " + clause);
+            throw new IllegalArgumentException("Invalid SQL clause detected");
+        }
+
         sqlBuilder.append(" ").append(clause);
         Collections.addAll(this.parameters, params);
         return this;
     }
 
+    public Query<T> where(String whereClause, Object... params) {
+        if (!SqlSecurity.isValidWhereClause(whereClause)) {
+            logger.severe(() -> "Potential SQL injection detected in WHERE clause: " + whereClause);
+            throw new IllegalArgumentException("Invalid WHERE clause detected");
+        }
+
+        String normalizedClause = whereClause.trim().toUpperCase();
+        if (!normalizedClause.startsWith("WHERE ")) {
+            sqlBuilder.append(" WHERE ");
+        }
+
+        sqlBuilder.append(" ").append(whereClause);
+        Collections.addAll(this.parameters, params);
+        return this;
+    }
+
+    public Query<T> orderBy(String orderByClause) {
+        String[] parts = orderByClause.split(",");
+        for (String part : parts) {
+            String trimmed = part.trim();
+            final String columnName;
+
+            if (trimmed.toUpperCase().endsWith(" ASC") || trimmed.toUpperCase().endsWith(" DESC")) {
+                columnName = trimmed.substring(0, trimmed.lastIndexOf(" ")).trim();
+            } else {
+                columnName = trimmed;
+            }
+
+            if (!SqlSecurity.isValidColumnName(columnName)) {
+                logger.severe(() -> "Invalid column name in ORDER BY clause: " + columnName);
+                throw new IllegalArgumentException("Invalid column name in ORDER BY: " + columnName);
+            }
+        }
+
+        sqlBuilder.append(" ORDER BY ").append(orderByClause);
+        return this;
+    }
+
     public Query<T> page(int pageNumber, int pageSize) {
+        if (pageNumber <= 0 || pageSize <= 0) {
+            throw new IllegalArgumentException("Page number and size must be positive");
+        }
+
         int offset = (pageNumber - 1) * pageSize;
         sqlBuilder.append(" LIMIT ? OFFSET ?");
         parameters.add(pageSize);
@@ -48,6 +100,7 @@ public class Query<T> {
         try (Connection conn = Database.getInstance().getConnection();
                 PreparedStatement ps = prepareStatement(conn);
                 ResultSet rs = ps.executeQuery()) {
+
             List<T> list = new ArrayList<>();
             while (rs.next()) {
                 list.add(mapResultSet(rs));
@@ -55,7 +108,7 @@ public class Query<T> {
             return list;
         } catch (SQLException e) {
             logger.severe(() -> "Error executing query: " + getSql() + ", " + e.getMessage());
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Database query error: " + e.getMessage());
         }
     }
 
@@ -65,16 +118,26 @@ public class Query<T> {
     }
 
     public int executeUpdate() {
+        if (!isValidForUpdate()) {
+            logger.severe(() -> "Attempted potentially unsafe update: " + getSql());
+            throw new IllegalStateException("Update query validation failed");
+        }
+
         try (Connection conn = Database.getInstance().getConnection();
                 PreparedStatement ps = prepareStatement(conn)) {
             return ps.executeUpdate();
         } catch (SQLException e) {
             logger.severe(() -> "Error executing update query: " + getSql() + " " + e.getMessage());
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Database update error: " + e.getMessage());
         }
     }
 
     public QueryResult<T> execute() {
+        if (!isSelect && !isValidForUpdate()) {
+            logger.severe(() -> "Attempted potentially unsafe operation: " + getSql());
+            throw new IllegalStateException("Query validation failed");
+        }
+
         long start = System.currentTimeMillis();
         try (Connection conn = Database.getInstance().getConnection();
                 PreparedStatement ps = prepareStatement(conn)) {
@@ -101,7 +164,7 @@ public class Query<T> {
             }
         } catch (SQLException e) {
             logger.severe(() -> "Error executing query: " + getSql() + " " + e.getMessage());
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Database error: " + e.getMessage());
         }
     }
 
@@ -136,11 +199,30 @@ public class Query<T> {
             return objectMapper.convertValue(row, entityClass);
         } catch (Exception e) {
             logger.severe(() -> "Error mapping result set to " + entityClass.getName() + " " + e.getMessage());
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, HttpStatus.INTERNAL_SERVER_ERROR.reason());
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error mapping database results");
         }
     }
 
     protected <X> X convertValue(Object value, Class<X> targetType) {
         return objectMapper.convertValue(value, targetType);
+    }
+
+    /**
+     * Validates if the current query is safe for operations that modify data
+     * 
+     * @return true if the query passes safety checks
+     */
+    private boolean isValidForUpdate() {
+        String sql = getSql().trim().toUpperCase();
+        if (sql.contains("DROP ") || sql.contains("TRUNCATE ") ||
+                sql.contains("ALTER ") || sql.contains(";")) {
+            return false;
+        }
+
+        if ((sql.startsWith("UPDATE ") || sql.startsWith("DELETE ")) && !sql.contains(" WHERE ")) {
+            return false;
+        }
+
+        return true;
     }
 }

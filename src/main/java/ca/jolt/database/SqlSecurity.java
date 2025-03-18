@@ -39,7 +39,6 @@ final class SqlSecurity {
             return false;
         }
 
-        // Check if it matches allowed pattern and isn't a reserved keyword
         return VALID_IDENTIFIER_PATTERN.matcher(identifier).matches() &&
                 !SQL_KEYWORDS.contains(identifier.toUpperCase());
     }
@@ -70,7 +69,6 @@ final class SqlSecurity {
             return false;
         }
 
-        // Check for potentially dangerous patterns
         String normalized = sql.toLowerCase();
         return !normalized.contains("--") &&
                 !normalized.contains(";") &&
