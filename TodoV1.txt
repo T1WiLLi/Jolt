@@ -13,7 +13,6 @@ server.jwt.secret_key={SECRET_KEY}
 server.jwt.pepper={PEPPER}
 
 V-2
-- Fix @Check annotation not working when we throw an exception, which should show the condition as hint to the user, but it works with @CheckEnum ???? IDK
 - Add support to inject variables in the database.
 - Add support to add trigger function to the database. 
 - Add support to add custom procedure / function to the database.

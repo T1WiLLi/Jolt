@@ -2,6 +2,7 @@ package ca.jolt.database;
 
 import java.sql.Connection;
 import java.sql.SQLException;
+import java.util.Map;
 import java.util.logging.Logger;
 
 import com.zaxxer.hikari.HikariConfig;
@@ -86,4 +87,69 @@ public final class Database {
             dataSource.close();
         }
     }
+
+    /**
+     * Injects a variable into the database configuration.
+     * 
+     * @param key   The variable name
+     * @param value The variable value
+     * @return true if successful
+     */
+    public static boolean injectVariable(String key, String value) {
+        return DatabaseMetadata.injectVariable(key, value);
+    }
+
+    /**
+     * Gets a variable value from the database configuration.
+     * 
+     * @param key The variable name
+     * @return The variable value or null if not found
+     */
+    public static String getVariable(String key) {
+        return DatabaseMetadata.getVariable(key);
+    }
+
+    /**
+     * Gets all application variables from the database.
+     * 
+     * @return Map of variable names to values
+     */
+    public static Map<String, String> getAllVariables() {
+        return DatabaseMetadata.getAllVariables();
+    }
+
+    /**
+     * Creates or replaces a database trigger function.
+     * 
+     * @param name         Function name
+     * @param functionBody PL/pgSQL function body
+     * @return true if successful
+     */
+    public static boolean createTriggerFunction(String name, String functionBody) {
+        return DatabaseMetadata.createTriggerFunction(name, functionBody, null, "trigger");
+    }
+
+    /**
+     * Creates or replaces a database view.
+     * 
+     * @param name  View name
+     * @param query SQL query that defines the view
+     * @return true if successful
+     */
+    public static boolean createView(String name, String query) {
+        return DatabaseMetadata.createView(name, query);
+    }
+
+    /**
+     * Creates or replaces a database function.
+     * 
+     * @param name         Function name
+     * @param functionBody Function body
+     * @param returnType   Return type
+     * @return true if successful
+     */
+    public static boolean createFunction(String name, String functionBody, String returnType) {
+        return DatabaseMetadata.createFunction(name, functionBody, null, returnType, "plpgsql", false, "VOLATILE");
+    }
+
 }
