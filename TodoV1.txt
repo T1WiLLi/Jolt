@@ -12,31 +12,82 @@ in application.properties file:
 server.jwt.secret_key={SECRET_KEY}
 server.jwt.pepper={PEPPER}
 
+V-2
+- Add support for schemaManager to update table fully based on entities, this mean that if a database table has 1 field that the entity does not have, the field will be removed from the table.
+- Add support to inject variables in the database.
+- Add support to add trigger function to the database. 
+- Add support to add custom procedure / function to the database.
+- Add support to add views to the database.
+
+V-3
 Improve CID Container to make it more flexible and allow injection in none-bean object classes.
 Implement freemarker template to generate HTML pages and make it easy to integrate within the framework. 
-Improve overall design of the JoltContext class, maybe by switching to an even better Builder pattern. 
-Improve the logging and exception handling in the framework.
 Improve configurability of the framework.
-Improve annotation for database entity such as @Id, @Column, @Table ect, to make it more flexible and easy to use.
-Implement automatic migration of database schema when the application is started.
-Implement JsonIgnore annotation to ignore certains fields during serialization in both the Form package and the Json process.
-Add Session management to the framework and make it secure and easy to use, built on top of Jakarta HttpSession, and also add a simple authentication mechanism.
+Add CSRF management and protection throughout the framework.
+Add Session management to the framework and make it secure and easy to use, built on top of Jakarta HttpSession
+Add Simple authentification and authorization system, built with both Session and JWT token.
 Add an email service to the framework, which will allow testing and sending emails.
 Add auto-scanning of packages for the CID Container, to make it easy to add new components without having to manually add them to the CID Container.
 
-Add support for @JsonIgnore annotation to ignore certain fields during serialization in both the Form package and the Json process.
-Add support for the Router to register custom routes.
+V-4
+Add a BaseController class that will be used to create controllers, and will provide Router-like functionality.
+Add annotation such as: @Root("") which can be applied to the controller class to specify the root path of the controller.
+Add annotation such as: @Get(), @Post(), @Put(), @Delete(), @Mapping(HttpMethod method, String path) to specify the HTTP method of the controller method.
 
-Thing to fix with schema creator : 
+Here is an example of the futur version for security route configuration and CSRF : 
 
-- If lenght is not set for a String assume TEXT
-- unique constraint doesn't seems to apply ... 
-- It generated 3 indexes for a single field... 
-- IDK where it is, but it doesn't seems to support UTF-8
+.withCSRF()
+    .enable() // .disable();
+    .addIgnoreUrlPatterns("/login", "/register", "/forgot-password", "/reset-password");
+    .withHttpOnlyFalse(); // .withHttpOnly(true);
+    .withHandler(new CustomHandler()) // A way to handle the CSRF token.
 
-- Add support for composite primary keys
-- Add support for ManyToOne, OneToMany, ManyToMany relationships annotation
-- Add support for Enum annotation using @Enum(values = {"value1", "value2", "value3"})
-- Add support to better handle circular references.
+.withRoutes()
+    .route("/**").permitAll() // denyAll()
+    .route("/admin").authenticated(Auth.Session) // .authenticated(Auth.JWT), .authenticated(new CustomAuth());
+    .route("/threads").permit(HttpMethod.GET, HttpMethod.PATCH).authenticated(Auth.Session)
+    .anyRoute().denyAll();
 
-- Fix error msg when constraint CHECK IN fails.
+
+
+@NoArgsConstructor
+@Getter 
+@Setter
+@Table(table = "users", unique = {"name"})
+public class User {
+
+    @Id(generationType = GenerationType.IDENTITY)
+    private Integer id;
+
+    @Column(value = "name", length = 255, nullable = false)
+    private String name;
+
+    @JoinColumn("user_product_id", nullable = false)
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, FetchType.LAZY, orphanRemoval = true) // 1 user can have many products
+    private List<Product> products;
+}
+
+@NoArgsConstructor
+@Table(table = "product", unique = { "name" }, indexes = { "name" })
+@Getter
+@Setter
+public class Product {
+    @Id(generationType = GenerationType.IDENTITY)
+    private Integer id;
+
+    @Column(value = "name", length = 255, nullable = false)
+    private String name;
+
+    @Column(value = "description", nullable = true)
+    private String description;
+
+    @Column(value = "price", nullable = false)
+    private Double price;
+
+    @CheckEnum(values = { "AVAILABLE", "UNAVAILABLE" })
+    @Column(value = "status", nullable = true)
+    private String status;
+
+    @Column(value = "user_id")
+    private User user;
+}

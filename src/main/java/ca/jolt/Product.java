@@ -5,11 +5,13 @@ import ca.jolt.database.annotation.Column;
 import ca.jolt.database.annotation.GenerationType;
 import ca.jolt.database.annotation.Id;
 import ca.jolt.database.annotation.Table;
+import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @NoArgsConstructor
+@AllArgsConstructor
 @Table(table = "product", unique = { "name" }, indexes = { "name" })
 @Getter
 @Setter

@@ -4,6 +4,7 @@ import ca.jolt.database.exception.DatabaseErrorType;
 import ca.jolt.database.exception.DatabaseException;
 import ca.jolt.database.exception.DatabaseExceptionMapper;
 import ca.jolt.database.models.TableMetadata;
+import ca.jolt.exceptions.JoltException;
 
 import java.lang.reflect.Field;
 import java.lang.reflect.ParameterizedType;
@@ -15,11 +16,6 @@ import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-/**
- * A generic data-access class for an entity, providing common CRUD operations.
- * It leverages TableMetadata (for table/column reflection) and SchemaManager
- * (for schema creation/migration).
- */
 public abstract class Broker<ID, T> {
 
     private static final Logger logger = Logger.getLogger(Broker.class.getName());
@@ -51,16 +47,13 @@ public abstract class Broker<ID, T> {
     }
 
     public Optional<T> findById(ID id) {
-        return new Query<>(
-                entityClass,
+        return new Query<>(entityClass,
                 "SELECT * FROM " + metadata.getTableName() + " WHERE " + metadata.getIdColumn() + " = ?",
-                true,
-                id).selectSingle();
+                true, id).selectSingle();
     }
 
     public List<T> findAll() {
-        return new Query<>(
-                entityClass,
+        return new Query<>(entityClass,
                 "SELECT * FROM " + metadata.getTableName(),
                 true).selectList();
     }
@@ -68,20 +61,30 @@ public abstract class Broker<ID, T> {
     public T save(T entity) {
         try {
             Object id = idField.get(entity);
+            T savedEntity;
             if (id == null) {
-                return executeInTransaction(conn -> insert(entity, conn));
-            } else {
-                return executeInTransaction(conn -> {
+                savedEntity = executeInTransaction(conn -> {
+                    T inserted = insert(entity, conn);
                     try {
-                        return update(entity, conn);
+                        updateRelationships(inserted, conn);
+                    } catch (IllegalAccessException e) {
+                        throw new JoltException(e.getMessage());
+                    }
+                    return inserted;
+                });
+            } else {
+                savedEntity = executeInTransaction(conn -> {
+                    T updated;
+                    try {
+                        updated = update(entity, conn);
+                        updateRelationships(updated, conn);
+                        return updated;
                     } catch (IllegalArgumentException | IllegalAccessException e) {
-                        DatabaseException dbException = new DatabaseException(DatabaseErrorType.MAPPING_ERROR,
-                                "Error while updating entity : " + entity.getClass().getName(), e.getMessage(), e);
-                        logger.severe(() -> dbException.getTechnicalDetails());
-                        throw dbException;
+                        throw new JoltException(e.getMessage());
                     }
                 });
             }
+            return savedEntity;
         } catch (IllegalAccessException e) {
             DatabaseException dbException = new DatabaseException(
                     DatabaseErrorType.MAPPING_ERROR, "Error in save: " + e.getMessage(), e.getMessage(), e);
@@ -129,16 +132,12 @@ public abstract class Broker<ID, T> {
         List<Object> values = new ArrayList<>();
 
         for (Field field : entityClass.getDeclaredFields()) {
-            if (field.equals(idField)) {
+            if (field.equals(idField))
                 continue;
-            }
-
             String colName = metadata.getFieldToColumn().get(field.getName());
-            if (colName == null) {
+            if (colName == null)
                 continue;
-            }
             columns.add(colName);
-
             try {
                 field.setAccessible(true);
                 values.add(field.get(entity));
@@ -163,7 +162,6 @@ public abstract class Broker<ID, T> {
             if (affected == 0) {
                 logger.warning(() -> "Insert may have failed; no rows affected");
             }
-
             try (ResultSet rs = ps.getGeneratedKeys()) {
                 if (rs.next()) {
                     Object generatedId = rs.getObject(1);
@@ -186,15 +184,12 @@ public abstract class Broker<ID, T> {
         List<Object> values = new ArrayList<>();
 
         for (Field field : entityClass.getDeclaredFields()) {
-            if (field.equals(idField)) {
+            if (field.equals(idField))
                 continue;
-            }
             String colName = metadata.getFieldToColumn().get(field.getName());
-            if (colName == null) {
+            if (colName == null)
                 continue;
-            }
             setClauses.add(colName + " = ?");
-
             field.setAccessible(true);
             values.add(field.get(entity));
         }
@@ -217,20 +212,54 @@ public abstract class Broker<ID, T> {
         return entity;
     }
 
+    /**
+     * Updates relationship data (e.g. ManyToMany join tables) for the given entity.
+     * Only the owning side (where mappedBy is empty) of ManyToMany relationships is
+     * processed.
+     */
+    private void updateRelationships(T entity, Connection conn) throws SQLException, IllegalAccessException {
+        for (TableMetadata.RelationMetadata rel : metadata.getRelationships().values()) {
+            if (rel.getType() == TableMetadata.RelationType.MANY_TO_MANY && rel.getMappedBy().isEmpty()) {
+                Field relField = rel.getField();
+                Object value = relField.get(entity);
+                if (value == null)
+                    continue;
+                if (!(value instanceof Iterable))
+                    continue;
+                Iterable<?> relatedEntities = (Iterable<?>) value;
+
+                String deleteSql = "DELETE FROM " + rel.getJoinTable() + " WHERE " + rel.getJoinColumn() + " = ?";
+                try (PreparedStatement ps = conn.prepareStatement(deleteSql)) {
+                    ps.setObject(1, idField.get(entity));
+                    ps.executeUpdate();
+                }
+
+                for (Object relatedEntity : relatedEntities) {
+                    Field relatedIdField = DatabaseUtils.findIdField(relatedEntity.getClass());
+                    relatedIdField.setAccessible(true);
+                    Object relatedId = relatedIdField.get(relatedEntity);
+                    String insertSql = "INSERT INTO " + rel.getJoinTable() + " (" + rel.getJoinColumn() + ", "
+                            + rel.getInverseJoinColumn() + ") VALUES (?, ?)";
+                    try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
+                        ps.setObject(1, idField.get(entity));
+                        ps.setObject(2, relatedId);
+                        ps.executeUpdate();
+                    }
+                }
+            }
+        }
+    }
+
     protected Optional<T> selectSingle(String whereClause, Object... params) {
-        return new Query<>(
-                entityClass,
+        return new Query<>(entityClass,
                 "SELECT * FROM " + metadata.getTableName() + " " + whereClause,
-                true,
-                params).selectSingle();
+                true, params).selectSingle();
     }
 
     protected List<T> select(String whereClause, Object... params) {
-        return new Query<>(
-                entityClass,
+        return new Query<>(entityClass,
                 "SELECT * FROM " + metadata.getTableName() + " " + whereClause,
-                true,
-                params).selectList();
+                true, params).selectList();
     }
 
     protected int update(String sqlClause, Object... params) {

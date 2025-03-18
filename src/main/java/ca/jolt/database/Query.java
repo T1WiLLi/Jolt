@@ -2,7 +2,6 @@ package ca.jolt.database;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-
 import ca.jolt.database.models.QueryResult;
 import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.http.HttpStatus;
@@ -17,7 +16,6 @@ import java.util.logging.Logger;
 public class Query<T> {
 
     private static Logger logger = Logger.getLogger(Query.class.getName());
-
     private final Class<T> entityClass;
     private final StringBuilder sqlBuilder;
     private final List<Object> parameters;
@@ -32,18 +30,12 @@ public class Query<T> {
         this.isSelect = isSelect;
     }
 
-    /**
-     * Appends additional SQL and binds parameters.
-     */
     public Query<T> with(String clause, Object... params) {
         sqlBuilder.append(" ").append(clause);
         Collections.addAll(this.parameters, params);
         return this;
     }
 
-    /**
-     * Appends pagination using LIMIT and OFFSET.
-     */
     public Query<T> page(int pageNumber, int pageSize) {
         int offset = (pageNumber - 1) * pageSize;
         sqlBuilder.append(" LIMIT ? OFFSET ?");
@@ -52,9 +44,6 @@ public class Query<T> {
         return this;
     }
 
-    /**
-     * Executes this SELECT query and returns the result list.
-     */
     public List<T> selectList() {
         try (Connection conn = Database.getInstance().getConnection();
                 PreparedStatement ps = prepareStatement(conn);
@@ -70,18 +59,11 @@ public class Query<T> {
         }
     }
 
-    /**
-     * Executes this SELECT query and returns a single Optional result.
-     */
     public Optional<T> selectSingle() {
         List<T> list = selectList();
         return list.isEmpty() ? Optional.empty() : Optional.of(list.get(0));
     }
 
-    /**
-     * Executes this DML query (INSERT/UPDATE/DELETE) and returns the affected row
-     * count.
-     */
     public int executeUpdate() {
         try (Connection conn = Database.getInstance().getConnection();
                 PreparedStatement ps = prepareStatement(conn)) {
@@ -92,9 +74,6 @@ public class Query<T> {
         }
     }
 
-    /**
-     * Executes the query and returns a QueryResult containing meta-data.
-     */
     public QueryResult<T> execute() {
         long start = System.currentTimeMillis();
         try (Connection conn = Database.getInstance().getConnection();
@@ -161,9 +140,6 @@ public class Query<T> {
         }
     }
 
-    /**
-     * Allows custom conversion; override for custom type converters.
-     */
     protected <X> X convertValue(Object value, Class<X> targetType) {
         return objectMapper.convertValue(value, targetType);
     }
