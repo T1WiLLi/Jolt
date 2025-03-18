@@ -1,5 +1,6 @@
 package ca.jolt.database;
 
+import ca.jolt.database.annotation.Check;
 import ca.jolt.database.annotation.CheckEnum;
 import ca.jolt.database.annotation.Column;
 import ca.jolt.database.annotation.GenerationType;
@@ -200,6 +201,14 @@ public final class SchemaManager {
             CheckEnumConstraintRegistry.register(constraintName, String.join(", ", allowedValues));
         }
 
+        Check checkAnno = field.getAnnotation(Check.class);
+        if (checkAnno != null) {
+            String condition = checkAnno.condition().replace("?", columnName);
+            StringBuilder checkSql = new StringBuilder();
+            checkSql.append(" CHECK (").append(condition).append(")");
+            sqlType += " " + checkSql.toString();
+        }
+
         StringBuilder sb = new StringBuilder();
         sb.append(columnName).append(" ").append(sqlType);
         if (columnAnno != null && !columnAnno.nullable()) {
@@ -214,17 +223,320 @@ public final class SchemaManager {
         return sb.toString();
     }
 
-    /**
-     * Updates the existing table schema by adding any missing columns.
-     */
     private static <T> void updateTableSchema(Connection conn, TableMetadata<T> metadata) throws SQLException {
         Map<String, Boolean> existingColumns = getExistingColumns(conn, metadata.getTableName());
         Set<String> entityColumns = getEntityColumnNames(metadata);
 
         addMissingColumns(conn, metadata, existingColumns);
         removeExtraColumns(conn, metadata, existingColumns, entityColumns);
+        updateConstraint(conn, metadata, existingColumns);
     }
 
+    /**
+     * Updates constraints on existing columns to match entity annotations.
+     */
+    private static <T> void updateConstraint(Connection conn, TableMetadata<T> metadata,
+            Map<String, Boolean> existingColumns) throws SQLException {
+        Map<String, Set<String>> existingConstraints = getExistingConstraints(conn, metadata.getTableName());
+        Map<String, String> existingColumnTypes = getExistingColumnTypes(conn, metadata.getTableName());
+        Map<String, Boolean> existingNullableStatus = getExistingNullableStatus(conn, metadata.getTableName());
+
+        for (Field field : metadata.getEntityClass().getDeclaredFields()) {
+            String colName = metadata.getFieldToColumn().get(field.getName());
+            if (colName == null || !existingColumns.containsKey(colName.toLowerCase())) {
+                continue;
+            }
+
+            updateCheckConstraint(conn, metadata, existingConstraints, field, colName);
+            updateCheckEnumConstraint(conn, metadata, existingConstraints, field, colName);
+            updateNullableConstraint(conn, metadata, existingNullableStatus, field, colName);
+            updateColumnType(conn, metadata, existingColumnTypes, field, colName);
+        }
+    }
+
+    /**
+     * Updates custom CHECK constraints from @Check annotation.
+     */
+    private static <T> void updateCheckConstraint(Connection conn, TableMetadata<T> metadata,
+            Map<String, Set<String>> existingConstraints, Field field, String colName) throws SQLException {
+        Check checkAnno = field.getAnnotation(Check.class);
+        if (checkAnno != null) {
+            String constraintName = metadata.getTableName() + "_" + colName + "_custom_check";
+
+            if (existingConstraints.getOrDefault(metadata.getTableName(), Collections.emptySet())
+                    .contains(constraintName.toLowerCase())) {
+                String condition = checkAnno.condition().replace("?", colName);
+                String checkClause = getConstraintDefinition(conn, constraintName);
+
+                if (!checkClause.contains(condition)) {
+                    dropConstraint(conn, metadata.getTableName(), constraintName);
+                    addCheckConstraint(conn, metadata.getTableName(), constraintName, condition);
+                }
+            } else {
+                String condition = checkAnno.condition().replace("?", colName);
+                addCheckConstraint(conn, metadata.getTableName(), constraintName, condition);
+            }
+        }
+    }
+
+    /**
+     * Updates CHECK constraints from @CheckEnum annotation.
+     */
+    private static <T> void updateCheckEnumConstraint(Connection conn, TableMetadata<T> metadata,
+            Map<String, Set<String>> existingConstraints, Field field, String colName) throws SQLException {
+        CheckEnum enumAnno = field.getAnnotation(CheckEnum.class);
+        if (enumAnno != null) {
+            String constraintName = metadata.getTableName() + "_" + colName + "_check";
+
+            if (existingConstraints.getOrDefault(metadata.getTableName(), Collections.emptySet())
+                    .contains(constraintName.toLowerCase())) {
+                String[] allowedValues = enumAnno.values();
+                String currentValues = CheckEnumConstraintRegistry.getAllowedValues(constraintName);
+
+                if (currentValues == null || !buildEnumValuesString(allowedValues).equals(currentValues)) {
+                    dropConstraint(conn, metadata.getTableName(), constraintName);
+                    addEnumConstraint(conn, metadata.getTableName(), constraintName, colName, allowedValues);
+                }
+            } else {
+                addEnumConstraint(conn, metadata.getTableName(), constraintName, colName, enumAnno.values());
+            }
+        }
+    }
+
+    /**
+     * Updates NOT NULL constraints based on @Column(nullable) annotation.
+     */
+    private static <T> void updateNullableConstraint(Connection conn, TableMetadata<T> metadata,
+            Map<String, Boolean> existingNullableStatus, Field field, String colName) throws SQLException {
+        Column columnAnno = field.getAnnotation(Column.class);
+        if (columnAnno != null) {
+            boolean currentNullable = existingNullableStatus.getOrDefault(colName.toLowerCase(), true);
+            boolean shouldBeNullable = columnAnno.nullable();
+
+            if (currentNullable != shouldBeNullable) {
+                String alterSql;
+                if (shouldBeNullable) {
+                    alterSql = "ALTER TABLE " + metadata.getTableName() +
+                            " ALTER COLUMN " + colName + " DROP NOT NULL";
+                } else {
+                    alterSql = "ALTER TABLE " + metadata.getTableName() +
+                            " ALTER COLUMN " + colName + " SET NOT NULL";
+                }
+
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.execute(alterSql);
+                    logger.info("Updated nullable status for column " + colName +
+                            " in table " + metadata.getTableName() + " to " + shouldBeNullable);
+                } catch (SQLException e) {
+                    logger.warning("Could not update nullable status for column '" + colName + "': " + e.getMessage());
+                }
+            }
+        }
+    }
+
+    /**
+     * Updates column type if it changed in the entity definition.
+     */
+    private static <T> void updateColumnType(Connection conn, TableMetadata<T> metadata,
+            Map<String, String> existingColumnTypes, Field field, String colName) throws SQLException {
+        Column columnAnno = field.getAnnotation(Column.class);
+        String currentType = existingColumnTypes.getOrDefault(colName.toLowerCase(), "");
+
+        String expectedType;
+        if (field.isAnnotationPresent(ManyToOne.class)) {
+            expectedType = DatabaseUtils.getSqlTypeForForeignKey(field.getType());
+        } else {
+            expectedType = DatabaseUtils.getSqlTypeForJavaType(field.getType(), columnAnno);
+        }
+
+        String baseCurrentType = currentType.replaceAll("\\(.*\\)", "").trim();
+        String baseExpectedType = expectedType.replaceAll("\\(.*\\)", "").trim();
+
+        if (!baseCurrentType.equalsIgnoreCase(baseExpectedType)) {
+            String alterSql = "ALTER TABLE " + metadata.getTableName() +
+                    " ALTER COLUMN " + colName + " TYPE " + expectedType;
+
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute(alterSql);
+                logger.info("Updated column type for " + colName +
+                        " in table " + metadata.getTableName() + " from " + currentType + " to " + expectedType);
+            } catch (SQLException e) {
+                logger.warning("Could not update column type for '" + colName + "': " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Adds a CHECK constraint for custom conditions.
+     */
+    private static void addCheckConstraint(Connection conn, String tableName, String constraintName,
+            String condition) throws SQLException {
+        String alterSql = "ALTER TABLE " + tableName +
+                " ADD CONSTRAINT " + constraintName +
+                " CHECK (" + condition + ")";
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(alterSql);
+            logger.info("Added CHECK constraint " + constraintName + " to table " + tableName);
+        } catch (SQLException e) {
+            logger.warning("Could not add CHECK constraint '" + constraintName + "': " + e.getMessage());
+        }
+    }
+
+    /**
+     * Adds a CHECK constraint for enum values.
+     */
+    private static void addEnumConstraint(Connection conn, String tableName, String constraintName,
+            String columnName, String[] allowedValues) throws SQLException {
+        StringBuilder checkSql = new StringBuilder();
+        checkSql.append("ALTER TABLE ").append(tableName);
+        checkSql.append(" ADD CONSTRAINT ").append(constraintName);
+        checkSql.append(" CHECK (").append(columnName).append(" IN (");
+
+        for (int i = 0; i < allowedValues.length; i++) {
+            checkSql.append("'").append(allowedValues[i]).append("'");
+            if (i < allowedValues.length - 1) {
+                checkSql.append(", ");
+            }
+        }
+        checkSql.append("))");
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(checkSql.toString());
+            logger.info("Added CHECK ENUM constraint " + constraintName + " to table " + tableName);
+            CheckEnumConstraintRegistry.register(constraintName, buildEnumValuesString(allowedValues));
+        } catch (SQLException e) {
+            logger.warning("Could not add CHECK ENUM constraint '" + constraintName + "': " + e.getMessage());
+        }
+    }
+
+    /**
+     * Drops a constraint by name.
+     */
+    private static void dropConstraint(Connection conn, String tableName, String constraintName) throws SQLException {
+        String dropSql = "ALTER TABLE " + tableName + " DROP CONSTRAINT IF EXISTS " + constraintName;
+
+        try (Statement stmt = conn.createStatement()) {
+            stmt.execute(dropSql);
+            logger.info("Dropped constraint " + constraintName + " from table " + tableName);
+        } catch (SQLException e) {
+            logger.warning("Could not drop constraint '" + constraintName + "': " + e.getMessage());
+        }
+    }
+
+    /**
+     * Builds a string representation of enum values for comparison.
+     */
+    private static String buildEnumValuesString(String[] values) {
+        return String.join(",", values);
+    }
+
+    /**
+     * Gets the definition of a constraint from the database.
+     */
+    private static String getConstraintDefinition(Connection conn, String constraintName) throws SQLException {
+        String sql = "SELECT check_clause FROM information_schema.check_constraints " +
+                "WHERE constraint_name = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, constraintName);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    return rs.getString("check_clause");
+                }
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Gets existing constraints for a table.
+     */
+    private static Map<String, Set<String>> getExistingConstraints(Connection conn, String tableName)
+            throws SQLException {
+        Map<String, Set<String>> constraints = new HashMap<>();
+
+        String sql = "SELECT constraint_name, constraint_type FROM information_schema.table_constraints " +
+                "WHERE table_name = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, tableName.toLowerCase());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String constraintName = rs.getString("constraint_name").toLowerCase();
+                    constraints.computeIfAbsent(tableName, k -> new HashSet<>())
+                            .add(constraintName);
+                }
+            }
+        }
+
+        return constraints;
+    }
+
+    /**
+     * Gets existing column types for a table.
+     */
+    private static Map<String, String> getExistingColumnTypes(Connection conn, String tableName) throws SQLException {
+        Map<String, String> columnTypes = new HashMap<>();
+
+        String sql = "SELECT column_name, data_type, character_maximum_length, numeric_precision, numeric_scale " +
+                "FROM information_schema.columns WHERE table_name = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, tableName.toLowerCase());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String columnName = rs.getString("column_name").toLowerCase();
+                    String dataType = rs.getString("data_type");
+
+                    // Add size information for certain types
+                    if (dataType.equals("character varying")) {
+                        int maxLength = rs.getInt("character_maximum_length");
+                        if (!rs.wasNull()) {
+                            dataType = "varchar(" + maxLength + ")";
+                        }
+                    } else if (dataType.equals("numeric")) {
+                        int precision = rs.getInt("numeric_precision");
+                        int scale = rs.getInt("numeric_scale");
+                        if (!rs.wasNull()) {
+                            dataType = "numeric(" + precision + "," + scale + ")";
+                        }
+                    }
+
+                    columnTypes.put(columnName, dataType);
+                }
+            }
+        }
+
+        return columnTypes;
+    }
+
+    /**
+     * Gets existing nullable status for columns in a table.
+     */
+    private static Map<String, Boolean> getExistingNullableStatus(Connection conn, String tableName)
+            throws SQLException {
+        Map<String, Boolean> nullableStatus = new HashMap<>();
+
+        String sql = "SELECT column_name, is_nullable FROM information_schema.columns WHERE table_name = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(sql)) {
+            pstmt.setString(1, tableName.toLowerCase());
+            try (ResultSet rs = pstmt.executeQuery()) {
+                while (rs.next()) {
+                    String columnName = rs.getString("column_name").toLowerCase();
+                    boolean isNullable = "YES".equalsIgnoreCase(rs.getString("is_nullable"));
+                    nullableStatus.put(columnName, isNullable);
+                }
+            }
+        }
+
+        return nullableStatus;
+    }
+
+    /**
+     * Gets existing columns for a table.
+     */
     private static Map<String, Boolean> getExistingColumns(Connection conn, String tableName) throws SQLException {
         Map<String, Boolean> existingColumns = new HashMap<>();
         DatabaseMetaData meta = conn.getMetaData();
@@ -234,22 +546,23 @@ public final class SchemaManager {
                 existingColumns.put(rs.getString("COLUMN_NAME").toLowerCase(), true);
             }
         }
+
         return existingColumns;
     }
 
     /**
-     * Gets all column names from the entity.
+     * Gets all column names defined in the entity.
      */
     private static <T> Set<String> getEntityColumnNames(TableMetadata<T> metadata) {
-        Set<String> entityColumnNames = new HashSet<>();
-        for (String columnName : metadata.getFieldToColumn().values()) {
-            entityColumnNames.add(columnName.toLowerCase());
+        Set<String> columns = new HashSet<>();
+        for (String colName : metadata.getFieldToColumn().values()) {
+            columns.add(colName.toLowerCase());
         }
-        return entityColumnNames;
+        return columns;
     }
 
     /**
-     * Adds columns that are in the entity but not in the database.
+     * Adds missing columns to the table.
      */
     private static <T> void addMissingColumns(Connection conn, TableMetadata<T> metadata,
             Map<String, Boolean> existingColumns) throws SQLException {
@@ -276,91 +589,22 @@ public final class SchemaManager {
     }
 
     /**
-     * Removes columns that are in the database but not in the entity.
+     * Removes columns that are not in the entity definition.
      */
     private static <T> void removeExtraColumns(Connection conn, TableMetadata<T> metadata,
-            Map<String, Boolean> existingColumns,
-            Set<String> entityColumnNames) throws SQLException {
-        String idColumnName = metadata.getIdColumn().toLowerCase();
-
-        for (String columnName : existingColumns.keySet()) {
-            if (columnName.equals(idColumnName))
-                continue;
-
-            if (!entityColumnNames.contains(columnName)) {
-                boolean isForeignKey = isForeignKeyColumn(conn, metadata.getTableName(), columnName);
-
-                if (isForeignKey) {
-                    dropForeignKeyConstraint(conn, metadata.getTableName(), columnName);
-                }
-
-                String alterSql = "ALTER TABLE " + metadata.getTableName() + " DROP COLUMN " + columnName;
+            Map<String, Boolean> existingColumns, Set<String> entityColumns) throws SQLException {
+        for (String colName : existingColumns.keySet()) {
+            if (!entityColumns.contains(colName.toLowerCase())
+                    && !colName.equals(metadata.getIdColumn().toLowerCase())) {
+                String alterSql = "ALTER TABLE " + metadata.getTableName() + " DROP COLUMN " + colName;
                 try (Statement stmt = conn.createStatement()) {
                     stmt.execute(alterSql);
-                    logger.info("Removed column " + columnName + " from table " + metadata.getTableName());
+                    logger.info("Removed column " + colName + " from table " + metadata.getTableName());
                 } catch (SQLException e) {
-                    DatabaseException dbException = DatabaseExceptionMapper.map(e, alterSql, metadata.getTableName());
-                    logger.severe(() -> dbException.getTechnicalDetails());
-                    throw dbException;
+                    logger.warning("Could not remove column '" + colName + "': " + e.getMessage());
                 }
             }
         }
-    }
-
-    /**
-     * Drops a foreign key constraint associated with a column.
-     */
-    private static void dropForeignKeyConstraint(Connection conn, String tableName, String columnName)
-            throws SQLException {
-        String constraintName = null;
-        String query = "SELECT constraint_name FROM information_schema.key_column_usage " +
-                "WHERE table_name = ? AND column_name = ?";
-
-        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
-            pstmt.setString(1, tableName);
-            pstmt.setString(2, columnName);
-            try (ResultSet rs = pstmt.executeQuery()) {
-                if (rs.next()) {
-                    constraintName = rs.getString("constraint_name");
-                }
-            }
-        }
-
-        if (constraintName != null) {
-            String dropConstraintSql = "ALTER TABLE " + tableName + " DROP CONSTRAINT " + constraintName;
-            try (Statement stmt = conn.createStatement()) {
-                stmt.execute(dropConstraintSql);
-                logger.info("Dropped constraint " + constraintName + " from table " + tableName);
-            } catch (SQLException e) {
-                logger.warning("Could not drop constraint " + constraintName + ": " + e.getMessage());
-            }
-        }
-    }
-
-    /**
-     * Checks if a column is part of a foreign key constraint.
-     */
-    private static boolean isForeignKeyColumn(Connection conn, String tableName, String columnName)
-            throws SQLException {
-        try (ResultSet rs = conn.getMetaData().getExportedKeys(null, null, tableName)) {
-            while (rs.next()) {
-                String fkColumnName = rs.getString("FKCOLUMN_NAME");
-                if (fkColumnName.equalsIgnoreCase(columnName)) {
-                    return true;
-                }
-            }
-        }
-
-        try (ResultSet rs = conn.getMetaData().getImportedKeys(null, null, tableName)) {
-            while (rs.next()) {
-                String fkColumnName = rs.getString("FKCOLUMN_NAME");
-                if (fkColumnName.equalsIgnoreCase(columnName)) {
-                    return true;
-                }
-            }
-        }
-
-        return false;
     }
 
     /**

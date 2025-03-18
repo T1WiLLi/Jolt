@@ -1,14 +1,11 @@
 package ca.jolt;
 
-import java.util.Date;
-
+import ca.jolt.database.annotation.Check;
 import ca.jolt.database.annotation.CheckEnum;
 import ca.jolt.database.annotation.Column;
 import ca.jolt.database.annotation.GenerationType;
 import ca.jolt.database.annotation.Id;
 import ca.jolt.database.annotation.Table;
-import ca.jolt.database.annotation.Timestamp;
-import ca.jolt.database.annotation.Timestamp.TimestampType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -29,16 +26,11 @@ public class Product {
     @Column(value = "description", nullable = true)
     private String description;
 
+    @Check(condition = "? > 0 AND ? < 9999", message = "Value must be between 0 and 100")
     @Column(value = "price", nullable = false)
     private Double price;
 
     @CheckEnum(values = { "AVAILABLE", "UNAVAILABLE" })
     @Column(value = "status", nullable = true)
     private String status;
-
-    @Timestamp(forUpdate = TimestampType.CREATED_AT)
-    private Date createdAt;
-
-    @Timestamp(forUpdate = TimestampType.UPDATED_AT)
-    private Date updatedAt;
 }
