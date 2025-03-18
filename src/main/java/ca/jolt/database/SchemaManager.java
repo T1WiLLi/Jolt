@@ -218,15 +218,41 @@ public final class SchemaManager {
      * Updates the existing table schema by adding any missing columns.
      */
     private static <T> void updateTableSchema(Connection conn, TableMetadata<T> metadata) throws SQLException {
-        DatabaseMetaData meta = conn.getMetaData();
-        Map<String, Boolean> existingColumns = new HashMap<>();
+        Map<String, Boolean> existingColumns = getExistingColumns(conn, metadata.getTableName());
+        Set<String> entityColumns = getEntityColumnNames(metadata);
 
-        try (ResultSet rs = meta.getColumns(null, null, metadata.getTableName().toLowerCase(), null)) {
+        addMissingColumns(conn, metadata, existingColumns);
+        removeExtraColumns(conn, metadata, existingColumns, entityColumns);
+    }
+
+    private static Map<String, Boolean> getExistingColumns(Connection conn, String tableName) throws SQLException {
+        Map<String, Boolean> existingColumns = new HashMap<>();
+        DatabaseMetaData meta = conn.getMetaData();
+
+        try (ResultSet rs = meta.getColumns(null, null, tableName.toLowerCase(), null)) {
             while (rs.next()) {
                 existingColumns.put(rs.getString("COLUMN_NAME").toLowerCase(), true);
             }
         }
+        return existingColumns;
+    }
 
+    /**
+     * Gets all column names from the entity.
+     */
+    private static <T> Set<String> getEntityColumnNames(TableMetadata<T> metadata) {
+        Set<String> entityColumnNames = new HashSet<>();
+        for (String columnName : metadata.getFieldToColumn().values()) {
+            entityColumnNames.add(columnName.toLowerCase());
+        }
+        return entityColumnNames;
+    }
+
+    /**
+     * Adds columns that are in the entity but not in the database.
+     */
+    private static <T> void addMissingColumns(Connection conn, TableMetadata<T> metadata,
+            Map<String, Boolean> existingColumns) throws SQLException {
         for (Field field : metadata.getEntityClass().getDeclaredFields()) {
             String colName = metadata.getFieldToColumn().get(field.getName());
             if (colName == null)
@@ -247,6 +273,94 @@ public final class SchemaManager {
                 }
             }
         }
+    }
+
+    /**
+     * Removes columns that are in the database but not in the entity.
+     */
+    private static <T> void removeExtraColumns(Connection conn, TableMetadata<T> metadata,
+            Map<String, Boolean> existingColumns,
+            Set<String> entityColumnNames) throws SQLException {
+        String idColumnName = metadata.getIdColumn().toLowerCase();
+
+        for (String columnName : existingColumns.keySet()) {
+            if (columnName.equals(idColumnName))
+                continue;
+
+            if (!entityColumnNames.contains(columnName)) {
+                boolean isForeignKey = isForeignKeyColumn(conn, metadata.getTableName(), columnName);
+
+                if (isForeignKey) {
+                    dropForeignKeyConstraint(conn, metadata.getTableName(), columnName);
+                }
+
+                String alterSql = "ALTER TABLE " + metadata.getTableName() + " DROP COLUMN " + columnName;
+                try (Statement stmt = conn.createStatement()) {
+                    stmt.execute(alterSql);
+                    logger.info("Removed column " + columnName + " from table " + metadata.getTableName());
+                } catch (SQLException e) {
+                    DatabaseException dbException = DatabaseExceptionMapper.map(e, alterSql, metadata.getTableName());
+                    logger.severe(() -> dbException.getTechnicalDetails());
+                    throw dbException;
+                }
+            }
+        }
+    }
+
+    /**
+     * Drops a foreign key constraint associated with a column.
+     */
+    private static void dropForeignKeyConstraint(Connection conn, String tableName, String columnName)
+            throws SQLException {
+        String constraintName = null;
+        String query = "SELECT constraint_name FROM information_schema.key_column_usage " +
+                "WHERE table_name = ? AND column_name = ?";
+
+        try (PreparedStatement pstmt = conn.prepareStatement(query)) {
+            pstmt.setString(1, tableName);
+            pstmt.setString(2, columnName);
+            try (ResultSet rs = pstmt.executeQuery()) {
+                if (rs.next()) {
+                    constraintName = rs.getString("constraint_name");
+                }
+            }
+        }
+
+        if (constraintName != null) {
+            String dropConstraintSql = "ALTER TABLE " + tableName + " DROP CONSTRAINT " + constraintName;
+            try (Statement stmt = conn.createStatement()) {
+                stmt.execute(dropConstraintSql);
+                logger.info("Dropped constraint " + constraintName + " from table " + tableName);
+            } catch (SQLException e) {
+                logger.warning("Could not drop constraint " + constraintName + ": " + e.getMessage());
+            }
+        }
+    }
+
+    /**
+     * Checks if a column is part of a foreign key constraint.
+     */
+    private static boolean isForeignKeyColumn(Connection conn, String tableName, String columnName)
+            throws SQLException {
+        try (ResultSet rs = conn.getMetaData().getExportedKeys(null, null, tableName)) {
+            while (rs.next()) {
+                String fkColumnName = rs.getString("FKCOLUMN_NAME");
+                if (fkColumnName.equalsIgnoreCase(columnName)) {
+                    return true;
+                }
+            }
+        }
+
+        try (ResultSet rs = conn.getMetaData().getImportedKeys(null, null, tableName)) {
+            while (rs.next()) {
+                String fkColumnName = rs.getString("FKCOLUMN_NAME");
+                if (fkColumnName.equalsIgnoreCase(columnName)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
     }
 
     /**

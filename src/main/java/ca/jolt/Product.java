@@ -1,10 +1,14 @@
 package ca.jolt;
 
+import java.util.Date;
+
 import ca.jolt.database.annotation.CheckEnum;
 import ca.jolt.database.annotation.Column;
 import ca.jolt.database.annotation.GenerationType;
 import ca.jolt.database.annotation.Id;
 import ca.jolt.database.annotation.Table;
+import ca.jolt.database.annotation.Timestamp;
+import ca.jolt.database.annotation.Timestamp.TimestampType;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -31,4 +35,10 @@ public class Product {
     @CheckEnum(values = { "AVAILABLE", "UNAVAILABLE" })
     @Column(value = "status", nullable = true)
     private String status;
+
+    @Timestamp(forUpdate = TimestampType.CREATED_AT)
+    private Date createdAt;
+
+    @Timestamp(forUpdate = TimestampType.UPDATED_AT)
+    private Date updatedAt;
 }
