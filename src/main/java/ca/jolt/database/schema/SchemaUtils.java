@@ -10,7 +10,7 @@ import ca.jolt.database.annotation.Table;
 import ca.jolt.database.exception.DatabaseErrorType;
 import ca.jolt.database.exception.DatabaseException;
 import ca.jolt.database.exception.DatabaseExceptionMapper;
-import ca.jolt.database.models.CheckEnumConstraintRegistry;
+import ca.jolt.database.models.CheckConditionRegistry;
 import ca.jolt.database.models.TableMetadata;
 
 import java.lang.reflect.Field;
@@ -74,7 +74,7 @@ public final class SchemaUtils {
         }
     }
 
-    private static String addCheckConstraints(Field field, String sqlType,
+    public static String addCheckConstraints(Field field, String sqlType,
             String columnName, String tableName) {
         CheckEnum enumAnno = field.getAnnotation(CheckEnum.class);
         if (enumAnno != null) {
@@ -91,15 +91,25 @@ public final class SchemaUtils {
             checkSql.append("))");
             sqlType += " " + checkSql.toString();
 
-            CheckEnumConstraintRegistry.register(constraintName, String.join(", ", allowedValues));
+            System.out.println("Adding check constraint: " + constraintName);
+            String message = "Allowed values: " + String.join(", ", allowedValues);
+            CheckConditionRegistry.register(constraintName, message);
         }
 
         Check checkAnno = field.getAnnotation(Check.class);
         if (checkAnno != null) {
             String condition = checkAnno.condition().replace("?", columnName);
+            String constraintName = tableName + "_" + columnName + "_check";
+
             StringBuilder checkSql = new StringBuilder();
             checkSql.append(" CHECK (").append(condition).append(")");
             sqlType += " " + checkSql.toString();
+
+            String userMessage = checkAnno.message();
+            if (userMessage == null || userMessage.isEmpty()) {
+                userMessage = "Constraint: " + condition;
+            }
+            CheckConditionRegistry.register(constraintName, userMessage);
         }
 
         return sqlType;
@@ -127,10 +137,8 @@ public final class SchemaUtils {
         }
     }
 
-    public static <T> void updateCheckEnumConstraint(Connection conn,
-            TableMetadata<T> metadata,
-            Map<String, Set<String>> existingConstraints,
-            Field field, String colName) throws SQLException {
+    public static <T> void updateCheckEnumConstraint(Connection conn, TableMetadata<T> metadata,
+            Map<String, Set<String>> existingConstraints, Field field, String colName) throws SQLException {
         CheckEnum enumAnno = field.getAnnotation(CheckEnum.class);
         if (enumAnno == null) {
             return;
@@ -139,9 +147,18 @@ public final class SchemaUtils {
         String[] allowedValues = enumAnno.values();
 
         if (constraintExists(existingConstraints, metadata.getTableName(), constraintName)) {
-            String currentValues = CheckEnumConstraintRegistry.getAllowedValues(constraintName);
-            if (currentValues == null ||
-                    !String.join(",", allowedValues).equals(currentValues)) {
+            String currentValues = CheckConditionRegistry.getCondition(constraintName);
+            if (currentValues == null) {
+                currentValues = "";
+            } else {
+
+                currentValues = currentValues.replace("Allowed values: ", "")
+                        .replace(", ", ",");
+            }
+
+            String newValuesCsv = String.join(",", allowedValues);
+
+            if (!currentValues.equalsIgnoreCase(newValuesCsv)) {
                 dropConstraint(conn, metadata.getTableName(), constraintName);
                 addEnumConstraint(conn, metadata.getTableName(), constraintName, colName, allowedValues);
             }
@@ -215,7 +232,7 @@ public final class SchemaUtils {
                 tableName);
     }
 
-    private static void addEnumConstraint(Connection conn, String tableName, String constraintName,
+    public static void addEnumConstraint(Connection conn, String tableName, String constraintName,
             String columnName, String[] allowedValues) throws SQLException {
         StringBuilder checkSql = new StringBuilder();
         checkSql.append("ALTER TABLE ").append(tableName);
@@ -233,7 +250,9 @@ public final class SchemaUtils {
         executeStatement(conn, checkSql.toString(),
                 "Added CHECK ENUM constraint " + constraintName + " to table " + tableName,
                 tableName);
-        CheckEnumConstraintRegistry.register(constraintName, String.join(",", allowedValues));
+
+        String message = "Allowed values: " + String.join(", ", allowedValues);
+        CheckConditionRegistry.register(constraintName, message);
     }
 
     private static void dropConstraint(Connection conn, String tableName, String constraintName) throws SQLException {
@@ -442,8 +461,11 @@ public final class SchemaUtils {
         Matcher m = p.matcher(checkClause);
         if (m.find()) {
             String valuesList = m.group(1);
-            valuesList = valuesList.replace("'::text", "").replace("'", "").replace(", ", ",");
-            CheckEnumConstraintRegistry.register(constraintName, valuesList);
+            valuesList = valuesList.replace("'::text", "")
+                    .replace("'", "")
+                    .replace(", ", ",");
+            String message = "Allowed values: " + valuesList;
+            CheckConditionRegistry.register(constraintName, message);
         }
     }
 

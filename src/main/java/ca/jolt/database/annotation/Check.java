@@ -17,5 +17,5 @@ public @interface Check {
     /**
      * Optional message for validation errors.
      */
-    String message() default "";
+    String message() default "Value doesn not meet required constraints.";
 }

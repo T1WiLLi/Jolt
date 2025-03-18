@@ -26,7 +26,7 @@ public class Product {
     @Column(value = "description", nullable = true)
     private String description;
 
-    @Check(condition = "? > 0 AND ? < 9999", message = "Value must be between 0 and 100")
+    @Check(condition = "? > 0 AND ? < 10000", message = "Value must be between 1 and 9999")
     @Column(value = "price", nullable = false)
     private Double price;
 

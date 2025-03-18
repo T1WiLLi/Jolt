@@ -3,7 +3,7 @@ package ca.jolt.database.exception;
 import java.sql.SQLException;
 import java.util.regex.Pattern;
 
-import ca.jolt.database.models.CheckEnumConstraintRegistry;
+import ca.jolt.database.models.CheckConditionRegistry;
 
 public class DatabaseExceptionMapper {
 
@@ -42,19 +42,24 @@ public class DatabaseExceptionMapper {
                         e);
             }
             if (lowerMsg.contains("check constraint")) {
-                System.out.println(lowerMsg);
                 var matcher = CHECK_CONSTRAINT_NAME_PATTERN.matcher(errorMessage);
                 if (matcher.find()) {
                     String constraintName = matcher.group(1);
-                    String allowedValues = CheckEnumConstraintRegistry.getAllowedValues(constraintName);
-                    if (allowedValues != null) {
+                    String storedCondition = CheckConditionRegistry
+                            .getCondition(constraintName.replace("_custom_", "_"));
+
+                    System.out.println("Contraint name: " + constraintName.replace("_custom_", "_"));
+                    System.out.println("Stored condition: " + storedCondition);
+
+                    if (storedCondition != null) {
                         return new DatabaseException(
                                 DatabaseErrorType.DATA_INTEGRITY_ERROR,
-                                String.format(
-                                        "Invalid value provided. Please adjust the field '%s' to one of the following: %s.",
-                                        constraintName.replace("chk_" + entityName.toLowerCase() + "_", ""),
-                                        allowedValues),
-                                String.format("Check constraint violation: %s, SQL: %s", errorMessage,
+                                "Constraint on "
+                                        + constraintName.replace("_custom_", "").replace("_check", "").replace("_", ".")
+                                        + " failed: "
+                                        + storedCondition,
+                                String.format("Check constraint violation: %s, SQL: %s",
+                                        errorMessage,
                                         sanitizeSql(sql)),
                                 e);
                     }
@@ -62,7 +67,8 @@ public class DatabaseExceptionMapper {
                 return new DatabaseException(
                         DatabaseErrorType.DATA_INTEGRITY_ERROR,
                         "The data provided doesn't meet the required constraints.",
-                        String.format("Check constraint violation: %s, SQL: %s", errorMessage, sanitizeSql(sql)),
+                        String.format("Check constraint violation: %s, SQL: %s",
+                                errorMessage, sanitizeSql(sql)),
                         e);
             }
             if (lowerMsg.contains("not null")) {

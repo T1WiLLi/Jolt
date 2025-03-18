@@ -35,9 +35,9 @@ public final class SchemaManager {
      */
     public static <T> void validateTable(Connection conn, TableMetadata<T> metadata) {
         String tableName = metadata.getTableName().toLowerCase();
-        if (!validatedTables.contains(tableName)) {
-            return;
-        }
+        // if (!validatedTables.contains(tableName)) {
+        // return;
+        // }
 
         try {
             if (!tableExists(conn, metadata.getTableName())) {
