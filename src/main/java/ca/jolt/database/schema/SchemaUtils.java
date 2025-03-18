@@ -123,7 +123,7 @@ public final class SchemaUtils {
         if (checkAnno == null) {
             return;
         }
-        String constraintName = metadata.getTableName() + "_" + colName + "_custom_check";
+        String constraintName = metadata.getTableName() + "_" + colName + "_check";
         String condition = checkAnno.condition().replace("?", colName);
 
         if (constraintExists(existingConstraints, metadata.getTableName(), constraintName)) {
@@ -230,6 +230,8 @@ public final class SchemaUtils {
         executeStatement(conn, alterSql,
                 "Added CHECK constraint " + constraintName + " to table " + tableName,
                 tableName);
+        CheckConditionRegistry.register(constraintName,
+                "ensure the following condition: " + condition);
     }
 
     public static void addEnumConstraint(Connection conn, String tableName, String constraintName,
