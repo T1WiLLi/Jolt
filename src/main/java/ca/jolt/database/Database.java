@@ -151,5 +151,4 @@ public final class Database {
     public static boolean createFunction(String name, String functionBody, String returnType) {
         return DatabaseMetadata.createFunction(name, functionBody, null, returnType, "plpgsql", false, "VOLATILE");
     }
-
 }

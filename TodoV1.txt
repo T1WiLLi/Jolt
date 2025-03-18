@@ -12,12 +12,6 @@ in application.properties file:
 server.jwt.secret_key={SECRET_KEY}
 server.jwt.pepper={PEPPER}
 
-V-2
-- Add support to inject variables in the database.
-- Add support to add trigger function to the database. 
-- Add support to add custom procedure / function to the database.
-- Add support to add views to the database.
-
 V-3
 Improve CID Container to make it more flexible and allow injection in none-bean object classes.
 Implement freemarker template to generate HTML pages and make it easy to integrate within the framework. 
