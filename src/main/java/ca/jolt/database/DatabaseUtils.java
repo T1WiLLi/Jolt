@@ -1,13 +1,6 @@
 package ca.jolt.database;
 
-import java.lang.annotation.Annotation;
-import java.lang.reflect.Field;
-import java.util.Date;
 import java.util.List;
-
-import ca.jolt.database.annotation.Column;
-import ca.jolt.database.annotation.Id;
-import ca.jolt.database.annotation.Table;
 
 public final class DatabaseUtils {
 
@@ -79,87 +72,7 @@ public final class DatabaseUtils {
             "SHUTDOWN", "STATISTICS", "TABLESAMPLE", "TAPE", "TEXTSIZE", "TOP", "TRAN", "TRUNCATE", "TSEQUAL",
             "UNCOMMITTED", "UPDATETEXT", "USE", "WAITFOR", "WITHIN GROUP", "WORK", "WRITETEXT");
 
-    public static Object convertToFieldType(String value, Class<?> targetType) {
-        if (targetType == Integer.class || targetType == int.class) {
-            return Integer.parseInt(value);
-        } else if (targetType == Long.class || targetType == long.class) {
-            return Long.parseLong(value);
-        } else if (targetType == String.class) {
-            return value;
-        } else if (targetType == java.util.UUID.class) {
-            return java.util.UUID.fromString(value);
-        } else {
-            throw new IllegalArgumentException("Unsupported ID type: " + targetType.getName());
-        }
-    }
-
-    public static String getSqlTypeForJavaType(Class<?> type, Column column) {
-        if (type == String.class) {
-            if (column == null) {
-                return "VARCHAR(255)";
-            }
-            return (column.length() != -1) ? "VARCHAR(" + column.length() + ")" : "TEXT";
-        } else if (type == Integer.class || type == int.class) {
-            return "INTEGER";
-        } else if (type == Long.class || type == long.class) {
-            return "BIGINT";
-        } else if (type == Double.class || type == double.class) {
-            return "DOUBLE PRECISION";
-        } else if (type == Float.class || type == float.class) {
-            return "REAL";
-        } else if (type == Boolean.class || type == boolean.class) {
-            return "BOOLEAN";
-        } else if (type == Date.class) {
-            return "TIMESTAMP";
-        } else if (type == java.util.UUID.class) {
-            return "UUID";
-        } else {
-            return "TEXT";
-        }
-    }
-
-    public static String getSqlTypeForForeignKey(Class<?> targetType) {
-        Column dummyColumn = new Column() {
-            @Override
-            public String value() {
-                return "";
-            }
-
-            @Override
-            public int length() {
-                return -1;
-            }
-
-            @Override
-            public boolean nullable() {
-                return true;
-            }
-
-            @Override
-            public Class<? extends Annotation> annotationType() {
-                return Column.class;
-            }
-        };
-
-        if (targetType.isAnnotationPresent(Table.class)) {
-            Field idField = findIdField(targetType);
-            return getSqlTypeForJavaType(idField.getType(), dummyColumn);
-        } else {
-            return getSqlTypeForJavaType(targetType, dummyColumn);
-        }
-    }
-
     public static boolean isReservedKeyword(String identifier) {
         return RESERVED_KEYWORDS.contains(identifier.toUpperCase());
-    }
-
-    public static Field findIdField(Class<?> clazz) {
-        for (Field field : clazz.getDeclaredFields()) {
-            if (field.isAnnotationPresent(Id.class)) {
-                field.setAccessible(true);
-                return field;
-            }
-        }
-        throw new IllegalArgumentException("No @Id field found in class " + clazz.getName());
     }
 }

@@ -117,38 +117,4 @@ public final class Database {
     public static Map<String, String> getAllVariables() {
         return DatabaseMetadata.getAllVariables();
     }
-
-    /**
-     * Creates or replaces a database trigger function.
-     * 
-     * @param name         Function name
-     * @param functionBody PL/pgSQL function body
-     * @return true if successful
-     */
-    public static boolean createTriggerFunction(String name, String functionBody) {
-        return DatabaseMetadata.createTriggerFunction(name, functionBody, null, "trigger");
-    }
-
-    /**
-     * Creates or replaces a database view.
-     * 
-     * @param name  View name
-     * @param query SQL query that defines the view
-     * @return true if successful
-     */
-    public static boolean createView(String name, String query) {
-        return DatabaseMetadata.createView(name, query);
-    }
-
-    /**
-     * Creates or replaces a database function.
-     * 
-     * @param name         Function name
-     * @param functionBody Function body
-     * @param returnType   Return type
-     * @return true if successful
-     */
-    public static boolean createFunction(String name, String functionBody, String returnType) {
-        return DatabaseMetadata.createFunction(name, functionBody, null, returnType, "plpgsql", false, "VOLATILE");
-    }
 }

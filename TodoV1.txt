@@ -12,6 +12,9 @@ in application.properties file:
 server.jwt.secret_key={SECRET_KEY}
 server.jwt.pepper={PEPPER}
 
+V-2
+
+
 V-3
 Improve CID Container to make it more flexible and allow injection in none-bean object classes.
 Implement freemarker template to generate HTML pages and make it easy to integrate within the framework. 

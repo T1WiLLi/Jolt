@@ -1,359 +1,202 @@
 package ca.jolt.database;
 
-import ca.jolt.database.exception.DatabaseErrorType;
-import ca.jolt.database.exception.DatabaseException;
-import ca.jolt.database.exception.DatabaseExceptionMapper;
-import ca.jolt.database.models.TableMetadata;
-import ca.jolt.exceptions.JoltException;
-
-import java.lang.reflect.Field;
-import java.lang.reflect.ParameterizedType;
-import java.lang.reflect.Type;
-import java.sql.*;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.ResultSet;
+import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-public abstract class Broker<ID, T> {
+import com.fasterxml.jackson.databind.DeserializationFeature;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.node.ObjectNode;
+import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
+import ca.jolt.database.exception.DatabaseErrorType;
+import ca.jolt.database.exception.DatabaseException;
+
+public abstract class Broker<T> {
     private static final Logger logger = Logger.getLogger(Broker.class.getName());
-
-    protected final TableMetadata<T> metadata;
+    protected final String table;
     protected final Class<T> entityClass;
-    protected final Field idField;
+    private final ObjectMapper objectMapper;
 
-    protected Broker() {
-        this.entityClass = resolveEntityClass();
-        this.metadata = new TableMetadata<>(entityClass);
-        this.idField = metadata.getId();
-
-        executeInTransaction(conn -> {
-            SchemaManager.validateTable(conn, metadata);
-            return null;
-        });
-    }
-
-    @SuppressWarnings("unchecked")
-    private Class<T> resolveEntityClass() {
-        Type superClass = getClass().getGenericSuperclass();
-        if (superClass instanceof ParameterizedType) {
-            ParameterizedType pt = (ParameterizedType) superClass;
-            return (Class<T>) pt.getActualTypeArguments()[1];
+    protected Broker(String table, Class<T> entityClass) {
+        if (!SqlSecurity.isValidIdentifier(table)) {
+            throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
+                    "The identifier for the class is not valid ! Please change it.",
+                    "The table name was found in our reserved keywords SQL-list. If you believe this to be an error, please report it as fast as possible to our github repository.",
+                    null);
         }
-        throw new IllegalStateException(
-                "Could not resolve entity class. Ensure your repository directly extends Broker.");
+        this.table = table;
+        this.entityClass = entityClass;
+        this.objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
+        this.objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
-    public Optional<T> findById(ID id) {
-        return new Query<>(entityClass,
-                "SELECT * FROM " + metadata.getTableName() + " WHERE " + metadata.getIdColumn() + " = ?",
-                true, id).selectSingle();
-    }
+    protected Optional<T> selectOne(String sql, Object... params) {
+        if (!SqlSecurity.isValidRawSql(sql)) {
+            throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
+                    "The SQL query is not valid ! Please change it.",
+                    "The SQL query was found to be invalid. If you believe this to be an error, please report it as fast as possible to our github repository.",
+                    null);
+        }
 
-    public List<T> findAll() {
-        return new Query<>(entityClass,
-                "SELECT * FROM " + metadata.getTableName(),
-                true).selectList();
-    }
-
-    public T save(T entity) {
+        Connection connection = null;
         try {
-            Object id = idField.get(entity);
-            T savedEntity;
-            if (id == null) {
-                savedEntity = executeInTransaction(conn -> {
-                    T inserted = insert(entity, conn);
-                    try {
-                        updateRelationships(inserted, conn);
-                    } catch (IllegalAccessException e) {
-                        throw new JoltException(e.getMessage());
-                    }
-                    return inserted;
-                });
-            } else {
-                savedEntity = executeInTransaction(conn -> {
-                    T updated;
-                    try {
-                        updated = update(entity, conn);
-                        updateRelationships(updated, conn);
-                        return updated;
-                    } catch (IllegalArgumentException | IllegalAccessException e) {
-                        throw new JoltException(e.getMessage());
-                    }
-                });
+            connection = Database.getInstance().getConnection();
+            connection.setAutoCommit(true);
+
+            try (PreparedStatement stmt = prepareStatement(connection, sql, params);
+                    ResultSet rs = stmt.executeQuery()) {
+
+                if (rs.next()) {
+                    return Optional.of(mapToEntity(rs));
+                }
+                return Optional.empty();
             }
-            return savedEntity;
-        } catch (IllegalAccessException e) {
-            DatabaseException dbException = new DatabaseException(
-                    DatabaseErrorType.MAPPING_ERROR, "Error in save: " + e.getMessage(), e.getMessage(), e);
-            logger.severe(() -> dbException.getTechnicalDetails());
-            throw dbException;
+        } catch (SQLException e) {
+            logger.severe(() -> "Database query error: " + e.getMessage());
+            throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
+                    "An unexpected database error occurred. Please try again later.",
+                    "Unhandled database error: " + e.getMessage(),
+                    e);
+        } finally {
+            Database.getInstance().releaseConnection(connection);
         }
     }
 
-    public boolean delete(T entity) {
+    protected List<T> selectMany(String sql, Object... params) {
+        if (!SqlSecurity.isValidRawSql(sql)) {
+            throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
+                    "The SQL query is not valid ! Please change it.",
+                    "The SQL query was found to be invalid. If you believe this to be an error, please report it as fast as possible to our github repository.",
+                    null);
+        }
+
+        Connection connection = null;
         try {
-            Object id = idField.get(entity);
-            if (id != null) {
-                executeInTransaction(conn -> {
-                    try (PreparedStatement ps = conn.prepareStatement(
-                            "DELETE FROM " + metadata.getTableName() + " WHERE " + metadata.getIdColumn() + " = ?")) {
-                        ps.setObject(1, id);
-                        ps.executeUpdate();
-                        return true;
-                    }
-                });
+            connection = Database.getInstance().getConnection();
+            connection.setAutoCommit(true);
+
+            try (PreparedStatement stmt = prepareStatement(connection, sql, params);
+                    ResultSet rs = stmt.executeQuery()) {
+
+                List<T> results = new ArrayList<>();
+                while (rs.next()) {
+                    results.add(mapToEntity(rs));
+                }
+                return results;
             }
-        } catch (IllegalAccessException e) {
-            DatabaseException dbException = new DatabaseException(
-                    DatabaseErrorType.MAPPING_ERROR, "Error while deleting entity : " + entity.getClass().getName(),
-                    e.getMessage(), e);
-            logger.severe(() -> dbException.getTechnicalDetails());
-            throw dbException;
+        } catch (SQLException e) {
+            logger.severe(() -> "Database query error: " + e.getMessage());
+            throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
+                    "An unexpected database error occurred. Please try again later.",
+                    "Unhandled database error: " + e.getMessage(),
+                    e);
+        } finally {
+            Database.getInstance().releaseConnection(connection);
         }
-        return false;
     }
 
-    public boolean deleteById(ID id) {
-        return executeInTransaction(conn -> {
-            try (PreparedStatement ps = conn.prepareStatement(
-                    "DELETE FROM " + metadata.getTableName() + " WHERE " + metadata.getIdColumn() + " = ?")) {
-                ps.setObject(1, id);
-                int rowsAffected = ps.executeUpdate();
+    protected boolean query(String sql, Object... params) {
+        if (!SqlSecurity.isValidRawSql(sql)) {
+            throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
+                    "The SQL query is not valid ! Please change it. The SQL query was found to be invalid. If you believe this to be an error",
+                    "please report it as fast as possible to our github repository.",
+                    null);
+        }
+
+        Connection connection = null;
+        try {
+            connection = Database.getInstance().getConnection();
+            connection.setAutoCommit(false);
+
+            try (PreparedStatement stmt = prepareStatement(connection, sql, params)) {
+                int rowsAffected = stmt.executeUpdate();
+                connection.commit();
                 return rowsAffected > 0;
             }
-        });
-    }
-
-    private T insert(T entity, Connection conn) throws SQLException {
-        List<String> columns = new ArrayList<>();
-        List<Object> values = new ArrayList<>();
-
-        for (Field field : entityClass.getDeclaredFields()) {
-            if (field.equals(idField))
-                continue;
-            String colName = metadata.getFieldToColumn().get(field.getName());
-            if (colName == null)
-                continue;
-            columns.add(colName);
-            try {
-                field.setAccessible(true);
-                values.add(field.get(entity));
-            } catch (IllegalAccessException e) {
-                DatabaseException dbException = new DatabaseException(
-                        DatabaseErrorType.MAPPING_ERROR,
-                        "Failed to access field " + field.getName() + ": " + e.getMessage(), e.getMessage(), e);
-                logger.severe(() -> dbException.getTechnicalDetails());
-                throw dbException;
-            }
-        }
-
-        String colStr = String.join(", ", columns);
-        String placeholders = String.join(", ", Collections.nCopies(values.size(), "?"));
-        String sql = "INSERT INTO " + metadata.getTableName() + " (" + colStr + ") VALUES (" + placeholders + ")";
-
-        try (PreparedStatement ps = conn.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)) {
-            for (int i = 0; i < values.size(); i++) {
-                ps.setObject(i + 1, values.get(i));
-            }
-            int affected = ps.executeUpdate();
-            if (affected == 0) {
-                logger.warning(() -> "Insert may have failed; no rows affected");
-            }
-            try (ResultSet rs = ps.getGeneratedKeys()) {
-                if (rs.next()) {
-                    Object generatedId = rs.getObject(1);
-                    idField.setAccessible(true);
-                    idField.set(entity, generatedId);
-                }
-            } catch (IllegalAccessException e) {
-                DatabaseException dbException = new DatabaseException(
-                        DatabaseErrorType.MAPPING_ERROR, "Failed to set generated ID: " + e.getMessage(),
-                        e.getMessage(), e);
-                logger.severe(() -> dbException.getTechnicalDetails());
-                throw dbException;
-            }
-        }
-        return entity;
-    }
-
-    private T update(T entity, Connection conn) throws SQLException, IllegalArgumentException, IllegalAccessException {
-        List<String> setClauses = new ArrayList<>();
-        List<Object> values = new ArrayList<>();
-
-        for (Field field : entityClass.getDeclaredFields()) {
-            if (field.equals(idField))
-                continue;
-            String colName = metadata.getFieldToColumn().get(field.getName());
-            if (colName == null)
-                continue;
-            setClauses.add(colName + " = ?");
-            field.setAccessible(true);
-            values.add(field.get(entity));
-        }
-
-        String sql = "UPDATE " + metadata.getTableName() + " SET " + String.join(", ", setClauses)
-                + " WHERE " + metadata.getIdColumn() + " = ?";
-
-        try (PreparedStatement ps = conn.prepareStatement(sql)) {
-            for (int i = 0; i < values.size(); i++) {
-                ps.setObject(i + 1, values.get(i));
-            }
-            idField.setAccessible(true);
-            ps.setObject(values.size() + 1, idField.get(entity));
-
-            int affected = ps.executeUpdate();
-            if (affected == 0) {
-                logger.warning(() -> "Update may have failed; no rows affected");
-            }
-        }
-        return entity;
-    }
-
-    /**
-     * Updates relationship data (e.g. ManyToMany join tables) for the given entity.
-     * Only the owning side (where mappedBy is empty) of ManyToMany relationships is
-     * processed.
-     */
-    private void updateRelationships(T entity, Connection conn) throws SQLException, IllegalAccessException {
-        for (TableMetadata.RelationMetadata rel : metadata.getRelationships().values()) {
-            if (rel.getType() == TableMetadata.RelationType.MANY_TO_MANY && rel.getMappedBy().isEmpty()) {
-                Field relField = rel.getField();
-                Object value = relField.get(entity);
-                if (value == null)
-                    continue;
-                if (!(value instanceof Iterable))
-                    continue;
-                Iterable<?> relatedEntities = (Iterable<?>) value;
-
-                String deleteSql = "DELETE FROM " + rel.getJoinTable() + " WHERE " + rel.getJoinColumn() + " = ?";
-                try (PreparedStatement ps = conn.prepareStatement(deleteSql)) {
-                    ps.setObject(1, idField.get(entity));
-                    ps.executeUpdate();
-                }
-
-                for (Object relatedEntity : relatedEntities) {
-                    Field relatedIdField = DatabaseUtils.findIdField(relatedEntity.getClass());
-                    relatedIdField.setAccessible(true);
-                    Object relatedId = relatedIdField.get(relatedEntity);
-                    String insertSql = "INSERT INTO " + rel.getJoinTable() + " (" + rel.getJoinColumn() + ", "
-                            + rel.getInverseJoinColumn() + ") VALUES (?, ?)";
-                    try (PreparedStatement ps = conn.prepareStatement(insertSql)) {
-                        ps.setObject(1, idField.get(entity));
-                        ps.setObject(2, relatedId);
-                        ps.executeUpdate();
-                    }
-                }
-            }
+        } catch (SQLException e) {
+            rollbackSilently(connection);
+            logger.severe(() -> "Database execution error: " + e.getMessage());
+            throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
+                    "An unexpected database error occurred. Please try again later.",
+                    "Unhandled database error: " + e.getMessage(),
+                    e);
+        } finally {
+            resetConnectionAndRelease(connection);
         }
     }
 
-    protected Optional<T> selectSingle(String whereClause, Object... params) {
-        return new Query<>(entityClass,
-                "SELECT * FROM " + metadata.getTableName() + " " + whereClause,
-                true, params).selectSingle();
-    }
+    protected T mapToEntity(ResultSet rs) throws SQLException {
+        try {
+            ObjectNode jsonNode = objectMapper.createObjectNode();
 
-    protected List<T> select(String whereClause, Object... params) {
-        return new Query<>(entityClass,
-                "SELECT * FROM " + metadata.getTableName() + " " + whereClause,
-                true, params).selectList();
-    }
+            for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+                String columnName = rs.getMetaData().getColumnName(i);
+                Object value = rs.getObject(i);
 
-    protected int update(String sqlClause, Object... params) {
-        return executeInTransaction(conn -> {
-            String sql = "UPDATE " + metadata.getTableName() + " " + sqlClause;
-            try (PreparedStatement ps = conn.prepareStatement(sql)) {
-                for (int i = 0; i < params.length; i++) {
-                    ps.setObject(i + 1, params[i]);
+                if (value == null) {
+                    jsonNode.putNull(columnName);
+                } else if (value instanceof String) {
+                    jsonNode.put(columnName, (String) value);
+                } else if (value instanceof Integer) {
+                    jsonNode.put(columnName, (Integer) value);
+                } else if (value instanceof Long) {
+                    jsonNode.put(columnName, (Long) value);
+                } else if (value instanceof Double) {
+                    jsonNode.put(columnName, (Double) value);
+                } else if (value instanceof Boolean) {
+                    jsonNode.put(columnName, (Boolean) value);
+                } else if (value instanceof java.sql.Date) {
+                    jsonNode.put(columnName, value.toString());
+                } else if (value instanceof java.sql.Timestamp) {
+                    jsonNode.put(columnName, value.toString());
+                } else {
+                    jsonNode.put(columnName, value.toString());
                 }
-                return ps.executeUpdate();
             }
-        });
-    }
 
-    protected int sql(String rawSql, Object... params) {
-        boolean isSelect = rawSql.trim().toUpperCase().startsWith("SELECT");
-        if (isSelect) {
-            return new Query<>(entityClass, rawSql, true, params).executeUpdate();
-        } else {
-            return executeInTransaction(conn -> {
-                try (PreparedStatement ps = conn.prepareStatement(rawSql)) {
-                    for (int i = 0; i < params.length; i++) {
-                        ps.setObject(i + 1, params[i]);
-                    }
-                    return ps.executeUpdate();
-                }
-            });
+            return objectMapper.treeToValue(jsonNode, entityClass);
+        } catch (Exception e) {
+            logger.severe(() -> "Error mapping ResultSet to entity: " + e.getMessage());
+            throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
+                    "An unexpected database error occurred. Please try again later.",
+                    "Unhandled database error: " + e.getMessage(),
+                    e);
         }
     }
 
-    public long count(String whereClause, Object... params) {
-        String sql = "SELECT COUNT(*) AS total FROM " + metadata.getTableName() + " " + whereClause;
-        try (Connection conn = Database.getInstance().getConnection();
-                PreparedStatement ps = conn.prepareStatement(sql)) {
-            for (int i = 0; i < params.length; i++) {
-                ps.setObject(i + 1, params[i]);
-            }
-            try (ResultSet rs = ps.executeQuery()) {
-                if (rs.next()) {
-                    return rs.getLong("total");
-                }
+    private PreparedStatement prepareStatement(Connection conn, String sql, Object... params) throws SQLException {
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        for (int i = 0; i < params.length; i++) {
+            stmt.setObject(i + 1, params[i]);
+        }
+        return stmt;
+    }
+
+    private void rollbackSilently(Connection conn) {
+        try {
+            if (conn != null && !conn.isClosed()) {
+                conn.rollback();
             }
         } catch (SQLException e) {
-            DatabaseException dbException = DatabaseExceptionMapper.map(e, sql, metadata.getTableName());
-            logger.severe(() -> dbException.getTechnicalDetails());
-            throw dbException;
+            logger.warning(() -> "Failed to rollback transaction: " + e.getMessage());
         }
-        return 0L;
     }
 
-    public boolean exists(ID id) {
-        return findById(id).isPresent();
-    }
-
-    protected <R> R executeInTransaction(TransactionCallback<R> callback) {
-        try (Connection conn = Database.getInstance().getConnection()) {
-            boolean originalAutoCommit = conn.getAutoCommit();
-            try {
-                conn.setAutoCommit(false);
-                R result = callback.doInTransaction(conn);
-                conn.commit();
-                return result;
-            } catch (SQLException e) {
-                try {
-                    conn.rollback();
-                } catch (SQLException rollbackEx) {
-                    DatabaseException dbException = DatabaseExceptionMapper.map(rollbackEx, "Transaction rollback",
-                            metadata.getTableName());
-                    logger.severe(() -> dbException.getTechnicalDetails());
-                    throw dbException;
-                }
-                DatabaseException dbException = DatabaseExceptionMapper.map(e, "Transaction", metadata.getTableName());
-                logger.severe(() -> dbException.getTechnicalDetails());
-                throw dbException;
-            } finally {
-                try {
-                    conn.setAutoCommit(originalAutoCommit);
-                } catch (SQLException resetEx) {
-                    logger.warning("Failed to reset auto-commit: " + resetEx.getMessage());
-                }
+    private void resetConnectionAndRelease(Connection conn) {
+        try {
+            if (conn != null && !conn.isClosed()) {
+                conn.setAutoCommit(true);
             }
         } catch (SQLException e) {
-            DatabaseException dbException = DatabaseExceptionMapper.map(e, "Connection", metadata.getTableName());
-            logger.severe(() -> dbException.getTechnicalDetails());
-            throw dbException;
+            logger.warning(() -> "Failed to reset connection state: " + e.getMessage());
+        } finally {
+            Database.getInstance().releaseConnection(conn);
         }
-    }
-
-    protected <R> R withTransaction(TransactionCallback<R> callback) {
-        return executeInTransaction(callback);
-    }
-
-    @FunctionalInterface
-    protected interface TransactionCallback<R> {
-        R doInTransaction(Connection conn) throws SQLException;
     }
 }
