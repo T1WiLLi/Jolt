@@ -8,8 +8,6 @@ import java.util.Optional;
 import java.util.regex.Matcher;
 
 import com.fasterxml.jackson.core.type.TypeReference;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
 
 import ca.jolt.cookie.CookieBuilder;
 import ca.jolt.exceptions.JoltBadRequestException;
@@ -17,6 +15,7 @@ import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.files.JoltFile;
 import ca.jolt.form.Form;
 import ca.jolt.http.HttpStatus;
+import ca.jolt.utils.JacksonUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -52,11 +51,6 @@ import jakarta.servlet.http.HttpServletResponse;
  * @since 1.0
  */
 public final class JoltContext {
-
-    /**
-     * JSON parser for reading and writing JSON in request/response.
-     */
-    private static final ObjectMapper JSON_MAPPER = new ObjectMapper().registerModule(new Jdk8Module());
 
     private final RequestContext requestContext;
     private final ResponseContext responseContext;
@@ -242,7 +236,7 @@ public final class JoltContext {
      *                                 If parsing fails.
      */
     public <T> T body(Class<T> type) {
-        return requestContext.body(JSON_MAPPER, type);
+        return requestContext.body(type);
     }
 
     /**
@@ -261,7 +255,7 @@ public final class JoltContext {
      *                                 If parsing fails.
      */
     public <T> T body(TypeReference<T> typeRef) {
-        return requestContext.body(JSON_MAPPER, typeRef);
+        return requestContext.body(typeRef);
     }
 
     /**
@@ -724,8 +718,9 @@ public final class JoltContext {
             String raw = bodyRaw();
             if (!raw.isEmpty()) {
                 try {
-                    Map<String, Object> parsed = JSON_MAPPER.readValue(raw, new TypeReference<Map<String, Object>>() {
-                    });
+                    Map<String, Object> parsed = JacksonUtil.getObjectMapper().readValue(raw,
+                            new TypeReference<Map<String, Object>>() {
+                            });
                     parsed.forEach((key, object) -> {
                         if (!shouldExclude(key, excludes)) {
                             String valueStr = (object == null) ? "" : object.toString();

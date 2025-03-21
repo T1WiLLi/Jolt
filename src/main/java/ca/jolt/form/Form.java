@@ -13,11 +13,8 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-
 import ca.jolt.exceptions.FormConversionException;
+import ca.jolt.utils.JacksonUtil;
 
 /**
  * A container for form fields, field values, and their associated validators.
@@ -421,14 +418,13 @@ public final class Form {
      * @throws FormConversionException If conversion fails
      */
     public <T> T buildEntity(Class<T> clazz, String... ignoreFields) {
-        ObjectMapper mapper = new ObjectMapper().registerModule(new Jdk8Module());
         try {
             Map<String, String> data = new HashMap<>(fieldValues);
             for (String ignore : ignoreFields) {
                 data.remove(ignore);
             }
-            String json = mapper.writeValueAsString(data);
-            return mapper.readValue(json, clazz);
+            String json = JacksonUtil.getObjectMapper().writeValueAsString(data);
+            return JacksonUtil.getObjectMapper().readValue(json, clazz);
         } catch (Exception e) {
             throw new FormConversionException("Failed to build entity from form", e);
         }
@@ -454,14 +450,12 @@ public final class Form {
      * @throws FormConversionException If an error occurs during the update process.
      */
     public <T> T updateEntity(T entity, String... ignoreFields) {
-        ObjectMapper mapper = new ObjectMapper().registerModule(new Jdk8Module());
-        mapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
         try {
             Map<String, String> data = new HashMap<>(fieldValues);
             for (String ignore : ignoreFields) {
                 data.remove(ignore);
             }
-            mapper.updateValue(entity, data);
+            JacksonUtil.getObjectMapper().updateValue(entity, data);
             return entity;
         } catch (Exception e) {
             throw new FormConversionException("Failed to update entity from form", e);

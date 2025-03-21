@@ -1,6 +1,8 @@
 package ca.jolt.database;
 
 import java.lang.reflect.Field;
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -17,60 +19,35 @@ import java.util.stream.Collectors;
 import ca.jolt.database.exception.DatabaseErrorType;
 import ca.jolt.database.exception.DatabaseException;
 
-/**
- * Defines REST FUNCTION ALITY for the database.
- * Built on-top of the Broker class.
- * 
- */
 public abstract class RestBroker<ID, T> extends Broker<T> {
     private static final Logger logger = Logger.getLogger(RestBroker.class.getName());
-
     private final Class<ID> id;
     private final String idColumnName;
 
-    /**
-     * Creates a new RestBroker for the specified entity type and table.
-     *
-     * @param table        The database table name
-     * @param entityClass  The entity class this broker manages
-     * @param idClass      The class of the ID field
-     * @param idColumnName The name of the ID column in the database (defaults to
-     *                     "id" if not specified)
-     */
     protected RestBroker(String table, Class<T> entityClass, Class<ID> idClass, String idColumnName) {
         super(table, entityClass);
         this.id = idClass;
         this.idColumnName = idColumnName != null ? idColumnName : "id";
     }
 
-    /**
-     * Creates a new RestBroker with default "id" column name.
-     *
-     * @param table       The database table name
-     * @param entityClass The entity class this broker manages
-     * @param idClass     The class of the ID field
-     */
     protected RestBroker(String table, Class<T> entityClass, Class<ID> idClass) {
         this(table, entityClass, idClass, "id");
     }
 
-    // Define function REST.
-
-    protected List<T> findAll() {
+    public List<T> findAll() {
         return selectMany("SELECT * FROM " + table);
     }
 
-    protected List<T> findAll(int offset, int limit) {
+    public List<T> findAll(int offset, int limit) {
         return selectMany("SELECT * FROM " + table + " LIMIT ? OFFSET ?", limit, offset);
     }
 
-    protected List<T> findByCriteria(Map<String, Object> criteria) {
+    public List<T> findByCriteria(Map<String, Object> criteria) {
         if (criteria == null || criteria.isEmpty()) {
             return findAll();
         }
 
         StringBuilder sql = new StringBuilder("SELECT * FROM ").append(table).append(" WHERE ");
-
         List<String> conditions = criteria.keySet().stream()
                 .map(key -> key + " = ?")
                 .toList();
@@ -78,17 +55,16 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         return selectMany(sql.toString(), criteria.values().toArray());
     }
 
-    protected Optional<T> findById(ID id) {
+    public Optional<T> findById(ID id) {
         if (id == null) {
             throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
-                    "The ID is null ! Please change it.",
+                    "The ID is null! Please change it.",
                     "The ID was found null, if you believe this to be an error, please reach out on github.", null);
         }
         return selectOne("SELECT * FROM " + table + " WHERE " + idColumnName + " = ?", id);
     }
 
-    @SuppressWarnings("unchecked")
-    public ID save(T entity) {
+    public T save(T entity) {
         if (entity == null) {
             throw new IllegalArgumentException("Entity cannot be null");
         }
@@ -102,14 +78,17 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
                         null);
             }
 
-            ID id = (ID) idField.get(entity);
+            idField.setAccessible(true);
+            @SuppressWarnings("unchecked")
+            ID entityId = (ID) idField.get(entity);
 
-            if (id == null || isEmptyId(id)) {
-                return insert(entity);
+            if (entityId == null || isEmptyId(entityId)) {
+                entityId = insertEntity(entity);
             } else {
-                update(entity);
-                return id;
+                updateEntity(entity, entityId);
             }
+
+            return findById(entityId).orElse(entity);
         } catch (IllegalAccessException e) {
             logger.log(Level.SEVERE, "Could not access ID field", e);
             throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
@@ -119,13 +98,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         }
     }
 
-    /**
-     * Deletes an entity from the database.
-     *
-     * @param entity The entity to delete
-     * @return true if deletion was successful, false otherwise
-     * @throws IllegalArgumentException if entity is null
-     */
     @SuppressWarnings("unchecked")
     public boolean delete(T entity) {
         if (entity == null) {
@@ -158,13 +130,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         }
     }
 
-    /**
-     * Deletes an entity by its ID.
-     *
-     * @param id The ID of the entity to delete
-     * @return true if deletion was successful, false otherwise
-     * @throws IllegalArgumentException if ID is null
-     */
     public boolean deleteById(ID id) {
         if (id == null) {
             throw new IllegalArgumentException("ID cannot be null");
@@ -174,23 +139,15 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         return query(sql, id);
     }
 
-    /**
-     * Updates an existing entity in the database.
-     *
-     * @param entity The entity to update
-     * @return The number of rows affected
-     */
-    @SuppressWarnings("unchecked")
-    private ID update(T entity) {
+    private void updateEntity(T entity, ID entityId) {
         Map<String, Object> fields = extractFields(entity);
-        ID id = (ID) fields.remove(idColumnName); // Remove ID from fields to update
+        fields.remove(idColumnName);
 
         if (fields.isEmpty()) {
-            return id;
+            return;
         }
 
         StringBuilder sql = new StringBuilder("UPDATE ").append(table).append(" SET ");
-
         List<String> setStatements = fields.keySet().stream()
                 .map(key -> key + " = ?")
                 .collect(Collectors.toList());
@@ -205,21 +162,17 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         for (Object value : fields.values()) {
             params[i++] = value;
         }
-        params[i] = id;
+        params[i] = entityId;
 
         query(sql.toString(), params);
-        return id;
     }
 
-    /**
-     * Inserts a new entity into the database.
-     *
-     * @param entity The entity to insert
-     * @return The ID of the newly inserted entity
-     */
-    @SuppressWarnings("unchecked")
-    private ID insert(T entity) {
+    private ID insertEntity(T entity) {
         Map<String, Object> fields = extractFields(entity);
+
+        if (fields.containsKey(idColumnName) && isEmptyId(fields.get(idColumnName))) {
+            fields.remove(idColumnName);
+        }
 
         if (fields.isEmpty()) {
             throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
@@ -238,6 +191,7 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         try {
             connection = Database.getInstance().getConnection();
             connection.setAutoCommit(false);
+            ID newId = null;
 
             try (PreparedStatement stmt = connection.prepareStatement(
                     sql.toString(), Statement.RETURN_GENERATED_KEYS)) {
@@ -257,21 +211,32 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
 
                 try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
                     if (generatedKeys.next()) {
-                        ID newId = convertToIdType(generatedKeys.getObject(1));
+                        newId = convertToIdType(generatedKeys.getObject(1));
 
-                        Field idField = getIdField(entity.getClass());
-                        if (idField != null) {
-                            idField.setAccessible(true);
-                            idField.set(entity, newId);
+                        String setterMethodName = "set" + idColumnName.substring(0, 1).toUpperCase()
+                                + idColumnName.substring(1);
+                        try {
+                            Method setterMethod = entity.getClass().getMethod(setterMethodName, id);
+                            setterMethod.invoke(entity, newId);
+                        } catch (NoSuchMethodException | SecurityException | IllegalAccessException
+                                | InvocationTargetException e) {
+                            logger.warning(
+                                    "Could not invoke setter method: " + setterMethodName + " - " + e.getMessage());
+                            Field idField = getIdField(entity.getClass());
+                            if (idField != null) {
+                                idField.setAccessible(true);
+                                idField.set(entity, newId);
+                            }
                         }
-
-                        connection.commit();
-                        return newId;
                     } else {
-                        connection.commit();
-                        return fields.containsKey(idColumnName) ? (ID) fields.get(idColumnName) : null;
+                        throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
+                                "Creating entity failed, no ID obtained",
+                                "The database did not return a generated ID",
+                                null);
                     }
                 }
+                connection.commit();
+                return newId;
             }
         } catch (SQLException | IllegalAccessException e) {
             rollbackSilently(connection);
@@ -285,38 +250,26 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         }
     }
 
-    /**
-     * Extracts field values from an entity using reflection.
-     * 
-     * @param entity The entity to extract fields from
-     * @return A map of field names to values
-     */
     private Map<String, Object> extractFields(T entity) {
         Map<String, Object> fields = new HashMap<>();
-
-        Class<?> currentClass = entity.getClass();
-        while (currentClass != null && currentClass != Object.class) {
-            for (Field field : currentClass.getDeclaredFields()) {
-                field.setAccessible(true);
+        Class<?> entityClass = entity.getClass();
+        for (Method method : entityClass.getMethods()) {
+            String methodName = method.getName();
+            if (methodName.startsWith("get") && !methodName.equals("getClass") && method.getParameterCount() == 0) {
+                String fieldName = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
                 try {
-                    Object value = field.get(entity);
-                    fields.put(field.getName(), value);
-                } catch (IllegalAccessException e) {
-                    logger.severe(() -> "Could not access field: " + field.getName() + " - " + e.getMessage());
+                    Object value = method.invoke(entity);
+                    if (value != null) {
+                        fields.put(fieldName, value);
+                    }
+                } catch (Exception e) {
+                    logger.severe(() -> "Could not invoke getter method: " + methodName + " - " + e.getMessage());
                 }
             }
-            currentClass = currentClass.getSuperclass();
         }
-
         return fields;
     }
 
-    /**
-     * Finds the field in the entity class that matches the ID column name.
-     * 
-     * @param clazz The entity class
-     * @return The ID field, or null if not found
-     */
     private Field getIdField(Class<?> clazz) {
         Class<?> currentClass = clazz;
         while (currentClass != null && currentClass != Object.class) {
@@ -337,69 +290,43 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
             }
             currentClass = currentClass.getSuperclass();
         }
-
         return null;
     }
 
-    /**
-     * Checks if an ID value is empty (null, 0, or empty string).
-     * 
-     * @param id The ID to check
-     * @return true if the ID is empty, false otherwise
-     */
-    private boolean isEmptyId(ID id) {
+    private boolean isEmptyId(Object id) {
         if (id == null) {
             return true;
         }
-
         if (id instanceof Number) {
             return ((Number) id).longValue() == 0;
         }
-
         if (id instanceof String) {
             return ((String) id).isEmpty();
         }
-
         return false;
     }
 
-    /**
-     * Converts a database object to the appropriate ID type.
-     * 
-     * @param dbValue The database value to convert
-     * @return The converted ID value
-     */
     @SuppressWarnings("unchecked")
     private ID convertToIdType(Object dbValue) {
         if (dbValue == null) {
             return null;
         }
-
         if (id.isAssignableFrom(dbValue.getClass())) {
             return (ID) dbValue;
         }
-
         if (id == Long.class || id == long.class) {
             return (ID) Long.valueOf(dbValue.toString());
         }
-
         if (id == Integer.class || id == int.class) {
             return (ID) Integer.valueOf(dbValue.toString());
         }
-
         if (id == String.class) {
             return (ID) dbValue.toString();
         }
-
         logger.warning("Unsupported ID type conversion: " + dbValue.getClass() + " to " + id);
         return (ID) dbValue;
     }
 
-    /**
-     * Rolls back a transaction silently.
-     * 
-     * @param conn The connection to roll back
-     */
     private void rollbackSilently(Connection conn) {
         try {
             if (conn != null && !conn.isClosed()) {
@@ -410,11 +337,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         }
     }
 
-    /**
-     * Resets connection state and releases it back to the pool.
-     * 
-     * @param conn The connection to reset and release
-     */
     private void resetConnectionAndRelease(Connection conn) {
         try {
             if (conn != null && !conn.isClosed()) {

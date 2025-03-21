@@ -5,14 +5,12 @@ import java.io.InputStream;
 import java.util.HashMap;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-
 import ca.jolt.cookie.CookieBuilder;
 import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.files.JoltFile;
 import ca.jolt.http.HttpStatus;
 import ca.jolt.routing.MimeInterpreter;
+import ca.jolt.utils.JacksonUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
@@ -120,7 +118,7 @@ final class ResponseContext {
         try {
             if (buffer.body != null) {
                 if (buffer.isJsonBody) {
-                    new ObjectMapper().registerModule(new Jdk8Module()).writeValue(response.getWriter(), buffer.body);
+                    JacksonUtil.getObjectMapper().writeValue(response.getWriter(), buffer.body);
                 } else {
                     response.getWriter().write((String) buffer.body);
                 }

@@ -5,41 +5,36 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.logging.Logger;
 
-import com.fasterxml.jackson.databind.DeserializationFeature;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.node.ObjectNode;
-import com.fasterxml.jackson.datatype.jdk8.Jdk8Module;
-
 import ca.jolt.database.exception.DatabaseErrorType;
 import ca.jolt.database.exception.DatabaseException;
+import ca.jolt.utils.JacksonUtil;
 
 public abstract class Broker<T> {
     private static final Logger logger = Logger.getLogger(Broker.class.getName());
     protected final String table;
     protected final Class<T> entityClass;
-    private final ObjectMapper objectMapper;
 
     protected Broker(String table, Class<T> entityClass) {
         if (!SqlSecurity.isValidIdentifier(table)) {
             throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
-                    "The identifier for the class is not valid ! Please change it.",
+                    "The identifier for the class is not valid! Please change it.",
                     "The table name was found in our reserved keywords SQL-list. If you believe this to be an error, please report it as fast as possible to our github repository.",
                     null);
         }
         this.table = table;
         this.entityClass = entityClass;
-        this.objectMapper = new ObjectMapper().registerModule(new Jdk8Module());
-        this.objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }
 
     protected Optional<T> selectOne(String sql, Object... params) {
         if (!SqlSecurity.isValidRawSql(sql)) {
             throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
-                    "The SQL query is not valid ! Please change it.",
+                    "The SQL query is not valid! Please change it.",
                     "The SQL query was found to be invalid. If you believe this to be an error, please report it as fast as possible to our github repository.",
                     null);
         }
@@ -51,7 +46,6 @@ public abstract class Broker<T> {
 
             try (PreparedStatement stmt = prepareStatement(connection, sql, params);
                     ResultSet rs = stmt.executeQuery()) {
-
                 if (rs.next()) {
                     return Optional.of(mapToEntity(rs));
                 }
@@ -71,7 +65,7 @@ public abstract class Broker<T> {
     protected List<T> selectMany(String sql, Object... params) {
         if (!SqlSecurity.isValidRawSql(sql)) {
             throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
-                    "The SQL query is not valid ! Please change it.",
+                    "The SQL query is not valid! Please change it.",
                     "The SQL query was found to be invalid. If you believe this to be an error, please report it as fast as possible to our github repository.",
                     null);
         }
@@ -83,7 +77,6 @@ public abstract class Broker<T> {
 
             try (PreparedStatement stmt = prepareStatement(connection, sql, params);
                     ResultSet rs = stmt.executeQuery()) {
-
                 List<T> results = new ArrayList<>();
                 while (rs.next()) {
                     results.add(mapToEntity(rs));
@@ -104,8 +97,8 @@ public abstract class Broker<T> {
     protected boolean query(String sql, Object... params) {
         if (!SqlSecurity.isValidRawSql(sql)) {
             throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
-                    "The SQL query is not valid ! Please change it. The SQL query was found to be invalid. If you believe this to be an error",
-                    "please report it as fast as possible to our github repository.",
+                    "The SQL query is not valid! Please change it.",
+                    "The SQL query was found to be invalid. If you believe this to be an error, please report it as fast as possible to our github repository.",
                     null);
         }
 
@@ -133,34 +126,31 @@ public abstract class Broker<T> {
 
     protected T mapToEntity(ResultSet rs) throws SQLException {
         try {
-            ObjectNode jsonNode = objectMapper.createObjectNode();
+            Map<String, Object> fieldMap = new HashMap<>();
+            int columnCount = rs.getMetaData().getColumnCount();
 
-            for (int i = 1; i <= rs.getMetaData().getColumnCount(); i++) {
+            for (int i = 1; i <= columnCount; i++) {
                 String columnName = rs.getMetaData().getColumnName(i);
                 Object value = rs.getObject(i);
 
-                if (value == null) {
-                    jsonNode.putNull(columnName);
-                } else if (value instanceof String) {
-                    jsonNode.put(columnName, (String) value);
-                } else if (value instanceof Integer) {
-                    jsonNode.put(columnName, (Integer) value);
-                } else if (value instanceof Long) {
-                    jsonNode.put(columnName, (Long) value);
-                } else if (value instanceof Double) {
-                    jsonNode.put(columnName, (Double) value);
-                } else if (value instanceof Boolean) {
-                    jsonNode.put(columnName, (Boolean) value);
-                } else if (value instanceof java.sql.Date) {
-                    jsonNode.put(columnName, value.toString());
-                } else if (value instanceof java.sql.Timestamp) {
-                    jsonNode.put(columnName, value.toString());
+                if (value != null) {
+                    switch (rs.getMetaData().getColumnType(i)) {
+                        case java.sql.Types.TIMESTAMP:
+                            fieldMap.put(columnName, rs.getTimestamp(i).toLocalDateTime());
+                            break;
+                        case java.sql.Types.DATE:
+                            fieldMap.put(columnName, rs.getDate(i).toLocalDate());
+                            break;
+                        default:
+                            fieldMap.put(columnName, value);
+                            break;
+                    }
                 } else {
-                    jsonNode.put(columnName, value.toString());
+                    fieldMap.put(columnName, null);
                 }
             }
 
-            return objectMapper.treeToValue(jsonNode, entityClass);
+            return JacksonUtil.getObjectMapper().convertValue(fieldMap, entityClass);
         } catch (Exception e) {
             logger.severe(() -> "Error mapping ResultSet to entity: " + e.getMessage());
             throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
