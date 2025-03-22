@@ -7,16 +7,16 @@ import ca.jolt.routing.context.JoltContext;
 
 public class Main extends JoltApplication {
     public static void main(String[] args) {
-        launch(Main.class, "ca.jolt");
+        launch(Main.class);
     }
 
     @Override
     public void setup() {
         get("/", Main::getUser);
         group("/product", () -> {
-            get("", ProductController::getAll);
+            get("/", ProductController::getAll);
             get("/{id:int}", ProductController::get);
-            post("", ProductController::create);
+            post("/", ProductController::create);
             put("/{id:int}", ProductController::update);
             delete("/{id:int}", ProductController::delete);
         });

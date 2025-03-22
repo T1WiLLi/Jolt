@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
 
+import ca.jolt.core.JoltApplication;
 import ca.jolt.exceptions.BeanCreationException;
 import ca.jolt.exceptions.BeanNotFoundException;
 import ca.jolt.exceptions.CircularDependencyException;
@@ -87,6 +88,28 @@ public final class JoltContainer {
     private final ConfigurationManager configurationManager = new ConfigurationManager();
     private final BeanScanner beanScanner = new BeanScanner(beanRegistry, configurationManager);
     private boolean isInitialized = false;
+
+    /**
+     * Use reflection to detect the package of the caller class.
+     * 
+     * <p>
+     * The resulting package is used to scan for beans, at the same level of the
+     * class extending {@link JoltContainer}. And below it.
+     * This function should not be called by the user as it is used internally by
+     * the container.
+     * 
+     * For more details on how the package scanning works see {@link #scan(String)}.
+     * 
+     * @return The container instance for method chaining.
+     */
+    public JoltContainer autoScan() {
+        scan("ca.jolt"); // Scan the default package
+        String callerPackage = detectCallerPackage();
+        if (callerPackage != null && !callerPackage.equals("ca.jolt") && !callerPackage.isEmpty()) {
+            scan(callerPackage);
+        }
+        return this;
+    }
 
     /**
      * Scans the specified base package to discover and register all classes
@@ -279,7 +302,54 @@ public final class JoltContainer {
         return beanRegistry.getBean(type, name);
     }
 
+    /**
+     * Injects dependencies into fields annotated with {@link JoltBeanInjection} in
+     * the given object.
+     * The object does not need to be a managed bean.
+     *
+     * <p>
+     * This method allows dependency injection into objects that are not managed by
+     * the container,
+     * making it possible to use dependency injection in objects created through
+     * other means.
+     * 
+     * @param <T>      the type of the object
+     * @param instance the object instance to inject dependencies into
+     * @return the same instance after injection
+     * @throws JoltDIException if dependency injection fails
+     */
+    public <T> T inject(T instance) {
+        Objects.requireNonNull(instance, "Instance cannot be null");
+        if (!isInitialized) {
+            logger.warning("Container is not initialized. Beans may not be available for injection.");
+        }
+        beanRegistry.inject(instance);
+        return instance;
+    }
+
     private JoltContainer() {
         // Private constructor to prevent instantiation
+    }
+
+    /**
+     * Detect the package of the caller class.
+     * 
+     * @return the package of the caller class.
+     */
+    private String detectCallerPackage() {
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        for (int i = 3; i < stackTrace.length; i++) {
+            String className = stackTrace[i].getClassName();
+            try {
+                Class<?> caller = Class.forName(className);
+                if (JoltApplication.class.isAssignableFrom(caller) && caller != JoltApplication.class) {
+                    String packageName = caller.getPackageName();
+                    return packageName;
+                }
+            } catch (ClassNotFoundException e) {
+                // Continue to the next element
+            }
+        }
+        return null;
     }
 }

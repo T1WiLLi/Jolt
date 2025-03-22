@@ -98,15 +98,12 @@ public abstract class JoltApplication {
      * @param scan     A package to scan for beans in addition to {@code ca.jolt}
      * @throws IllegalStateException if an instance is already running
      */
-    public static <T extends JoltApplication> void launch(Class<T> appClass, String scan) {
+    public static <T extends JoltApplication> void launch(Class<T> appClass) {
         try {
             if (instance == null) {
                 instance = appClass.getDeclaredConstructor().newInstance();
             }
-            JoltContainer.getInstance().scan("ca.jolt");
-            if (!scan.equals("ca.jolt") && !scan.isEmpty()) {
-                JoltContainer.getInstance().scan(scan);
-            }
+            JoltContainer.getInstance().autoScan();
             Database.init();
             JoltContainer.getInstance().initialize();
             router = JoltContainer.getInstance().getBean(Router.class);

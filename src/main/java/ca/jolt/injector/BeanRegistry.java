@@ -179,7 +179,6 @@ final class BeanRegistry {
         Objects.requireNonNull(type, "Bean type cannot be null");
         Objects.requireNonNull(name, "Bean name cannot be null");
 
-        // Check if a bean match the given type and name pass to the function.
         for (Map.Entry<String, Class<?>> entry : beanDefinitions.entrySet()) {
             if (type.isAssignableFrom(entry.getValue()) && entry.getKey().equals(name)) {
                 logger.info("Creating bean instance for type: " + type.getName() +
@@ -187,8 +186,40 @@ final class BeanRegistry {
                 return type.cast(createBean(entry.getValue(), entry.getKey()));
             }
         }
-        // If no bean match the given type and name, throw a BeanNotFoundException.
         throw new BeanNotFoundException("No bean found of type: " + type.getName() + " and name: " + name);
+    }
+
+    /**
+     * Injects dependencies into the given object instance.
+     * This can be used for both managed beans and external objects.
+     *
+     * @param instance the object instance to inject dependencies into
+     */
+    public void inject(Object instance) {
+        Objects.requireNonNull(instance, "Instance cannot be null");
+        Class<?> clazz = instance.getClass();
+
+        for (Field field : clazz.getDeclaredFields()) {
+            if (field.isAnnotationPresent(JoltBeanInjection.class)) {
+                try {
+                    field.setAccessible(true); // Altought it's not clean, it's necessary for private fields
+                    JoltBeanInjection injection = field.getAnnotation(JoltBeanInjection.class);
+                    Object dependency = !injection.value().isEmpty() ? getBean(injection.value())
+                            : getBean(field.getType());
+
+                    if (dependency == null && injection.required()) {
+                        throw new BeanNotFoundException("Required dependency not found for: " +
+                                clazz.getName() + "." + field.getName());
+                    }
+
+                    field.set(instance, dependency);
+                } catch (IllegalAccessException e) {
+                    logger.severe("Error injecting dependency for " + clazz.getName() + "." + field.getName());
+                    throw new BeanCreationException("Failed to inject dependency for: " +
+                            clazz.getName() + "." + field.getName(), e);
+                }
+            }
+        }
     }
 
     public void shutdown() {

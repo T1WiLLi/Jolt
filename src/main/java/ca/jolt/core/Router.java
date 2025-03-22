@@ -95,6 +95,9 @@ public final class Router {
 
     /**
      * Registers a new HTTP {@code GET} route.
+     * <p>
+     * The path will be normalized and combined with any active group prefixes.
+     * Both empty strings and "/" are accepted for the root path.
      *
      * @param path    The path pattern, possibly with placeholders
      * @param handler A {@link RouteHandler} to process the request
@@ -107,6 +110,9 @@ public final class Router {
 
     /**
      * Registers a new HTTP {@code POST} route.
+     * <p>
+     * The path will be normalized and combined with any active group prefixes.
+     * Both empty strings and "/" are accepted for the root path.
      *
      * @param path    The path pattern to match
      * @param handler A {@link RouteHandler} to process the request
@@ -119,6 +125,9 @@ public final class Router {
 
     /**
      * Registers a new HTTP {@code PUT} route.
+     * <p>
+     * The path will be normalized and combined with any active group prefixes.
+     * Both empty strings and "/" are accepted for the root path.
      *
      * @param path    The path pattern to match
      * @param handler A {@link RouteHandler} to process the request
@@ -131,6 +140,9 @@ public final class Router {
 
     /**
      * Registers a new HTTP {@code DELETE} route.
+     * <p>
+     * The path will be normalized and combined with any active group prefixes.
+     * Both empty strings and "/" are accepted for the root path.
      *
      * @param path    The path pattern to match
      * @param handler A {@link RouteHandler} to process the request
@@ -143,6 +155,9 @@ public final class Router {
 
     /**
      * Register a new HTTP route with the specified method and path.
+     * <p>
+     * The path will be normalized and combined with any active group prefixes.
+     * Both empty strings and "/" are accepted for the root path.
      * 
      * @param method  The HTTP method (e.g. {@code GET}, {@code POST}, etc.)
      * @param path    The path pattern to match
@@ -155,14 +170,17 @@ public final class Router {
     /**
      * Groups multiple routes under a common path prefix.
      * <p>
+     * The prefix is normalized and combined with any existing prefixes.
+     * Routes defined within the group will automatically inherit this prefix.
+     * <p>
      * Example usage:
      * 
      * <pre>{@code
      * group("/api", () -> {
-     *     get("/users", UserController::getAll);
-     *     post("/users", UserController::create);
+     *     get("/users", UserController::getAll); // /api/users
+     *     get("/", HomeController::apiIndex); // /api
      *     group("/admin", () -> {
-     *         get("/dashboard", AdminController::dashboard);
+     *         get("/dashboard", AdminController::dashboard); // /api/admin/dashboard
      *     });
      * });
      * }</pre>
@@ -171,7 +189,8 @@ public final class Router {
      * @param group  A {@link Runnable} containing route definitions
      */
     public void group(String prefix, Runnable group) {
-        prefixes.push(normalizePath(getCurrentPrefix() + prefix));
+        String normalizedPrefix = normalizePath(prefix);
+        prefixes.push(normalizePath(getCurrentPrefix() + normalizedPrefix));
         try {
             group.run();
         } finally {
@@ -239,14 +258,22 @@ public final class Router {
     }
 
     /**
-     * Combines the current prefix with the given path and normalizes it
-     * by reducing consecutive slashes.
+     * Combines the current prefix with the given path and normalizes it.
+     * <p>
+     * Handles empty paths and root paths correctly, ensuring consistent
+     * path formatting throughout the application.
      *
      * @param path A route path to combine with the current prefix
      * @return A normalized path string
      */
     private String fullPath(String path) {
-        return normalizePath(getCurrentPrefix() + path);
+        String currentPrefix = getCurrentPrefix();
+
+        if (path == null || path.isEmpty() || path.equals("/")) {
+            return currentPrefix.isEmpty() ? "/" : currentPrefix;
+        }
+
+        return normalizePath(currentPrefix + path);
     }
 
     /**
@@ -260,12 +287,31 @@ public final class Router {
     }
 
     /**
-     * Normalizes a path by converting consecutive slashes to a single slash.
+     * Normalizes a path by ensuring consistent formatting:
+     * <ul>
+     * <li>Converts consecutive slashes to a single slash</li>
+     * <li>Ensures paths start with a slash</li>
+     * <li>Removes trailing slashes (except for root path "/")</li>
+     * </ul>
      *
      * @param path The path to normalize
-     * @return A cleaned-up path
+     * @return A cleaned-up path with consistent formatting
      */
     private String normalizePath(String path) {
-        return path.replaceAll("//+", "/");
+        if (path == null || path.isEmpty()) {
+            return "/";
+        }
+
+        String normalized = path.replaceAll("//+", "/");
+
+        if (!normalized.startsWith("/")) {
+            normalized = "/" + normalized;
+        }
+
+        if (normalized.length() > 1 && normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+
+        return normalized;
     }
 }
