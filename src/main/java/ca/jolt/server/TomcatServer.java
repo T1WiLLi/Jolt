@@ -117,6 +117,17 @@ public final class TomcatServer {
         try {
             Context context = tomcat.addContext("", docBase);
 
+            context.setMapperContextRootRedirectEnabled(false);
+            context.setMapperDirectoryRedirectEnabled(false);
+            context.setAllowCasualMultipartParsing(false);
+            context.setReloadable(false);
+
+            Wrapper defaultServlet = Tomcat.addServlet(context, "default",
+                    "org.apache.catalina.servlets.DefaultServlet");
+            defaultServlet.addInitParameter("listings", "false");
+            defaultServlet.setLoadOnStartup(1);
+            context.addServletMappingDecoded("/", "default");
+
             MultipartConfigElement multipartConfig = new MultipartConfigElement(
                     new File(config.getTempDir()).getAbsolutePath(),
                     config.getMultipartMaxFileSize(),

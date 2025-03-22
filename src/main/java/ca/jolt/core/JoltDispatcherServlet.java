@@ -12,10 +12,7 @@ import ca.jolt.routing.MimeInterpreter;
 import ca.jolt.routing.RouteHandler;
 import ca.jolt.routing.RouteMatch;
 import ca.jolt.routing.context.JoltContext;
-import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
-import jakarta.servlet.ServletRequest;
-import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -29,46 +26,30 @@ import java.util.stream.Stream;
 
 /**
  * The main servlet responsible for dispatching HTTP requests to the appropriate
- * route handler in a Jolt-based application.
+ * route handler or serving static resources in a Jolt-based application.
  * <p>
- * It is registered internally within the Jolt framework and uses:
- * <ul>
- * <li>A {@link Router} to match the incoming request path and method.</li>
- * <li>A {@link GlobalExceptionHandler} to handle exceptions thrown during
- * request handling.</li>
- * </ul>
- * <p>
- * On receiving a request,
- * {@link #service(HttpServletRequest, HttpServletResponse)}
- * performs the following steps:
+ * This servlet handles the following steps for each request:
  * <ol>
- * <li>Attempts to serve static resources first.</li>
- * <li>Matches the request to a route.</li>
- * <li>Invokes the corresponding {@link RouteHandler}.</li>
- * <li>Serializes the response as text or JSON, unless already committed.</li>
- * <li>Catches exceptions and delegates handling to the
- * {@link GlobalExceptionHandler}.</li>
+ * <li>Processes registered filters.</li>
+ * <li>Executes "before" handlers.</li>
+ * <li>Attempts to match the request to a route or serve a static resource.</li>
+ * <li>Returns a 404 error if no route or static resource is found.</li>
+ * <li>Executes "after" handlers.</li>
  * </ol>
+ * <p>
+ * Directory listings are explicitly disabled, and static resources are only
+ * served
+ * if they exist in the "static" directory of the classpath.
  *
  * @author William
  * @since 1.0
  */
 public final class JoltDispatcherServlet extends HttpServlet {
 
-    /**
-     * The logger for this servlet.
-     */
     private static final Logger log = Logger.getLogger(JoltDispatcherServlet.class.getName());
 
-    /**
-     * Matches incoming requests to a {@link RouteHandler}.
-     */
-    private final transient Router router;
-
-    /**
-     * Handles exceptions thrown during request handling.
-     */
-    private final transient GlobalExceptionHandler exceptionHandler;
+    private final Router router;
+    private final GlobalExceptionHandler exceptionHandler;
 
     /**
      * Constructs a new {@code JoltDispatcherServlet}, retrieving necessary
@@ -79,25 +60,6 @@ public final class JoltDispatcherServlet extends HttpServlet {
         this.exceptionHandler = JoltContainer.getInstance().getBean(GlobalExceptionHandler.class);
     }
 
-    /**
-     * Dispatches incoming HTTP requests to the appropriate route handler.
-     * <p>
-     * Steps:
-     * <ul>
-     * <li>Extracts the request path.</li>
-     * <li>Tries serving static resources.</li>
-     * <li>Finds a matching route and executes its {@link RouteHandler}.</li>
-     * <li>Serializes the handler's response if not already committed.</li>
-     * <li>Logs request/response details.</li>
-     * <li>Delegates exception handling to {@link GlobalExceptionHandler}.</li>
-     * </ul>
-     *
-     * @param req The incoming {@link HttpServletRequest}
-     * @param res The outgoing {@link HttpServletResponse}
-     * @throws ServletException If a servlet-related error occurs
-     * @throws IOException      If an I/O error is detected while handling the
-     *                          request
-     */
     @Override
     protected void service(HttpServletRequest req, HttpServletResponse res) throws ServletException, IOException {
         long start = System.currentTimeMillis();
@@ -112,13 +74,8 @@ public final class JoltDispatcherServlet extends HttpServlet {
 
             executeBeforeHandlers(joltCtx);
 
-            RouteMatch match = router.match(context.method, context.path);
-            if (match != null) {
-                if (!handleRoute(match, context, start)) {
-                    handleStaticResourceOrError(context);
-                }
-            } else {
-                handleStaticResourceOrError(context);
+            if (!handleRequest(context, joltCtx, start)) {
+                sendNotFoundError(context);
             }
         } catch (Exception e) {
             log.warning(() -> "Error in request processing: " + e.getMessage());
@@ -132,7 +89,8 @@ public final class JoltDispatcherServlet extends HttpServlet {
     }
 
     /**
-     * Prepares an internal request context object with extracted method and path.
+     * Prepares the request context by extracting the method and path from the
+     * request.
      *
      * @param req The HTTP request
      * @param res The HTTP response
@@ -163,8 +121,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
                 .sorted((f1, f2) -> {
                     int order1 = filterConfig.getOrder(f1);
                     int order2 = filterConfig.getOrder(f2);
-
-                    return order1 != order2 ? Integer.compare(order1, order2) : 0;
+                    return Integer.compare(order1, order2);
                 }).toList();
 
         JoltContext joltContext = new JoltContext(context.req, context.res, null, Collections.emptyList());
@@ -174,14 +131,10 @@ public final class JoltDispatcherServlet extends HttpServlet {
                 continue;
             }
             try {
-                filter.doFilter(context.req, context.res, new FilterChain() {
-                    @Override
-                    public void doFilter(ServletRequest request, ServletResponse response)
-                            throws IOException, ServletException, JoltHttpException {
-                        // No-op. The filter itself controls whether to pass to next filter.
-                    }
+                filter.doFilter(context.req, context.res, (request, response) -> {
+                    // No-op. The filter itself controls whether to pass to the next filter.
                 });
-            } catch (IOException | ServletException | JoltHttpException e) {
+            } catch (IOException | ServletException e) {
                 exceptionHandler.handle(e, context.res);
             }
             if (context.res.isCommitted()) {
@@ -194,33 +147,104 @@ public final class JoltDispatcherServlet extends HttpServlet {
     /**
      * Executes all registered "before" handlers that match the current path.
      *
-     * @param ctx The JoltHttpContext containing request and response
+     * @param ctx The Jolt context containing request and response
      */
     private void executeBeforeHandlers(JoltContext ctx) {
-        executeHandler(ctx, router.getBeforeHandlers().stream());
+        executeHandlers(ctx, router.getBeforeHandlers().stream());
     }
 
     /**
      * Executes all registered "after" handlers that match the current path.
      *
-     * @param ctx The JoltHttpContext containing request and response
+     * @param ctx The Jolt context containing request and response
      */
     private void executeAfterHandlers(JoltContext ctx) {
-        executeHandler(ctx, router.getAfterHandlers().stream());
+        executeHandlers(ctx, router.getAfterHandlers().stream());
     }
 
     /**
      * Executes a stream of handlers that match the current path.
      *
-     * @param ctx      The JoltHttpContext containing request and response
+     * @param ctx      The Jolt context containing request and response
      * @param handlers The stream of handlers to execute
      */
-    private void executeHandler(JoltContext ctx, Stream<LifecycleEntry> handlers) {
+    private void executeHandlers(JoltContext ctx, Stream<LifecycleEntry> handlers) {
+        handlers.filter(entry -> entry.matches(ctx.requestPath()))
+                .forEach(entry -> {
+                    try {
+                        entry.execute(ctx);
+                    } catch (Exception e) {
+                        exceptionHandler.handle(e, ctx);
+                    }
+                });
+    }
+
+    /**
+     * Handles the request by attempting to match a route or serve a static
+     * resource.
+     *
+     * @param context The request context
+     * @param joltCtx The Jolt context
+     * @param start   The start time of the request
+     * @return {@code true} if the request was handled, {@code false} otherwise
+     */
+    private boolean handleRequest(RequestContext context, JoltContext joltCtx, long start) {
+        RouteMatch match = router.match(context.method, context.path);
+        if (match != null) {
+            return handleRoute(match, context, start);
+        }
+
+        if (context.method.equals("GET") && tryServeStaticResource(context.path, context.res)) {
+            return true;
+        }
+
+        return false;
+    }
+
+    /**
+     * Sends a 404 Not Found response.
+     *
+     * @param context The request context
+     */
+    private void sendNotFoundError(RequestContext context) {
+        log.info(() -> "No route or static resource found for path: " + context.path);
+        exceptionHandler.handle(
+                new JoltHttpException(HttpStatus.NOT_FOUND, "No route or static resource found for " + context.path),
+                context.res);
+    }
+
+    /**
+     * Attempts to serve a static resource from the "static" directory in the
+     * classpath.
+     *
+     * @param path The requested path
+     * @param res  The HTTP response
+     * @return {@code true} if the resource was served, {@code false} otherwise
+     */
+    private boolean tryServeStaticResource(String path, HttpServletResponse res) {
         try {
-            handlers.filter(entry -> entry.matches(ctx.requestPath()))
-                    .forEach(entry -> entry.execute(ctx));
-        } catch (Exception e) {
-            exceptionHandler.handle(e, ctx);
+            String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
+            if (normalizedPath.isEmpty()) {
+                return false;
+            }
+
+            String resourcePath = "static/" + normalizedPath;
+            InputStream in = getClass().getClassLoader().getResourceAsStream(resourcePath);
+
+            if (in != null) {
+                byte[] data = in.readAllBytes();
+                int dotIndex = normalizedPath.lastIndexOf('.');
+                String extension = (dotIndex != -1) ? normalizedPath.substring(dotIndex) : "";
+                String mimeType = MimeInterpreter.getMime(extension);
+
+                res.setContentType(mimeType);
+                res.getOutputStream().write(data);
+                return true;
+            }
+            return false;
+        } catch (IOException e) {
+            log.warning(() -> "Error serving static resource: " + path + " - " + e.getMessage());
+            return false;
         }
     }
 
@@ -229,19 +253,13 @@ public final class JoltDispatcherServlet extends HttpServlet {
      *
      * @param match   The route match containing handler and path parameters
      * @param context The request context
-     * @param start   The start time of request processing
-     * @return true if the route was successfully handled, false otherwise
-     * @throws JoltRoutingException if an I/O error occurs during response writing
+     * @param start   The start time of the request
+     * @return {@code true} if the route was handled, {@code false} otherwise
      */
-    private boolean handleRoute(RouteMatch match, RequestContext context, long start) throws JoltRoutingException {
+    private boolean handleRoute(RouteMatch match, RequestContext context, long start) {
         try {
-            // Update the context with route information
-            JoltContext routeCtx = new JoltContext(
-                    context.req,
-                    context.res,
-                    match.matcher(),
+            JoltContext routeCtx = new JoltContext(context.req, context.res, match.matcher(),
                     match.route().getParamNames());
-
             RouteHandler handler = match.route().getHandler();
             Object result = handler.handle(routeCtx);
 
@@ -267,33 +285,6 @@ public final class JoltDispatcherServlet extends HttpServlet {
     }
 
     /**
-     * Attempts to serve a static resource or handle a not found error.
-     *
-     * @param context The request context
-     * @param start   The start time of request processing
-     * @return true if the resource was successfully served, false otherwise
-     * @throws JoltHttpException if an I/O error occurs during static resource
-     *                           serving
-     */
-    private boolean handleStaticResourceOrError(RequestContext context) throws JoltHttpException {
-        if (tryServeStaticResource(context.path, context.res) && context.method.equals("GET")) {
-            return true;
-        }
-
-        List<String> allowedMethods = router.getAllowedMethods(context.path);
-        if (!allowedMethods.isEmpty()) {
-            log.info(() -> "HTTP method " + context.method + " is not allowed for path: " + context.path);
-            throw new JoltHttpException(HttpStatus.METHOD_NOT_ALLOWED,
-                    "HTTP method " + context.method + " not allowed for " + context.path);
-        }
-
-        log.info(() -> "No route found for path: " + context.path);
-        exceptionHandler.handle(new JoltHttpException(HttpStatus.NOT_FOUND, "No route found for " + context.path),
-                context.res);
-        return false;
-    }
-
-    /**
      * Determines the request path from {@link HttpServletRequest#getPathInfo()}
      * or falls back to {@link HttpServletRequest#getServletPath()}.
      *
@@ -306,43 +297,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
     }
 
     /**
-     * Attempts to serve a static resource from the "static" directory in the
-     * classpath.
-     * 
-     * @param path The requested path, which might correspond to a static resource
-     * @param res  The HTTP servlet response
-     * @return true if a static resource was found and served, false otherwise
-     */
-    private boolean tryServeStaticResource(String path, HttpServletResponse res) {
-        try {
-            String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
-            InputStream in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedPath);
-
-            if (in == null && (normalizedPath.isEmpty() || normalizedPath.equals("/"))) {
-                normalizedPath = "index.html";
-                in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedPath);
-            }
-
-            if (in != null) {
-                byte[] data = in.readAllBytes();
-                int dotIndex = normalizedPath.lastIndexOf('.');
-                String extension = (dotIndex != -1) ? normalizedPath.substring(dotIndex) : "";
-                String mimeType = MimeInterpreter.getMime(extension);
-
-                res.setContentType(mimeType);
-                res.getOutputStream().write(data);
-                return true;
-            }
-        } catch (IOException e) {
-            log.warning(() -> "Error serving static resource: " + path + " - " + e.getMessage());
-            return false;
-        }
-        return false;
-    }
-
-    /**
-     * Holds context information for a single request to reduce parameter passing
-     * and improve method readability.
+     * Holds context information for a single request.
      */
     private static class RequestContext {
         final HttpServletRequest req;
@@ -350,14 +305,6 @@ public final class JoltDispatcherServlet extends HttpServlet {
         final String method;
         final String path;
 
-        /**
-         * Creates a new {@link RequestContext} for a request/response pair.
-         *
-         * @param req    The HTTP request
-         * @param res    The HTTP response
-         * @param method The HTTP method (e.g., "GET", "POST")
-         * @param path   The request path
-         */
         RequestContext(HttpServletRequest req, HttpServletResponse res, String method, String path) {
             this.req = req;
             this.res = res;
