@@ -6,7 +6,16 @@
 
     <groupId>ca.jolt</groupId>
     <artifactId>jolt</artifactId>
-    <version>1.5.1</version>
+    <version>2.0.1</version>
+
+    <developers>
+        <developer>
+            <name>William Beaudin</name>
+            <roles>
+                <role>Creator</role>
+            </roles>
+        </developer>
+    </developers>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>

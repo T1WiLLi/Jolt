@@ -1,7 +1,7 @@
 ca.jolt.cookie
 ca.jolt.core
 ca.jolt.database
-ca.jolt.database.annotation
+ca.jolt.database.exception
 ca.jolt.exceptions
 ca.jolt.exceptions.handler
 ca.jolt.files
@@ -21,3 +21,4 @@ ca.jolt.security.policies
 ca.jolt.security.utils
 ca.jolt.server
 ca.jolt.server.config
+ca.jolt.utils

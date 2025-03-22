@@ -15,60 +15,129 @@ import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 
+/**
+ * Handles the HTTP response context, allowing modification of response
+ * attributes such as status, headers, body, and cookies.
+ * Provides methods to send text, JSON, HTML, and binary responses, as well as
+ * handle redirects and file downloads.
+ */
 final class ResponseContext {
 
+    /** The underlying HttpServletResponse object. */
     @Getter
     private final HttpServletResponse response;
     private final ResponseBuffer buffer = new ResponseBuffer();
 
+    /**
+     * Constructs a ResponseContext with the given HttpServletResponse.
+     *
+     * @param response the HttpServletResponse to wrap
+     */
     public ResponseContext(HttpServletResponse response) {
         this.response = response;
     }
 
+    /**
+     * Sets the HTTP status of the response.
+     *
+     * @param status the HttpStatus to set
+     */
     public void setStatus(HttpStatus status) {
         buffer.setStatus(status);
     }
 
+    /**
+     * Sets the HTTP status of the response using a numeric code.
+     *
+     * @param code the HTTP status code
+     */
     public void setStatus(int code) {
         buffer.setStatus(HttpStatus.fromCode(code));
     }
 
+    /**
+     * Retrieves the current HTTP status of the response.
+     *
+     * @return the HttpStatus of the response
+     */
     public HttpStatus getStatus() {
         return buffer.status;
     }
 
+    /**
+     * Sets a header in the response.
+     *
+     * @param name  the name of the header
+     * @param value the value of the header
+     */
     public void setHeader(String name, String value) {
         buffer.setHeader(name, value);
     }
 
+    /**
+     * Sets the content type of the response.
+     *
+     * @param type the MIME type of the response content
+     */
     public void setContentType(String type) {
         buffer.setContentType(type);
     }
 
+    /**
+     * Redirects the client to a different URL.
+     *
+     * @param location the target URL for the redirect
+     */
     public void redirect(String location) {
         setStatus(HttpStatus.FOUND);
         setHeader("Location", location);
     }
 
+    /**
+     * Sends a plain text response.
+     *
+     * @param data the text to send in the response
+     */
     public void text(String data) {
         setContentType("text/plain;charset=UTF-8");
         buffer.setTextBody(data);
     }
 
+    /**
+     * Sends a JSON response.
+     *
+     * @param data the object to serialize to JSON and send
+     */
     public void json(Object data) {
         setContentType("application/json;charset=UTF-8");
         buffer.setJsonBody(data);
     }
 
+    /**
+     * Sends an HTML response.
+     *
+     * @param html the HTML content to send
+     */
     public void html(String html) {
         setContentType("text/html;charset=UTF-8");
         buffer.setTextBody(html);
     }
 
+    /**
+     * Writes raw data to the response output stream.
+     *
+     * @param data the data to write
+     * @throws IOException if an I/O error occurs
+     */
     public void write(Object data) throws IOException {
         response.getWriter().write(data.toString());
     }
 
+    /**
+     * Serves a static resource from the "static" directory.
+     *
+     * @param resource the resource path relative to the "static" directory
+     */
     public void serve(String resource) {
         String normalizedResource = resource.startsWith("/") ? resource.substring(1) : resource;
         InputStream in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedResource);
@@ -88,33 +157,50 @@ final class ResponseContext {
         }
     }
 
+    /**
+     * Triggers a file download.
+     *
+     * @param file     the file to send
+     * @param filename the name of the downloaded file
+     */
     public void download(JoltFile file, String filename) {
         setHeader("Content-Type", file.getContentType());
         setHeader("Content-Disposition", "attachment; filename=\"" + filename + "\"");
         buffer.setBinaryBody(file.getData());
     }
 
+    /**
+     * Adds a new cookie to the response.
+     *
+     * @return a CookieBuilder instance for constructing cookies
+     */
     public CookieBuilder addCookie() {
         return new CookieBuilder(response);
     }
 
+    /**
+     * Removes a cookie from the response.
+     *
+     * @param name the name of the cookie to remove
+     */
     public void removeCookie(String name) {
         Cookie cookie = new Cookie(name, "");
         cookie.setMaxAge(0);
         response.addCookie(cookie);
     }
 
+    /**
+     * Commits the buffered response to the client, sending headers and body
+     * content.
+     */
     public void commit() {
         response.setStatus(buffer.status.code());
-
         for (Map.Entry<String, String> header : buffer.headers.entrySet()) {
             response.setHeader(header.getKey(), header.getValue());
         }
-
         if (buffer.contentType != null) {
             response.setContentType(buffer.contentType);
         }
-
         try {
             if (buffer.body != null) {
                 if (buffer.isJsonBody) {
@@ -126,8 +212,8 @@ final class ResponseContext {
                 response.getOutputStream().write(buffer.binaryData);
             }
         } catch (IOException e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error writing response: " + e.getMessage(), e);
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error writing response: " + e.getMessage(),
+                    e);
         }
     }
 
