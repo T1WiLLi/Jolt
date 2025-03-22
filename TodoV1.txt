@@ -12,13 +12,10 @@ in application.properties file:
 server.jwt.secret_key={SECRET_KEY}
 server.jwt.pepper={PEPPER}
 
-V-2
-Add auto-scanning of packages for the CID Container, to make it easy to add new components without having to manually add them to the CID Container.
-Improve CID Container to make it more flexible and allow injection in none-bean object classes.
-Improve configurability of the framework.
 
 V-3
 Implement freemarker template to generate HTML pages and make it easy to integrate within the framework. 
+Fix directory listing in the Dispatcher.
 Add CSRF management and protection throughout the framework.
 Add Session management to the framework and make it secure and easy to use, built on top of Jakarta HttpSession
 Add Simple authentification and authorization system, built with both Session and JWT token.

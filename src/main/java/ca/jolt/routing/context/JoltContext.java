@@ -15,6 +15,7 @@ import ca.jolt.exceptions.JoltHttpException;
 import ca.jolt.files.JoltFile;
 import ca.jolt.form.Form;
 import ca.jolt.http.HttpStatus;
+import ca.jolt.template.JoltModel;
 import ca.jolt.utils.JacksonUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
@@ -54,6 +55,7 @@ public final class JoltContext {
 
     private final RequestContext requestContext;
     private final ResponseContext responseContext;
+    private final TemplatingContext templatingContext;
 
     private boolean committed = false;
 
@@ -82,6 +84,7 @@ public final class JoltContext {
             Matcher pathMatcher, List<String> paramNames) {
         this.requestContext = new RequestContext(req);
         this.responseContext = new ResponseContext(res);
+        this.templatingContext = new TemplatingContext();
         this.pathParams = extractPathParams(pathMatcher, paramNames);
     }
 
@@ -446,6 +449,20 @@ public final class JoltContext {
                     "Cannot write HTML after response has been committed");
         }
         responseContext.html(html);
+        return this;
+    }
+
+    /**
+     * Render a Freemarker template with the provided model. The template must be
+     * located in the "resources/templates" directory in the classpath.
+     * 
+     * 
+     * @param template The name of the template file to render.
+     * @param model    The model to pass to the template.
+     * @return this {@code JoltHttpContext} for fluent chaining.
+     */
+    public JoltContext render(String template, JoltModel model) {
+        templatingContext.render(responseContext, template, model);
         return this;
     }
 

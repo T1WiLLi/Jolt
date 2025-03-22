@@ -13,7 +13,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+
 import ca.jolt.exceptions.FormConversionException;
+import ca.jolt.template.JoltModel;
 import ca.jolt.utils.JacksonUtil;
 
 /**
@@ -428,6 +431,25 @@ public final class Form {
         } catch (Exception e) {
             throw new FormConversionException("Failed to build entity from form", e);
         }
+    }
+
+    /**
+     * Attempts to build a JoltModel from the form data, excluding specified fields.
+     * 
+     * This method creates a new JoltModel containing all field values from the
+     * form,
+     * except for those specified in the ignoreFields parameter.
+     * 
+     * @param ignoreFields Field names to exclude from the model
+     * @return A JoltModel populated with the form's field values (minus ignored
+     *         fields)
+     */
+    public JoltModel buildModel(String... ignoreFields) {
+        Map<String, Object> data = new HashMap<>(fieldValues);
+        for (String ignore : ignoreFields) {
+            data.remove(ignore);
+        }
+        return JoltModel.from(data);
     }
 
     /**
