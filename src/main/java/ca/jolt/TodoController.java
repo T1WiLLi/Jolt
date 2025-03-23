@@ -8,37 +8,52 @@ import java.util.concurrent.atomic.AtomicInteger;
 
 import ca.jolt.form.Form;
 import ca.jolt.routing.context.JoltContext;
+import ca.jolt.security.utils.JwtToken;
 import ca.jolt.template.JoltModel;
+import jakarta.servlet.http.Cookie;
 
 public class TodoController {
 
     private static final Map<Integer, Todo> todoStore = new HashMap<>();
     private static final AtomicInteger idGenerator = new AtomicInteger(0);
 
-    public static void createInitialTodos() {
-        createTodo(new Todo(idGenerator.incrementAndGet(), "Learn Jolt Framework", true));
-        createTodo(new Todo(idGenerator.incrementAndGet(), "Build awesome web apps", false));
-        createTodo(new Todo(idGenerator.incrementAndGet(), "Integrate Freemarker", true));
-        createTodo(new Todo(idGenerator.incrementAndGet(), "Deploy to production", false));
-    }
-
     public static JoltContext index(JoltContext ctx) {
+        Cookie cookie = ctx.getCookie("session");
+        if (cookie == null) {
+            return ctx.redirect("/auth/login");
+        }
+        String username = JwtToken.getOwner(cookie.getValue());
+        if (username == null) {
+            return ctx.redirect("/auth/login");
+        }
+
         JoltModel model = JoltModel.create()
                 .with("title", "Jolt X Freemarker Todo Demo")
                 .with("message", "Welcome to this interactive demo!")
-                .with("todos", todoStore.values());
+                .with("todos", getTodosByUsername(username));
 
         return ctx.render("home.ftl", model);
     }
 
     public static JoltContext createTodo(JoltContext ctx) {
         try {
+            Cookie cookie = ctx.getCookie("session");
+            if (cookie == null) {
+                return ctx.status(401).json(Map.of("error", "Unauthorized"));
+            }
+            String username = JwtToken.getOwner(cookie.getValue());
+            if (username == null) {
+                return ctx.status(401).json(Map.of("error", "Unauthorized"));
+            }
+
             Form form = ctx.buildForm();
             String text = (String) form.getValue("text");
             boolean completed = form.getValue("completed") != null
                     && Boolean.parseBoolean((String) form.getValue("completed"));
+            String description = (String) form.getValue("description");
+            String date = (String) form.getValue("date");
 
-            Todo newTodo = new Todo(idGenerator.incrementAndGet(), text, completed);
+            Todo newTodo = new Todo(idGenerator.incrementAndGet(), text, completed, description, date, username);
             createTodo(newTodo);
 
             return ctx.json(newTodo);
@@ -53,14 +68,23 @@ public class TodoController {
 
     public static JoltContext updateTodo(JoltContext ctx) {
         try {
+            String username = JwtToken.getOwner(ctx.getCookie("session").getValue());
+            if (username == null) {
+                return ctx.status(401).json(Map.of("error", "Unauthorized"));
+            }
+
             int id = ctx.path("id").asInt();
             Form form = ctx.buildForm();
 
             Todo existingTodo = todoStore.get(id);
-            if (existingTodo == null) {
+            if (existingTodo == null || !existingTodo.getUsername().equals(username)) {
                 return ctx.status(404).json(Map.of("error", "Todo not found"));
             }
-            existingTodo = form.updateEntity(existingTodo, "id");
+
+            existingTodo.setText((String) form.getValue("text"));
+            existingTodo.setCompleted(Boolean.parseBoolean((String) form.getValue("completed")));
+            existingTodo.setDescription((String) form.getValue("description"));
+            existingTodo.setDate((String) form.getValue("date"));
 
             todoStore.put(id, existingTodo);
             return ctx.json(existingTodo);
@@ -71,10 +95,15 @@ public class TodoController {
 
     public static JoltContext deleteTodo(JoltContext ctx) {
         try {
+            String username = JwtToken.getOwner(ctx.getCookie("session").getValue());
+            if (username == null) {
+                return ctx.status(401).json(Map.of("error", "Unauthorized"));
+            }
+
             int id = ctx.path("id").asInt();
 
             Todo removedTodo = todoStore.remove(id);
-            if (removedTodo == null) {
+            if (removedTodo == null || !removedTodo.getUsername().equals(username)) {
                 return ctx.status(404).json(Map.of("error", "Todo not found"));
             }
 
@@ -85,7 +114,22 @@ public class TodoController {
     }
 
     public static JoltContext getAllTodos(JoltContext ctx) {
-        List<Todo> todos = new ArrayList<>(todoStore.values());
+        String username = JwtToken.getOwner(ctx.getCookie("session").getValue());
+        if (username == null) {
+            return ctx.status(401).json(Map.of("error", "Unauthorized"));
+        }
+
+        List<Todo> todos = getTodosByUsername(username);
         return ctx.json(todos);
+    }
+
+    private static List<Todo> getTodosByUsername(String username) {
+        List<Todo> userTodos = new ArrayList<>();
+        for (Todo todo : todoStore.values()) {
+            if (todo.getUsername().equals(username)) {
+                userTodos.add(todo);
+            }
+        }
+        return userTodos;
     }
 }

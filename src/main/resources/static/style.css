@@ -14,6 +14,29 @@ body {
     border-radius: 8px;
     text-align: center;
     box-shadow: 0 3px 6px rgba(0, 0, 0, 0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.auth-buttons {
+    display: flex;
+    gap: 10px;
+}
+
+.logout-btn {
+    background: #e74c3c;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+}
+
+.logout-btn:hover {
+    background: #c0392b;
 }
 
 .message {
@@ -110,6 +133,18 @@ body {
 .todo-text {
     font-size: 16px;
     word-break: break-word;
+    margin-right: 10px;
+}
+
+.todo-description {
+    font-size: 14px;
+    color: #666;
+    margin-right: 10px;
+}
+
+.todo-date {
+    font-size: 14px;
+    color: #666;
 }
 
 .todo-item-buttons {
@@ -247,4 +282,70 @@ body {
 
 .cancel-btn:hover {
     background: #7f8c8d;
+}
+
+.form-container {
+    background: white;
+    padding: 25px;
+    border-radius: 8px;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.1);
+    max-width: 400px;
+    margin: 0 auto;
+}
+
+.form-group {
+    margin-bottom: 15px;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 5px;
+    font-weight: bold;
+}
+
+.form-group input {
+    width: 100%;
+    padding: 10px;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 16px;
+}
+
+.submit-btn {
+    background: #3498db;
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-weight: bold;
+    transition: background 0.2s;
+    width: 100%;
+}
+
+.submit-btn:hover {
+    background: #2980b9;
+}
+
+.auth-links {
+    text-align: center;
+    margin-top: 15px;
+}
+
+.auth-links a {
+    color: #3498db;
+    text-decoration: none;
+}
+
+.auth-links a:hover {
+    text-decoration: underline;
+}
+
+.error-message {
+    color: #e74c3c;
+    background-color: #ffebee;
+    padding: 10px;
+    border-radius: 4px;
+    margin-bottom: 15px;
+    text-align: center;
 }

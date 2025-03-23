@@ -9,6 +9,9 @@
 <body>
    <header class="header">
         <h1>${title}</h1>
+        <div class="auth-buttons">
+            <button id="logout-btn" class="logout-btn">Logout</button>
+        </div>
     </header>
     
     <main>
@@ -21,6 +24,8 @@
             
             <div class="add-todo-form">
                 <input type="text" id="new-todo-text" placeholder="Add a new task..." class="new-todo-input">
+                <input type="text" id="new-todo-description" placeholder="Description" class="new-todo-input">
+                <input type="date" id="new-todo-date" class="new-todo-input">
                 <button id="add-todo-btn" class="add-todo-btn">Add</button>
             </div>
             
@@ -34,6 +39,8 @@
                                        <#if todo.completed>checked</#if>
                                        data-id="${todo.id}">
                                 <span class="todo-text">${todo.text}</span>
+                                <span class="todo-description">${todo.description}</span>
+                                <span class="todo-date">${todo.date}</span>
                             </div>
                             <div class="todo-item-buttons">
                                 <button class="edit-btn" data-id="${todo.id}">Edit</button>
@@ -51,12 +58,13 @@
             </div>
         </div>
         
-        <!-- Edit Modal -->
         <div id="edit-modal" class="modal">
             <div class="modal-content">
                 <span class="close-modal">&times;</span>
                 <h3>Edit Todo</h3>
                 <input type="text" id="edit-todo-text" class="edit-todo-input">
+                <input type="text" id="edit-todo-description" class="edit-todo-input">
+                <input type="date" id="edit-todo-date" class="edit-todo-input">
                 <div class="modal-buttons">
                     <button id="save-edit-btn" class="save-btn">Save</button>
                     <button id="cancel-edit-btn" class="cancel-btn">Cancel</button>

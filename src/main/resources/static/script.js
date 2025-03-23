@@ -4,6 +4,7 @@ document.addEventListener('DOMContentLoaded', function () {
     setupEditButtons();
     setupDeleteButtons();
     setupModalEvents();
+    setupLogoutButton();
 });
 
 function setupTodoCheckboxes() {
@@ -29,6 +30,8 @@ function setupTodoCheckboxes() {
 function setupAddTodoForm() {
     const addButton = document.getElementById('add-todo-btn');
     const newTodoInput = document.getElementById('new-todo-text');
+    const newTodoDescription = document.getElementById('new-todo-description');
+    const newTodoDate = document.getElementById('new-todo-date');
 
     addButton.addEventListener('click', function () {
         addNewTodo();
@@ -43,20 +46,26 @@ function setupAddTodoForm() {
 
 function addNewTodo() {
     const input = document.getElementById('new-todo-text');
+    const description = document.getElementById('new-todo-description');
+    const date = document.getElementById('new-todo-date');
     const text = input.value.trim();
+    const desc = description.value.trim();
+    const todoDate = date.value;
 
-    if (text) {
+    if (text && desc && todoDate) {
         fetch('/todos', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
-            body: JSON.stringify({ text: text, completed: false })
+            body: JSON.stringify({ text: text, completed: false, description: desc, date: todoDate })
         })
             .then(response => response.json())
             .then(todo => {
                 addTodoToUI(todo);
                 input.value = '';
+                description.value = '';
+                date.value = '';
                 updateStats();
             })
             .catch(error => console.error('Error adding todo:', error));
@@ -102,8 +111,18 @@ function addTodoToUI(todo) {
     textSpan.className = 'todo-text';
     textSpan.textContent = todo.text;
 
+    const descriptionSpan = document.createElement('span');
+    descriptionSpan.className = 'todo-description';
+    descriptionSpan.textContent = todo.description;
+
+    const dateSpan = document.createElement('span');
+    dateSpan.className = 'todo-date';
+    dateSpan.textContent = todo.date;
+
     todoActions.appendChild(checkbox);
     todoActions.appendChild(textSpan);
+    todoActions.appendChild(descriptionSpan);
+    todoActions.appendChild(dateSpan);
 
     const buttonsDiv = document.createElement('div');
     buttonsDiv.className = 'todo-item-buttons';
@@ -115,7 +134,10 @@ function addTodoToUI(todo) {
 
     editBtn.addEventListener('click', function () {
         const id = this.getAttribute('data-id');
-        openEditModal(id, todo.text);
+        const todoText = this.closest('.todo-item').querySelector('.todo-text').textContent;
+        const todoDescription = this.closest('.todo-item').querySelector('.todo-description').textContent;
+        const todoDate = this.closest('.todo-item').querySelector('.todo-date').textContent;
+        openEditModal(id, todoText, todoDescription, todoDate);
     });
 
     const deleteBtn = document.createElement('button');
@@ -150,7 +172,9 @@ function setupEditButtons() {
         button.addEventListener('click', function () {
             const id = this.getAttribute('data-id');
             const todoText = this.closest('.todo-item').querySelector('.todo-text').textContent;
-            openEditModal(id, todoText);
+            const todoDescription = this.closest('.todo-item').querySelector('.todo-description').textContent;
+            const todoDate = this.closest('.todo-item').querySelector('.todo-date').textContent;
+            openEditModal(id, todoText, todoDescription, todoDate);
         });
     });
 }
@@ -177,10 +201,14 @@ function setupModalEvents() {
     saveEditBtn.addEventListener('click', function () {
         const todoId = modal.getAttribute('data-todo-id');
         const newText = document.getElementById('edit-todo-text').value.trim();
+        const newDescription = document.getElementById('edit-todo-description').value.trim();
+        const newDate = document.getElementById('edit-todo-date').value;
 
-        if (newText) {
-            updateTodo(todoId, { text: newText });
+        if (newText && newDescription && newDate) {
+            updateTodo(todoId, { text: newText, description: newDescription, date: newDate });
             document.querySelector(`.todo-item[data-id='${todoId}'] .todo-text`).textContent = newText;
+            document.querySelector(`.todo-item[data-id='${todoId}'] .todo-description`).textContent = newDescription;
+            document.querySelector(`.todo-item[data-id='${todoId}'] .todo-date`).textContent = newDate;
             closeEditModal();
         }
     });
@@ -192,12 +220,16 @@ function setupModalEvents() {
     });
 }
 
-function openEditModal(todoId, todoText) {
+function openEditModal(todoId, todoText, todoDescription, todoDate) {
     const modal = document.getElementById('edit-modal');
     const editInput = document.getElementById('edit-todo-text');
+    const editDescription = document.getElementById('edit-todo-description');
+    const editDate = document.getElementById('edit-todo-date');
 
     modal.setAttribute('data-todo-id', todoId);
     editInput.value = todoText;
+    editDescription.value = todoDescription;
+    editDate.value = todoDate;
 
     modal.style.display = 'block';
     editInput.focus();
@@ -261,4 +293,26 @@ function updateStats() {
     if (stats) {
         stats.textContent = `Completed: ${completed.length} / ${items.length}`;
     }
+}
+
+function setupLogoutButton() {
+    const logoutBtn = document.getElementById('logout-btn');
+    logoutBtn.addEventListener('click', function () {
+        fetch('/auth/logout', {
+            method: 'POST'
+        })
+            .then(response => {
+                if (response.redirected) {
+                    window.location.href = response.url;
+                } else {
+                    return response.json();
+                }
+            })
+            .then(data => {
+                if (data && data.message) {
+                    console.log(data.message);
+                }
+            })
+            .catch(error => console.error('Error logging out:', error));
+    });
 }

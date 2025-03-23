@@ -9,16 +9,22 @@ public class Main extends JoltApplication {
 
     @Override
     protected void setup() {
-        TodoController.createInitialTodos();
-        get("/lmao", ctx -> {
-            return ctx.write("lmao").contentType("text/html");
-        });
         get("/", TodoController::index);
+
         group("/todos", () -> {
             post("/", TodoController::createTodo);
             put("/{id:int}", TodoController::updateTodo);
             delete("/{id:int}", TodoController::deleteTodo);
             get("/", TodoController::getAllTodos);
+        });
+
+        group("/auth", () -> {
+            get("/register", UserController::showRegisterForm);
+            get("/login", UserController::showLoginForm);
+
+            post("/register", UserController::register);
+            post("/login", UserController::login);
+            post("/logout", UserController::logout);
         });
     }
 }

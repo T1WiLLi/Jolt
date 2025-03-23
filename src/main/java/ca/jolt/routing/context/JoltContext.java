@@ -368,7 +368,7 @@ public final class JoltContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot set header after response has been committed");
         }
-        responseContext.redirect(location);
+        responseContext.sendRedirect(location, HttpStatus.FOUND.code());
         return this;
     }
 
@@ -385,7 +385,7 @@ public final class JoltContext {
                     "Cannot set header after response has been committed");
         }
         redirectedRoute.run();
-        responseContext.redirect(location);
+        responseContext.sendRedirect(location, HttpStatus.FOUND.code());
         return this;
     }
 

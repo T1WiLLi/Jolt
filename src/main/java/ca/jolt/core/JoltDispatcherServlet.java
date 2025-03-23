@@ -44,7 +44,8 @@ import java.util.stream.Stream;
  * @author William
  * @since 1.0
  */
-public final class JoltDispatcherServlet extends HttpServlet {
+public final class JoltDispatcherServlet extends HttpServlet { // TODO: Should return correct error, instead of 404, if
+                                                               // it's about the method, then return 405
 
     private static final Logger log = Logger.getLogger(JoltDispatcherServlet.class.getName());
 
@@ -65,7 +66,6 @@ public final class JoltDispatcherServlet extends HttpServlet {
         long start = System.currentTimeMillis();
         RequestContext context = prepareRequestContext(req, res);
         JoltContext joltCtx = new JoltContext(req, res, null, Collections.emptyList());
-
         try {
             if (processFilters(context)) {
                 executeAfterHandlers(joltCtx);
@@ -215,7 +215,9 @@ public final class JoltDispatcherServlet extends HttpServlet {
 
     /**
      * Attempts to serve a static resource from the "static" directory in the
-     * classpath.
+     * classpath. Resources are always resolved relative to the root static
+     * directory,
+     * not the current template path.
      *
      * @param path The requested path
      * @param res  The HTTP response
@@ -224,19 +226,20 @@ public final class JoltDispatcherServlet extends HttpServlet {
     private boolean tryServeStaticResource(String path, HttpServletResponse res) {
         try {
             String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
-            if (normalizedPath.isEmpty()) {
+            int lastSlash = normalizedPath.lastIndexOf('/');
+            String fileName = (lastSlash != -1) ? normalizedPath.substring(lastSlash + 1) : normalizedPath;
+            if (fileName.isEmpty()) {
                 return false;
             }
 
-            String resourcePath = "static/" + normalizedPath;
+            String resourcePath = "static/" + fileName;
             InputStream in = getClass().getClassLoader().getResourceAsStream(resourcePath);
 
             if (in != null) {
                 byte[] data = in.readAllBytes();
-                int dotIndex = normalizedPath.lastIndexOf('.');
-                String extension = (dotIndex != -1) ? normalizedPath.substring(dotIndex) : "";
+                int dotIndex = fileName.lastIndexOf('.');
+                String extension = (dotIndex != -1) ? fileName.substring(dotIndex) : "";
                 String mimeType = MimeInterpreter.getMime(extension);
-
                 res.setContentType(mimeType);
                 res.getOutputStream().write(data);
                 return true;

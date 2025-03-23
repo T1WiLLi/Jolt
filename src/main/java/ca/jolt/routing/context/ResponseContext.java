@@ -84,16 +84,6 @@ final class ResponseContext {
     }
 
     /**
-     * Redirects the client to a different URL.
-     *
-     * @param location the target URL for the redirect
-     */
-    public void redirect(String location) {
-        setStatus(HttpStatus.FOUND);
-        setHeader("Location", location);
-    }
-
-    /**
      * Sends a plain text response.
      *
      * @param data the text to send in the response
@@ -101,6 +91,15 @@ final class ResponseContext {
     public void text(String data) {
         setContentType("text/plain;charset=UTF-8");
         buffer.setTextBody(data);
+    }
+
+    public void sendRedirect(String location, int sc) {
+        try {
+            response.sendRedirect(location, sc);
+        } catch (IOException e) {
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error during redirect: " + e.getMessage(),
+                    e);
+        }
     }
 
     /**
