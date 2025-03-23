@@ -198,6 +198,15 @@ public final class JoltDispatcherServlet extends HttpServlet { // TODO: Should r
             return true;
         }
 
+        if (router.pathExistsWithDifferentMethod(context.method, context.path)) {
+            log.info(() -> "Method " + context.method + " not allowed for path: " + context.path);
+            String allowedMethods = router.getAllowedMethods(context.path);
+            context.res.setHeader("Allow", allowedMethods);
+            exceptionHandler.handle(
+                    new JoltHttpException(HttpStatus.METHOD_NOT_ALLOWED, "Method not allowed for " + context.path),
+                    context.res);
+            return true;
+        }
         return false;
     }
 

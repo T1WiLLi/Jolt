@@ -9,6 +9,7 @@ import java.util.Locale;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
 import java.util.logging.Logger;
 
 import ca.jolt.exceptions.DuplicateRouteException;
@@ -199,6 +200,29 @@ public final class Router {
     }
 
     /**
+     * Checks if the given path exists with any HTTP method other than the specified
+     * one.
+     *
+     * @param currentMethod The current HTTP method that was used (as a string)
+     * @param path          The path to check
+     * @return {@code true} if the path exists with a different method,
+     *         {@code false} otherwise
+     */
+    public boolean pathExistsWithDifferentMethod(String currentMethod, String path) {
+        for (HttpMethod method : HttpMethod.values()) {
+            String methodName = method.toString();
+            if (methodName.equals(currentMethod)) {
+                continue;
+            }
+            if (match(methodName, path) != null) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    /**
      * Returns a list of HTTP methods allowed for the specified path.
      * <p>
      * Useful when responding with HTTP 405, indicating which methods
@@ -207,14 +231,11 @@ public final class Router {
      * @param path The request path to check
      * @return A list of valid HTTP methods, or an empty list if none match
      */
-    public List<String> getAllowedMethods(String path) {
-        List<String> allowed = new ArrayList<>();
-        for (Route route : routes) {
-            if (route.getPattern().matcher(path).matches()) {
-                allowed.add(route.getHttpMethod());
-            }
-        }
-        return allowed;
+    public String getAllowedMethods(String path) {
+        return Arrays.stream(HttpMethod.values())
+                .filter(method -> match(method.toString(), path) != null)
+                .map(HttpMethod::toString)
+                .collect(Collectors.joining(", "));
     }
 
     /**

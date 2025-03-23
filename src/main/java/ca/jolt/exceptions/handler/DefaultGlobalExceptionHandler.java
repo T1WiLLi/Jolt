@@ -58,6 +58,9 @@ public final class DefaultGlobalExceptionHandler implements GlobalExceptionHandl
             }
         }
 
+        res.setHeader("Content-Security-Policy",
+                "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'");
+
         try {
             res.sendError(status.code(), message);
         } catch (Exception ex) {

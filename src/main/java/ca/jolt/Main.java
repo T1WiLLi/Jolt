@@ -9,6 +9,7 @@ public class Main extends JoltApplication {
 
     @Override
     protected void setup() {
+        post("/hello", ctx -> ctx.json("Hello, World!"));
         get("/", TodoController::index);
 
         group("/todos", () -> {
