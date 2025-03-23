@@ -2,10 +2,12 @@
 <html>
 <head>
     <title>${title}</title>
-    <link rel="stylesheet" href="./style.css">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <header>
+   <header class="header">
         <h1>${title}</h1>
     </header>
     
@@ -14,20 +16,58 @@
             <p>${message}</p>
         </div>
         
-        <div class="items">
-            <h2>Items:</h2>
-            <ul>
-                <#list items as item>
-                    <li>${item}</li>
-                </#list>
-            </ul>
+        <div class="todo-container">
+            <h2>My Todo List:</h2>
+            
+            <div class="add-todo-form">
+                <input type="text" id="new-todo-text" placeholder="Add a new task..." class="new-todo-input">
+                <button id="add-todo-btn" class="add-todo-btn">Add</button>
+            </div>
+            
+            <div class="todo-list">
+                <#if todos?? && todos?size gt 0>
+                    <#list todos as todo>
+                        <div class="todo-item <#if todo.completed>completed</#if>" data-id="${todo.id}">
+                            <div class="todo-actions">
+                                <input type="checkbox" 
+                                       class="todo-checkbox" 
+                                       <#if todo.completed>checked</#if>
+                                       data-id="${todo.id}">
+                                <span class="todo-text">${todo.text}</span>
+                            </div>
+                            <div class="todo-item-buttons">
+                                <button class="edit-btn" data-id="${todo.id}">Edit</button>
+                                <button class="delete-btn" data-id="${todo.id}">Delete</button>
+                            </div>
+                        </div>
+                    </#list>
+                    
+                    <div class="stats">
+                        Completed: ${todos?filter(t -> t.completed)?size} / ${todos?size}
+                    </div>
+                <#else>
+                    <p class="no-todos">No todos yet! Enjoy your free time! 😊</p>
+                </#if>
+            </div>
+        </div>
+        
+        <!-- Edit Modal -->
+        <div id="edit-modal" class="modal">
+            <div class="modal-content">
+                <span class="close-modal">&times;</span>
+                <h3>Edit Todo</h3>
+                <input type="text" id="edit-todo-text" class="edit-todo-input">
+                <div class="modal-buttons">
+                    <button id="save-edit-btn" class="save-btn">Save</button>
+                    <button id="cancel-edit-btn" class="cancel-btn">Cancel</button>
+                </div>
+            </div>
         </div>
     </main>
     
-    <footer>
-        <p>&copy; ${.now?string('yyyy')} Jolt Framework</p>
+    <footer class="footer">
+        <p>© ${.now?string('yyyy')} Jolt Framework - Powered by Freemarker</p>
     </footer>
-    
-    <script src="/js/main.js"></script>
+    <script src="script.js"></script>
 </body>
 </html>

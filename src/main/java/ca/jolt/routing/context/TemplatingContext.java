@@ -38,7 +38,6 @@ final class TemplatingContext {
             StringWriter stringWriter = new StringWriter();
             template.process(dataModel, stringWriter);
             response.html(stringWriter.toString());
-
         } catch (IOException | TemplateException e) {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Error while rendering template: " + templatePath, e);

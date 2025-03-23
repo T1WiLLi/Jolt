@@ -506,6 +506,17 @@ public final class JoltContext {
     }
 
     /**
+     * Sets the Content-Type header on the response.
+     * 
+     * @param type The content type to set.
+     * @return this {@code JoltHttpContext} for fluent chaining.
+     */
+    public JoltContext contentType(String type) {
+        responseContext.setContentType(type);
+        return this;
+    }
+
+    /**
      * Shortand for HTTP Status 200 OK.
      * 
      * @return this {@code JoltHttpContext} for fluent chaining.

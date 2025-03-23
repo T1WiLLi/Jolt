@@ -33,6 +33,7 @@ import ca.jolt.utils.JacksonUtil;
  * <li>Perform asynchronous validation (supporting {@link AsyncRule}) via
  * {@link #verifyAsync(String[])}.</li>
  * <li>Track validation errors in a dedicated map.</li>
+ * <li>Check for field existence and values.</li>
  * </ul>
  * <p>
  * <strong>Usage Example:</strong>
@@ -63,6 +64,7 @@ import ca.jolt.utils.JacksonUtil;
 public final class Form {
 
     private static final Logger logger = Logger.getLogger(Form.class.getName());
+    private static final String DEFAULT_DATE_PATTERN = "yyyy-MM-dd";
 
     /**
      * Maps each field name to its current string value.
@@ -115,9 +117,7 @@ public final class Form {
      */
     public Form(Map<String, String> initialData) {
         if (initialData != null) {
-            for (var entry : initialData.entrySet()) {
-                fieldValues.put(entry.getKey(), entry.getValue());
-            }
+            fieldValues.putAll(initialData);
         }
     }
 
@@ -152,6 +152,30 @@ public final class Form {
     }
 
     /**
+     * Checks if the form contains a field with the specified name.
+     * A field exists if it has been added to the fieldValues map or has a
+     * validator.
+     *
+     * @param fieldName The name of the field to check
+     * @return {@code true} if the field exists; {@code false} otherwise
+     */
+    public boolean hasField(String fieldName) {
+        return fieldValues.containsKey(fieldName) || fieldValidators.containsKey(fieldName);
+    }
+
+    /**
+     * Checks if the specified field has a non-null, non-empty value.
+     *
+     * @param fieldName The name of the field to check
+     * @return {@code true} if the field has a value; {@code false} if the field
+     *         doesn't exist or has a null/empty value
+     */
+    public boolean hasValue(String fieldName) {
+        String value = fieldValues.get(fieldName);
+        return value != null && !value.isEmpty();
+    }
+
+    /**
      * Verifies all fields in this form, except those specified in the
      * {@code excludedFields} array.
      * <p>
@@ -165,8 +189,7 @@ public final class Form {
      *         {@code false} otherwise
      */
     public boolean verify(String... excludedFields) {
-        allErrors.clear();
-        firstErrors.clear();
+        clearErrors();
         boolean isValid = true;
         Set<String> excludeSet = new HashSet<>(Arrays.asList(excludedFields));
 
@@ -178,30 +201,49 @@ public final class Form {
                 isValid = false;
             }
         }
-        verifyLog(isValid);
+
+        logVerificationResults(isValid);
+
         if (isValid && successCallback != null) {
             successCallback.run();
         }
+
         return isValid;
     }
 
-    private void verifyLog(boolean isValid) {
+    /**
+     * Clears all error maps in preparation for a new validation cycle.
+     */
+    private void clearErrors() {
+        allErrors.clear();
+        firstErrors.clear();
+    }
+
+    /**
+     * Logs the results of form verification.
+     * 
+     * @param isValid Whether the verification passed successfully
+     */
+    private void logVerificationResults(boolean isValid) {
         String logMessage = "Form verification " + buildVerificationLog();
         logger.info(() -> logMessage);
+
         if (!isValid) {
             logger.info(() -> "Form validation failed with errors: " + firstErrors.toString());
         }
     }
 
     /**
-     * Builds a log-friendly string showing each field’s status or error message.
+     * Builds a log-friendly string showing each field's status or error message.
      */
     private String buildVerificationLog() {
         StringBuilder sb = new StringBuilder();
         sb.append("[");
+
         for (var entry : fieldValidators.entrySet()) {
             String fieldName = entry.getKey();
             String value = fieldValues.get(fieldName);
+
             if (firstErrors.containsKey(fieldName)) {
                 sb.append("[").append(fieldName)
                         .append(" => ERROR: ").append(firstErrors.get(fieldName)).append("], ");
@@ -210,9 +252,11 @@ public final class Form {
                         .append(" => \"").append(value).append("\"], ");
             }
         }
+
         if (!fieldValidators.isEmpty()) {
             sb.setLength(sb.length() - 2);
         }
+
         sb.append("]");
         return sb.toString();
     }
@@ -252,12 +296,14 @@ public final class Form {
 
         for (var entry : allErrors.entrySet()) {
             List<String> formatted = new ArrayList<>();
+
             for (String message : entry.getValue()) {
                 String formattedMessage = errorTemplate
                         .replace("{field}", entry.getKey())
                         .replace("{message}", message);
                 formatted.add(formattedMessage);
             }
+
             formattedErrors.put(entry.getKey(), formatted);
         }
 
@@ -273,6 +319,7 @@ public final class Form {
      */
     public void addError(String fieldName, String errorMessage) {
         allErrors.computeIfAbsent(fieldName, k -> new ArrayList<>()).add(errorMessage);
+
         if (!firstErrors.containsKey(fieldName)) {
             firstErrors.put(fieldName, errorMessage);
         }
@@ -298,15 +345,12 @@ public final class Form {
      */
     public Integer getValueAsInt(String fieldName) {
         String value = getValue(fieldName);
-        if (value == null || value.isEmpty()) {
-            throw new FormConversionException(
-                    "The conversion of field " + fieldName + " to int failed. The field is empty.");
-        }
+        validateFieldValueExists(fieldName, value, "int");
+
         try {
             return Integer.parseInt(value);
         } catch (NumberFormatException e) {
-            throw new FormConversionException(
-                    "The conversion of field " + fieldName + " to int failed. The field is " + value + ".", e);
+            throw createConversionException(fieldName, value, "int", e);
         }
     }
 
@@ -320,15 +364,12 @@ public final class Form {
      */
     public Double getValueAsDouble(String fieldName) {
         String value = getValue(fieldName);
-        if (value == null || value.isEmpty()) {
-            throw new FormConversionException(
-                    "The conversion of field " + fieldName + " to double failed. The field is empty.");
-        }
+        validateFieldValueExists(fieldName, value, "double");
+
         try {
             return Double.parseDouble(value);
         } catch (NumberFormatException e) {
-            throw new FormConversionException(
-                    "The conversion of field " + fieldName + " to date failed. The field is " + value + ".", e);
+            throw createConversionException(fieldName, value, "double", e);
         }
     }
 
@@ -341,10 +382,8 @@ public final class Form {
      */
     public Boolean getValueAsBoolean(String fieldName) {
         String value = getValue(fieldName);
-        if (value == null || value.isEmpty()) {
-            throw new FormConversionException(
-                    "The conversion of field " + fieldName + " to boolean failed. The field is empty.");
-        }
+        validateFieldValueExists(fieldName, value, "boolean");
+
         return Boolean.parseBoolean(value);
     }
 
@@ -359,17 +398,10 @@ public final class Form {
      */
     public LocalDate getValueAsDate(String fieldName) {
         String value = getValue(fieldName);
-        if (value == null || value.isEmpty()) {
-            throw new FormConversionException(
-                    "The conversion of field " + fieldName + " to date failed. The field is empty.");
-        }
-        String pattern = datePatterns.getOrDefault(fieldName, "yyyy-MM-dd");
-        try {
-            return LocalDate.parse(value, DateTimeFormatter.ofPattern(pattern));
-        } catch (DateTimeParseException e) {
-            throw new FormConversionException(
-                    "The conversion of field " + fieldName + " to date failed. The field is " + value + ".", e);
-        }
+        validateFieldValueExists(fieldName, value, "date");
+
+        String pattern = datePatterns.getOrDefault(fieldName, DEFAULT_DATE_PATTERN);
+        return parseDate(fieldName, value, pattern);
     }
 
     /**
@@ -384,15 +416,56 @@ public final class Form {
      */
     public LocalDate getValueAsDate(String fieldName, String pattern) {
         String value = getValue(fieldName);
+        validateFieldValueExists(fieldName, value, "date");
+
+        return parseDate(fieldName, value, pattern);
+    }
+
+    /**
+     * Validates that a field value exists and is not empty.
+     * 
+     * @param fieldName  The name of the field being validated
+     * @param value      The value to check
+     * @param targetType The type being converted to (for error messaging)
+     * @throws FormConversionException If the value is null or empty
+     */
+    private void validateFieldValueExists(String fieldName, String value, String targetType) {
         if (value == null || value.isEmpty()) {
             throw new FormConversionException(
-                    "The conversion of field " + fieldName + " to date failed. The field is empty.");
+                    "The conversion of field " + fieldName + " to " + targetType + " failed. The field is empty.");
         }
+    }
+
+    /**
+     * Creates a FormConversionException for a failed conversion.
+     * 
+     * @param fieldName  The name of the field
+     * @param value      The value that failed conversion
+     * @param targetType The type being converted to
+     * @param cause      The underlying exception
+     * @return A FormConversionException with appropriate message
+     */
+    private FormConversionException createConversionException(String fieldName, String value, String targetType,
+            Exception cause) {
+        return new FormConversionException(
+                "The conversion of field " + fieldName + " to " + targetType + " failed. The field is " + value + ".",
+                cause);
+    }
+
+    /**
+     * Parses a string value to a LocalDate using the specified pattern.
+     * 
+     * @param fieldName The name of the field
+     * @param value     The string value to parse
+     * @param pattern   The date pattern to use
+     * @return The parsed LocalDate
+     * @throws FormConversionException If parsing fails
+     */
+    private LocalDate parseDate(String fieldName, String value, String pattern) {
         try {
             return LocalDate.parse(value, DateTimeFormatter.ofPattern(pattern));
         } catch (DateTimeParseException e) {
-            throw new FormConversionException(
-                    "The conversion of field " + fieldName + " to date failed. The field is " + value + ".", e);
+            throw createConversionException(fieldName, value, "date", e);
         }
     }
 
@@ -405,6 +478,20 @@ public final class Form {
      */
     void registerDatePattern(String fieldName, String pattern) {
         datePatterns.put(fieldName, pattern);
+    }
+
+    /**
+     * Creates a copy of the form's field values, excluding specified fields.
+     * 
+     * @param ignoreFields Field names to exclude
+     * @return A map containing all field values except those ignored
+     */
+    private Map<String, String> getFilteredFieldValues(String... ignoreFields) {
+        Map<String, String> data = new HashMap<>(fieldValues);
+        for (String ignore : ignoreFields) {
+            data.remove(ignore);
+        }
+        return data;
     }
 
     /**
@@ -422,10 +509,7 @@ public final class Form {
      */
     public <T> T buildEntity(Class<T> clazz, String... ignoreFields) {
         try {
-            Map<String, String> data = new HashMap<>(fieldValues);
-            for (String ignore : ignoreFields) {
-                data.remove(ignore);
-            }
+            Map<String, String> data = getFilteredFieldValues(ignoreFields);
             String json = JacksonUtil.getObjectMapper().writeValueAsString(data);
             return JacksonUtil.getObjectMapper().readValue(json, clazz);
         } catch (Exception e) {
@@ -437,8 +521,7 @@ public final class Form {
      * Attempts to build a JoltModel from the form data, excluding specified fields.
      * 
      * This method creates a new JoltModel containing all field values from the
-     * form,
-     * except for those specified in the ignoreFields parameter.
+     * form, except for those specified in the ignoreFields parameter.
      * 
      * @param ignoreFields Field names to exclude from the model
      * @return A JoltModel populated with the form's field values (minus ignored
@@ -454,16 +537,13 @@ public final class Form {
 
     /**
      * Updates the provided entity instance with values from the form's field
-     * values,
-     * ignoring any fields specified in the {@code ignoreFields} array.
+     * values, ignoring any fields specified in the {@code ignoreFields} array.
      * <p>
      * This method creates a copy of the form's field values, removes any entries
-     * whose keys
-     * are present in the {@code ignoreFields}, and then uses Jackson's
+     * whose keys are present in the {@code ignoreFields}, and then uses Jackson's
      * {@link ObjectMapper#updateValue(Object, Object)}
      * to update the entity with the remaining values. Any form fields that do not
-     * correspond
-     * to properties in the entity are ignored.
+     * correspond to properties in the entity are ignored.
      *
      * @param <T>          The type of the entity.
      * @param entity       The existing entity instance to be updated.
@@ -473,10 +553,7 @@ public final class Form {
      */
     public <T> T updateEntity(T entity, String... ignoreFields) {
         try {
-            Map<String, String> data = new HashMap<>(fieldValues);
-            for (String ignore : ignoreFields) {
-                data.remove(ignore);
-            }
+            Map<String, String> data = getFilteredFieldValues(ignoreFields);
             JacksonUtil.getObjectMapper().updateValue(entity, data);
             return entity;
         } catch (Exception e) {
