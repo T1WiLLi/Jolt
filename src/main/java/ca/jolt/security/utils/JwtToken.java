@@ -111,6 +111,29 @@ public final class JwtToken {
     }
 
     /**
+     * Creates a JWT token for the specified user ID with the provided claims.
+     *
+     * @param userID The unique identifier of the user for whom the token is being
+     *               created.
+     * @param claims A map of additional claims to include in the token payload.
+     * @return A JWT token as a string.
+     */
+    public static String create(int userID, Map<String, Object> claims) {
+        return create(String.valueOf(userID), claims);
+    }
+
+    /**
+     * Creates a JWT token for the specified user ID
+     * 
+     * @param userID The unique identifier of the user for whom the token is being
+     *               created.
+     * @return
+     */
+    public static String create(int userID) {
+        return create(String.valueOf(userID));
+    }
+
+    /**
      * Verify a JWT token expiration, signature and claims.
      * 
      * @param token the JWT token

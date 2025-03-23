@@ -64,7 +64,7 @@ public class DefaultSecurityConfiguration extends SecurityConfiguration {
                 .withHsts(HstsPolicy.ONE_YEAR_WITH_SUBDOMAINS_PRELOAD)
                 .withReferrerPolicy(ReferrerPolicy.SAME_ORIGIN)
                 .httpsOnly(false)
-                .contentSecurityPolicy(false) // TODO: Put it back again to true.
+                .contentSecurityPolicy(true)
                 .withCacheControl(CacheControlPolicy.NO_CACHE);
 
         return this;
