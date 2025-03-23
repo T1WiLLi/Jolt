@@ -12,13 +12,18 @@ public class Todo {
     private String description;
     private String date;
     private String username;
+    private String priority;
+    private String category;
 
-    public Todo(int id, String text, boolean completed, String description, String date, String username) {
+    public Todo(int id, String text, boolean completed, String description, String date, String username,
+            String priority, String category) {
         this.id = id;
         this.text = text;
         this.completed = completed;
         this.description = description;
         this.date = date;
         this.username = username;
+        this.priority = priority;
+        this.category = category;
     }
 }

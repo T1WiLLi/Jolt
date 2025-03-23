@@ -38,9 +38,11 @@ public class TodoController {
         String filterStatus = ctx.query("status").orDefault("all");
         String sortBy = ctx.query("sort").orDefault("date");
         String searchQuery = ctx.query("search").orDefault("");
+        String priority = ctx.query("priority").orDefault("");
+        String category = ctx.query("category").orDefault("");
 
         // Apply filters
-        List<Todo> filteredTodos = filterAndSortTodos(userTodos, filterStatus, sortBy, searchQuery);
+        List<Todo> filteredTodos = filterAndSortTodos(userTodos, filterStatus, sortBy, searchQuery, priority, category);
 
         // Calculate statistics
         int totalCount = userTodos.size();
@@ -63,6 +65,8 @@ public class TodoController {
                 .with("filterStatus", filterStatus)
                 .with("sortBy", sortBy)
                 .with("searchQuery", searchQuery)
+                .with("priority", priority)
+                .with("category", category)
                 .with("today", today);
 
         return ctx.render("home.ftl", model);
@@ -91,7 +95,7 @@ public class TodoController {
     }
 
     private static List<Todo> filterAndSortTodos(List<Todo> todos, String filterStatus, String sortBy,
-            String searchQuery) {
+            String searchQuery, String priority, String category) {
         // First filter by status
         List<Todo> filtered = todos.stream()
                 .filter(todo -> {
@@ -111,6 +115,20 @@ public class TodoController {
             filtered = filtered.stream()
                     .filter(todo -> todo.getText().toLowerCase().contains(searchQuery.toLowerCase()) ||
                             todo.getDescription().toLowerCase().contains(searchQuery.toLowerCase()))
+                    .collect(Collectors.toList());
+        }
+
+        // Filter by priority if provided
+        if (!priority.isEmpty()) {
+            filtered = filtered.stream()
+                    .filter(todo -> todo.getPriority().equals(priority))
+                    .collect(Collectors.toList());
+        }
+
+        // Filter by category if provided
+        if (!category.isEmpty()) {
+            filtered = filtered.stream()
+                    .filter(todo -> todo.getCategory().equals(category))
                     .collect(Collectors.toList());
         }
 
@@ -153,11 +171,13 @@ public class TodoController {
                     && Boolean.parseBoolean((String) form.getValue("completed"));
             String description = (String) form.getValue("description");
             String date = (String) form.getValue("date");
+            String priority = (String) form.getValue("priority");
+            String category = (String) form.getValue("category");
 
-            Todo newTodo = new Todo(idGenerator.incrementAndGet(), text, completed, description, date, username);
+            Todo newTodo = new Todo(idGenerator.incrementAndGet(), text, completed, description, date, username,
+                    priority, category);
             createTodo(newTodo);
 
-            // Redirect back to the index page instead of returning JSON
             return ctx.redirect("/");
         } catch (Exception e) {
             return ctx.redirect("/?error=" + e.getMessage());
@@ -191,15 +211,18 @@ public class TodoController {
             boolean completed = form.getValue("completed") != null;
             String description = (String) form.getValue("description");
             String date = (String) form.getValue("date");
+            String priority = (String) form.getValue("priority");
+            String category = (String) form.getValue("category");
 
             existingTodo.setText(text);
             existingTodo.setCompleted(completed);
             existingTodo.setDescription(description);
             existingTodo.setDate(date);
+            existingTodo.setPriority(priority);
+            existingTodo.setCategory(category);
 
             todoStore.put(id, existingTodo);
 
-            // Redirect back to the index page
             return ctx.redirect(
                     "/" + (form.getValue("returnFilter") != null ? "?status=" + form.getValue("returnFilter") : ""));
         } catch (Exception e) {

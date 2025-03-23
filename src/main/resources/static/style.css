@@ -692,3 +692,36 @@ main {
         width: 100%;
     }
 }
+
+.priority-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 8px;
+}
+
+.priority-badge.low {
+    background-color: #2ecc71;
+    color: white;
+}
+
+.priority-badge.medium {
+    background-color: #f39c12;
+    color: white;
+}
+
+.priority-badge.high {
+    background-color: #e74c3c;
+    color: white;
+}
+
+.category-badge {
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: 500;
+    margin-left: 8px;
+    background-color: var(--primary-light);
+    color: white;
+}

@@ -40,6 +40,27 @@
                     <label for="date">Due Date:</label>
                     <input type="date" id="date" name="date" value="${todo.date}" required>
                 </div>
+
+                <!-- Priority Dropdown -->
+                <div class="form-group">
+                    <label for="priority">Priority:</label>
+                    <select id="priority" name="priority" class="new-todo-input" required>
+                        <option value="Low" ${(todo.priority == "Low")?then('selected', '')}>Low</option>
+                        <option value="Medium" ${(todo.priority == "Medium")?then('selected', '')}>Medium</option>
+                        <option value="High" ${(todo.priority == "High")?then('selected', '')}>High</option>
+                    </select>
+                </div>
+
+                <!-- Category Dropdown -->
+                <div class="form-group">
+                    <label for="category">Category:</label>
+                    <select id="category" name="category" class="new-todo-input" required>
+                        <option value="Work" ${(todo.category == "Work")?then('selected', '')}>Work</option>
+                        <option value="Personal" ${(todo.category == "Personal")?then('selected', '')}>Personal</option>
+                        <option value="Shopping" ${(todo.category == "Shopping")?then('selected', '')}>Shopping</option>
+                        <option value="Other" ${(todo.category == "Other")?then('selected', '')}>Other</option>
+                    </select>
+                </div>
                 
                 <div class="form-group checkbox-group">
                     <label class="checkbox-label">

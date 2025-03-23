@@ -41,12 +41,27 @@
                     <a href="/?status=pending" class="filter-btn ${(filterStatus == 'pending')?then('active', '')}">Pending (${pendingCount})</a>
                     <a href="/?status=completed" class="filter-btn ${(filterStatus == 'completed')?then('active', '')}">Completed (${completedCount})</a>
                     <a href="/?status=today" class="filter-btn ${(filterStatus == 'today')?then('active', '')}">Today</a>
+                    <select name="priority" onchange="window.location.href='/?priority=' + this.value" class="filter-btn">
+                        <option value="">Priority</option>
+                        <option value="Low" ${(priority == "Low")?then('selected', '')}>Low</option>
+                        <option value="Medium" ${(priority == "Medium")?then('selected', '')}>Medium</option>
+                        <option value="High" ${(priority == "High")?then('selected', '')}>High</option>
+                    </select>
+                    <select name="category" onchange="window.location.href='/?category=' + this.value" class="filter-btn">
+                        <option value="">Category</option>
+                        <option value="Work" ${(category == "Work")?then('selected', '')}>Work</option>
+                        <option value="Personal" ${(category == "Personal")?then('selected', '')}>Personal</option>
+                        <option value="Shopping" ${(category == "Shopping")?then('selected', '')}>Shopping</option>
+                        <option value="Other" ${(category == "Other")?then('selected', '')}>Other</option>
+                    </select>
                 </div>
                 
                 <div class="sort-options">
                     <form method="GET" action="/" class="sort-form">
                         <input type="hidden" name="status" value="${filterStatus}">
                         <input type="hidden" name="search" value="${searchQuery!}">
+                        <input type="hidden" name="priority" value="${priority}">
+                        <input type="hidden" name="category" value="${category}">
                         <select name="sort" onchange="this.form.submit()" class="sort-select">
                             <option value="date-asc" ${(sortBy == 'date-asc')?then('selected', '')}>Date (Oldest)</option>
                             <option value="date-desc" ${(sortBy == 'date-desc')?then('selected', '')}>Date (Newest)</option>
@@ -62,6 +77,17 @@
                     <input type="text" name="text" placeholder="Add a new task..." class="new-todo-input" required>
                     <input type="text" name="description" placeholder="Description" class="new-todo-input" required>
                     <input type="date" name="date" class="new-todo-input" value="${today}" required>
+                    <select name="priority" class="new-todo-input" required>
+                        <option value="Low">Low</option>
+                        <option value="Medium">Medium</option>
+                        <option value="High">High</option>
+                    </select>
+                    <select name="category" class="new-todo-input" required>
+                        <option value="Work">Work</option>
+                        <option value="Personal">Personal</option>
+                        <option value="Shopping">Shopping</option>
+                        <option value="Other">Other</option>
+                    </select>
                 </div>
                 <button type="submit" class="add-todo-btn">Add Task</button>
             </form>
@@ -83,6 +109,8 @@
                                         <#if todo.date == today>
                                             <span class="today-badge">Today</span>
                                         </#if>
+                                        <span class="priority-badge ${todo.priority?lower_case}">${todo.priority}</span>
+                                        <span class="category-badge">${todo.category}</span>
                                     </div>
                                     <div class="todo-secondary">
                                         <span class="todo-description">${todo.description}</span>
