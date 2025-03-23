@@ -14,8 +14,11 @@ public class Main extends JoltApplication {
 
         group("/todos", () -> {
             post("/", TodoController::createTodo);
-            put("/{id:int}", TodoController::updateTodo);
-            delete("/{id:int}", TodoController::deleteTodo);
+            post("/clear-completed", TodoController::clearCompletedTodos);
+            post("/{id:int}", TodoController::updateTodo);
+            get("/edit/{id:int}", TodoController::showEditForm);
+            post("/toggle/{id:int}", TodoController::toggleTodoStatus);
+            get("/delete/{id:int}", TodoController::deleteTodo);
             get("/", TodoController::getAllTodos);
         });
 
