@@ -3,6 +3,7 @@ package ca.jolt.database;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
+import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Types;
 import java.util.ArrayList;
@@ -222,7 +223,7 @@ public abstract class Broker<T> {
     }
 
     /**
-     * Maps a ResultSet row to an entity of type T.
+     * Maps a ResultSet row to an entity of type T with improved type conversions.
      *
      * @param rs The ResultSet containing the data to map.
      * @return The mapped entity.
@@ -232,26 +233,45 @@ public abstract class Broker<T> {
     protected T mapToEntity(ResultSet rs) throws SQLException {
         try {
             Map<String, Object> fieldMap = new HashMap<>();
-            int columnCount = rs.getMetaData().getColumnCount();
+            ResultSetMetaData metaData = rs.getMetaData();
+            int columnCount = metaData.getColumnCount();
 
             for (int i = 1; i <= columnCount; i++) {
-                String columnName = rs.getMetaData().getColumnName(i);
-                Object value = rs.getObject(i);
+                String columnName = metaData.getColumnName(i);
+                int columnType = metaData.getColumnType(i);
 
-                if (value != null) {
-                    switch (rs.getMetaData().getColumnType(i)) {
+                if (rs.getObject(i) == null) {
+                    fieldMap.put(columnName, null);
+                    continue;
+                }
+
+                try {
+                    switch (columnType) {
                         case Types.TIMESTAMP:
-                            fieldMap.put(columnName, rs.getTimestamp(i).toLocalDateTime());
+                            fieldMap.put(columnName,
+                                    rs.getTimestamp(i) != null ? rs.getTimestamp(i).toLocalDateTime() : null);
                             break;
                         case Types.DATE:
-                            fieldMap.put(columnName, rs.getDate(i).toLocalDate());
+                            fieldMap.put(columnName, rs.getDate(i) != null ? rs.getDate(i).toLocalDate() : null);
+                            break;
+                        case Types.TIME:
+                            fieldMap.put(columnName, rs.getTime(i) != null ? rs.getTime(i).toLocalTime() : null);
+                            break;
+                        case Types.NUMERIC:
+                        case Types.DECIMAL:
+                            fieldMap.put(columnName, rs.getBigDecimal(i));
+                            break;
+                        case Types.BOOLEAN:
+                        case Types.BIT:
+                            fieldMap.put(columnName, rs.getBoolean(i));
                             break;
                         default:
-                            fieldMap.put(columnName, value);
+                            fieldMap.put(columnName, rs.getObject(i));
                             break;
                     }
-                } else {
-                    fieldMap.put(columnName, null);
+                } catch (SQLException ex) {
+                    logger.warning(() -> "Error mapping column " + columnName + ": " + ex.getMessage());
+                    fieldMap.put(columnName, rs.getObject(i));
                 }
             }
 
