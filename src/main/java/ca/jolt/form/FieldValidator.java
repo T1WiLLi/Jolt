@@ -523,7 +523,8 @@ public final class FieldValidator {
      * @return This {@code FieldValidator} (for fluent chaining)
      */
     public FieldValidator pattern(String pattern, String errorMessage) {
-        return pattern(pattern, errorMessage);
+        addRule(BaseRules.regex(pattern, errorMessage, ""));
+        return this;
     }
 
     /**
@@ -536,7 +537,8 @@ public final class FieldValidator {
      * @return This {@code FieldValidator} (for fluent chaining)
      */
     public FieldValidator pattern(String pattern) {
-        return pattern(pattern, "Value must match the pattern " + pattern + ".");
+        addRule(BaseRules.regex(pattern, "Value must match the pattern " + pattern + ".", ""));
+        return this;
     }
 
     /**

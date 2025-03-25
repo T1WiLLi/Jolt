@@ -16,6 +16,7 @@ import java.util.logging.Logger;
 import ca.jolt.database.exception.DatabaseErrorType;
 import ca.jolt.database.exception.DatabaseException;
 import ca.jolt.utils.JacksonUtil;
+import ca.jolt.utils.StringUtils;
 
 /**
  * An abstract class that serves as a base for database brokers. It provides
@@ -66,6 +67,7 @@ public abstract class Broker<T> {
      */
     protected Optional<T> selectOne(String sql, Object... params) {
         if (!SqlSecurity.isValidRawSql(sql)) {
+            System.out.println("The SQL query is invalid!");
             throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
                     "The SQL query is not valid! Please change it.",
                     "The SQL query was found to be invalid. If you believe this to be an error, please report it as fast as possible to our github repository.",
@@ -238,43 +240,60 @@ public abstract class Broker<T> {
 
             for (int i = 1; i <= columnCount; i++) {
                 String columnName = metaData.getColumnName(i);
+                String fieldName = StringUtils.snakeToCamelCase(columnName);
                 int columnType = metaData.getColumnType(i);
 
                 if (rs.getObject(i) == null) {
-                    fieldMap.put(columnName, null);
+                    fieldMap.put(fieldName, null);
                     continue;
                 }
 
                 try {
+                    Object value = null;
                     switch (columnType) {
                         case Types.TIMESTAMP:
-                            fieldMap.put(columnName,
-                                    rs.getTimestamp(i) != null ? rs.getTimestamp(i).toLocalDateTime() : null);
+                            value = rs.getTimestamp(i) != null ? rs.getTimestamp(i).toLocalDateTime() : null;
                             break;
                         case Types.DATE:
-                            fieldMap.put(columnName, rs.getDate(i) != null ? rs.getDate(i).toLocalDate() : null);
+                            value = rs.getDate(i) != null ? rs.getDate(i).toLocalDate() : null;
                             break;
                         case Types.TIME:
-                            fieldMap.put(columnName, rs.getTime(i) != null ? rs.getTime(i).toLocalTime() : null);
+                            value = rs.getTime(i) != null ? rs.getTime(i).toLocalTime() : null;
                             break;
                         case Types.NUMERIC:
                         case Types.DECIMAL:
-                            fieldMap.put(columnName, rs.getBigDecimal(i));
+                            value = rs.getBigDecimal(i);
                             break;
                         case Types.BOOLEAN:
                         case Types.BIT:
-                            fieldMap.put(columnName, rs.getBoolean(i));
+                            Object boolValue = rs.getObject(i);
+                            if (boolValue instanceof Boolean) {
+                                value = (Boolean) boolValue;
+                            } else if (boolValue instanceof String) {
+                                String strValue = (String) boolValue;
+                                value = "t".equalsIgnoreCase(strValue) || "true".equalsIgnoreCase(strValue);
+                            } else if (boolValue instanceof Number) {
+                                value = ((Number) boolValue).intValue() != 0;
+                            } else {
+                                value = false;
+                            }
+                            break;
+                        case Types.INTEGER:
+                        case Types.SMALLINT:
+                        case Types.TINYINT:
+                            value = rs.getObject(i);
                             break;
                         default:
-                            fieldMap.put(columnName, rs.getObject(i));
+                            value = rs.getObject(i);
                             break;
                     }
+
+                    fieldMap.put(fieldName, value);
+
                 } catch (SQLException ex) {
-                    logger.warning(() -> "Error mapping column " + columnName + ": " + ex.getMessage());
-                    fieldMap.put(columnName, rs.getObject(i));
+                    fieldMap.put(fieldName, rs.getObject(i));
                 }
             }
-
             return JacksonUtil.getObjectMapper().convertValue(fieldMap, entityClass);
         } catch (Exception e) {
             logger.severe(() -> "Error mapping ResultSet to entity: " + e.getMessage());

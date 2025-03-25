@@ -313,21 +313,54 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
     private Map<String, Object> extractFields(T entity) {
         Map<String, Object> fields = new HashMap<>();
         Class<?> entityClass = entity.getClass();
+
         for (Method method : entityClass.getMethods()) {
-            String methodName = method.getName();
-            if (methodName.startsWith("get") && !methodName.equals("getClass") && method.getParameterCount() == 0) {
-                String fieldName = methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
-                try {
-                    Object value = method.invoke(entity);
-                    if (value != null) {
-                        fields.put(fieldName, value);
+            if (isValidGetter(method)) {
+                String fieldName = extractFieldName(method);
+                if (fieldName != null) {
+                    try {
+                        Object value = method.invoke(entity);
+                        if (value != null) {
+                            fields.put(fieldName, value);
+                        }
+                    } catch (Exception e) {
+                        logger.severe(
+                                () -> "Could not invoke getter method: " + method.getName() + " - " + e.getMessage());
                     }
-                } catch (Exception e) {
-                    logger.severe(() -> "Could not invoke getter method: " + methodName + " - " + e.getMessage());
                 }
             }
         }
         return fields;
+    }
+
+    /**
+     * Checks if a method is a valid getter method.
+     *
+     * @param method The method to check.
+     * @return True if the method is a valid getter, false otherwise.
+     */
+    private boolean isValidGetter(Method method) {
+        String methodName = method.getName();
+        return method.getDeclaringClass() != Object.class
+                && method.getParameterCount() == 0
+                && (methodName.startsWith("get") || methodName.startsWith("is") || methodName.startsWith("has"))
+                && !methodName.equals("getClass");
+    }
+
+    /**
+     * Extracts the field name from a getter method.
+     *
+     * @param method The getter method.
+     * @return The field name, or null if it cannot be determined.
+     */
+    private String extractFieldName(Method method) {
+        String methodName = method.getName();
+        if (methodName.startsWith("is")) {
+            return methodName.substring(2, 3).toLowerCase() + methodName.substring(3);
+        } else if (methodName.startsWith("get") || methodName.startsWith("has")) {
+            return methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
+        }
+        return null;
     }
 
     /**
