@@ -10,3 +10,4 @@
 
 
 Documentation : https://t1willi.github.io/Jolt/
+Maven Central Repository : https://central.sonatype.com/artifact/io.github.t1willi/jolt/overview
