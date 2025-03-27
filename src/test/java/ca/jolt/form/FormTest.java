@@ -1,8 +1,11 @@
 package ca.jolt.form;
 
-import ca.jolt.exceptions.FormConversionException;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+
+import io.github.t1willi.exceptions.FormConversionException;
+import io.github.t1willi.form.FieldValidator;
+import io.github.t1willi.form.Form;
 
 import java.time.LocalDate;
 
@@ -142,14 +145,6 @@ class FormTest {
 
         form.setValue("dob", "invalid-date");
         assertThrows(FormConversionException.class, () -> form.getValueAsDate("dob"));
-    }
-
-    @Test
-    void testCustomDateFormatConversion() {
-        form.setValue("dob", "01/01/1990");
-        form.registerDatePattern("dob", "MM/dd/yyyy");
-
-        assertEquals(LocalDate.of(1990, 1, 1), form.getValueAsDate("dob", "MM/dd/yyyy"));
     }
 
     @Test

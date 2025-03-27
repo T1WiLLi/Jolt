@@ -3,6 +3,9 @@ package ca.jolt.form;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import io.github.t1willi.form.FieldValidator;
+import io.github.t1willi.form.Form;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.Mockito.*;
 

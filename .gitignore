@@ -40,3 +40,4 @@ ehthumbs.db
 
 # custom 
 docs/template
+.env
