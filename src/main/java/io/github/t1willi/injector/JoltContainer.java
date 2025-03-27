@@ -103,9 +103,9 @@ public final class JoltContainer {
      * @return The container instance for method chaining.
      */
     public JoltContainer autoScan() {
-        scan("ca.jolt"); // Scan the default package
+        scan("io.github.t1willi"); // Scan the default package
         String callerPackage = detectCallerPackage();
-        if (callerPackage != null && !callerPackage.equals("ca.jolt") && !callerPackage.isEmpty()) {
+        if (callerPackage != null && !callerPackage.equals("io.github.t1willi") && !callerPackage.isEmpty()) {
             scan(callerPackage);
         }
         return this;
