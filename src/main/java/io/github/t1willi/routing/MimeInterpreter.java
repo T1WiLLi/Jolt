@@ -1,4 +1,4 @@
-package io.github.routing;
+package io.github.t1willi.routing;
 
 /**
  * Enum representing various MIME types and their associated file extensions.

@@ -1,4 +1,4 @@
-package io.github.routing.context;
+package io.github.t1willi.routing.context;
 
 /**
  * A specialized {@link JoltHttpContextValue} representing a path parameter.

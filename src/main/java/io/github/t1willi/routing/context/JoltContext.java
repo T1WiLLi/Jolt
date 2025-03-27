@@ -1,4 +1,4 @@
-package io.github.routing.context;
+package io.github.t1willi.routing.context;
 
 import java.io.IOException;
 import java.util.HashMap;
@@ -9,14 +9,14 @@ import java.util.regex.Matcher;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
-import io.github.cookie.CookieBuilder;
-import io.github.exceptions.JoltBadRequestException;
-import io.github.exceptions.JoltHttpException;
-import io.github.files.JoltFile;
-import io.github.form.Form;
-import io.github.http.HttpStatus;
-import io.github.template.JoltModel;
-import io.github.utils.JacksonUtil;
+import io.github.t1willi.cookie.CookieBuilder;
+import io.github.t1willi.exceptions.JoltBadRequestException;
+import io.github.t1willi.exceptions.JoltHttpException;
+import io.github.t1willi.files.JoltFile;
+import io.github.t1willi.form.Form;
+import io.github.t1willi.http.HttpStatus;
+import io.github.t1willi.template.JoltModel;
+import io.github.t1willi.utils.JacksonUtil;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;

@@ -1,4 +1,4 @@
-package io.github.routing;
+package io.github.t1willi.routing;
 
 import java.util.ArrayList;
 import java.util.List;

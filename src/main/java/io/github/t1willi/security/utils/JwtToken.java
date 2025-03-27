@@ -1,4 +1,4 @@
-package io.github.security.utils;
+package io.github.t1willi.security.utils;
 
 import java.nio.charset.StandardCharsets;
 import java.time.Instant;
@@ -8,8 +8,8 @@ import java.util.Map;
 
 import javax.crypto.SecretKey;
 
-import io.github.security.cryptography.Cryptography;
-import io.github.server.config.ConfigurationManager;
+import io.github.t1willi.security.cryptography.Cryptography;
+import io.github.t1willi.server.config.ConfigurationManager;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtBuilder;
 import io.jsonwebtoken.JwtException;

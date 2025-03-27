@@ -29,7 +29,7 @@ public final class ConfigLoader {
     /**
      * Default path to the application's properties file.
      */
-    private static final String DEFAULT_CONFIG_FILE = "/META-INF/application.properties";
+    private static final String DEFAULT_CONFIG_FILE = "/application.properties";
 
     /**
      * Regular expression pattern to identify placeholders in property values (e.g.,

@@ -1,4 +1,4 @@
-package io.github.server.config;
+package io.github.t1willi.server.config;
 
 import java.util.Properties;
 

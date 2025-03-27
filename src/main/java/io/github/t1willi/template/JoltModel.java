@@ -1,4 +1,4 @@
-package io.github.template;
+package io.github.t1willi.template;
 
 import java.util.HashMap;
 import java.util.Map;

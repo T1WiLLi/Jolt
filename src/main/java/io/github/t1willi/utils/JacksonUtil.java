@@ -1,4 +1,4 @@
-package io.github.utils;
+package io.github.t1willi.utils;
 
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;

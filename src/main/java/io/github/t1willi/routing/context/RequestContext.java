@@ -1,4 +1,4 @@
-package io.github.routing.context;
+package io.github.t1willi.routing.context;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -13,9 +13,9 @@ import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
-import io.github.exceptions.JoltBadRequestException;
-import io.github.files.JoltFile;
-import io.github.utils.JacksonUtil;
+import io.github.t1willi.exceptions.JoltBadRequestException;
+import io.github.t1willi.files.JoltFile;
+import io.github.t1willi.utils.JacksonUtil;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;

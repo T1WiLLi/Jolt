@@ -1,4 +1,4 @@
-package io.github.security.policies;
+package io.github.t1willi.security.policies;
 
 import lombok.Getter;
 

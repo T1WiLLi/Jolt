@@ -1,8 +1,8 @@
-package io.github.server.config;
+package io.github.t1willi.server.config;
 
 import java.util.Properties;
 
-import io.github.database.DatabaseConfiguration;
+import io.github.t1willi.database.DatabaseConfiguration;
 
 /**
  * A singleton class that manages application configuration.

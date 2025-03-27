@@ -1,4 +1,4 @@
-package io.github.utils;
+package io.github.t1willi.utils;
 
 import java.io.File;
 import java.io.IOException;
@@ -7,8 +7,8 @@ import java.net.URL;
 import java.util.ArrayList;
 import java.util.List;
 
-import io.github.server.config.ConfigurationManager;
-import io.github.server.config.ServerConfig;
+import io.github.t1willi.server.config.ConfigurationManager;
+import io.github.t1willi.server.config.ServerConfig;
 import jakarta.servlet.http.HttpServletResponse;
 
 public class DirectoryListingHtmlTemplateBuilder {
