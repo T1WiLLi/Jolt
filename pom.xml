@@ -9,6 +9,10 @@
     <version>2.5.5</version>
     <packaging>jar</packaging>
 
+    <name>Jolt</name>
+    <description>A Java web framework for rapid development</description>
+    <url>https://github.com/T1WiLLi/Jolt</url>
+
     <licenses>
         <license>
             <name>MIT License</name>
@@ -19,9 +23,8 @@
     <developers>
         <developer>
             <name>William Beaudin</name>
-            <roles>
-                <role>Creator</role>
-            </roles>
+            <organization>GitHub</organization>
+            <organizationUrl>https://github.com/T1WiLLi</organizationUrl>
         </developer>
     </developers>
 
@@ -39,10 +42,13 @@
 
     <distributionManagement>
         <repository>
-            <id>github</id>
-            <name>GitHub T1WiLLi Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/t1willi/jolt</url>
+            <id>central</id>
+            <url>https://central.sonatype.com/api/v1/publisher/</url>
         </repository>
+        <snapshotRepository>
+            <id>central</id>
+            <url>https://central.sonatype.com/api/v1/publisher/</url>
+        </snapshotRepository>
     </distributionManagement>
 
     <dependencies>
@@ -169,11 +175,11 @@
 
 
   <build>
-      <plugins>
+        <plugins>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>3.8.1</version>
+                <version>3.13.0</version> <!-- Updated to latest version -->
                 <configuration>
                     <source>21</source>
                     <target>21</target>
@@ -187,39 +193,75 @@
                     </annotationProcessorPaths>
                 </configuration>
             </plugin>
+
+            <!-- Central Publishing Plugin for Maven Central -->
             <plugin>
-                <groupId>org.apache.maven.plugins</groupId>
-                <artifactId>maven-javadoc-plugin</artifactId>
-                <version>3.4.1</version>
-                <executions>
-                    <execution>
-                        <id>generate-javadocs</id>
-                        <phase>package</phase>
-                        <goals>
-                            <goal>javadoc</goal>
-                        </goals>
-                    </execution>
-                </executions>
+                <groupId>org.sonatype.central</groupId>
+                <artifactId>central-publishing-maven-plugin</artifactId>
+                <version>0.7.0</version> <!-- Latest version as of March 2025 -->
+                <extensions>true</extensions>
                 <configuration>
-                    <failOnError>false</failOnError>
+                    <publishingServerId>central</publishingServerId>
+                    <autoPublish>true</autoPublish> <!-- Automatically publish after validation -->
                 </configuration>
             </plugin>
-                <!-- Attach source code to JAR -->
+
+            <!-- Source Plugin to attach source code -->
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-source-plugin</artifactId>
-                <version>3.3.0</version>
+                <version>3.3.1</version> <!-- Updated to latest version -->
                 <executions>
                     <execution>
                         <id>attach-sources</id>
                         <goals>
-                            <goal>jar</goal>
+                            <goal>jar-no-fork</goal>
                         </goals>
                     </execution>
                 </executions>
             </plugin>
-      </plugins>
-  </build>
+
+            <!-- Javadoc Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-javadoc-plugin</artifactId>
+                <version>3.7.0</version> <!-- Updated to latest version -->
+                <executions>
+                    <execution>
+                        <id>attach-javadocs</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                        <configuration>
+                            <failOnError>false</failOnError>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+
+            <!-- GPG Signing Plugin -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-gpg-plugin</artifactId>
+                <version>3.2.4</version> <!-- Updated to latest version -->
+                <executions>
+                    <execution>
+                        <id>sign-artifacts</id>
+                        <phase>verify</phase>
+                        <goals>
+                            <goal>sign</goal>
+                        </goals>
+                        <configuration>
+                            <gpgArguments>
+                                <arg>--pinentry-mode</arg>
+                                <arg>loopback</arg>
+                            </gpgArguments>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
+        </plugins>
+    </build>
 
 
   <profiles>
