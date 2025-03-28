@@ -50,6 +50,13 @@
             <url>https://central.sonatype.com/api/v1/publisher/</url>
         </snapshotRepository>
     </distributionManagement>
+    
+    <repositories>
+        <repository>
+            <id>jcenter</id>
+            <url>https://jcenter.bintray.com/</url>
+        </repository>
+    </repositories>
 
     <dependencies>
         <!-- Servlet & Tomcat -->
@@ -114,21 +121,9 @@
 
         <!-- JWT token -->
         <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-api</artifactId>
-            <version>0.11.5</version>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-impl</artifactId>
-            <version>0.11.5</version>
-            <scope>runtime</scope>
-        </dependency>
-        <dependency>
-            <groupId>io.jsonwebtoken</groupId>
-            <artifactId>jjwt-jackson</artifactId>
-            <version>0.11.5</version>
-            <scope>runtime</scope>
+            <groupId>org.bitbucket.b_c</groupId>
+            <artifactId>jose4j</artifactId>
+            <version>0.9.4</version>
         </dependency>
         <!-- Database -->
         <dependency>
@@ -171,8 +166,7 @@
             <version>5.10.0</version> <!-- Use the latest version compatible with Java 23 -->
             <scope>test</scope>
         </dependency>
-  </dependencies>
-
+    </dependencies>
 
   <build>
         <plugins>
