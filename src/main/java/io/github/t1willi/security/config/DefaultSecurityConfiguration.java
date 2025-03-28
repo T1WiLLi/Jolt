@@ -16,7 +16,7 @@ import jakarta.annotation.PostConstruct;
  * This configuration includes CORS settings and security headers configuration.
  */
 @JoltConfiguration(value = ConfigurationType.SECURITY, isDefault = true)
-public class DefaultSecurityConfiguration extends SecurityConfiguration {
+public final class DefaultSecurityConfiguration extends SecurityConfiguration {
 
     /**
      * Initializes this configuration when the bean is constructed.

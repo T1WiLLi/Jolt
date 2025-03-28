@@ -27,5 +27,10 @@ public enum ConfigurationType {
     /**
      * Represents a bean configured to act as a template.
      */
-    TEMPLATE;
+    TEMPLATE,
+
+    /**
+     * Represents a bean configured to manage cookies.
+     */
+    COOKIE;
 }
