@@ -1,5 +1,6 @@
 package io.github.t1willi.security.config;
 
+import io.github.t1willi.security.utils.Constant;
 import lombok.Getter;
 
 /**
@@ -8,6 +9,13 @@ import lombok.Getter;
  * CORS (Cross-Origin Resource Sharing) and HTTP security headers.
  */
 public abstract class SecurityConfiguration {
+
+    /**
+     * Amount of request a given user can make in a given time frame. (1 sec).
+     * This is used to prevent brute force attacks.
+     */
+    @Getter
+    private int maxRequest = Constant.DEFAULT_MAX_REQUEST_PER_USER_PER_SECOND;
 
     /**
      * Configures the security settings.
@@ -47,5 +55,17 @@ public abstract class SecurityConfiguration {
      */
     public HeadersConfiguration withHeaders() {
         return headersConfig;
+    }
+
+    /**
+     * Provides access to the maximum request rate configuration for fluent
+     * configuration.
+     * 
+     * @param maxRequest the maximum request rate per user per second
+     * @return This configuration instance for method chaining
+     */
+    public SecurityConfiguration withMaxRequest(int maxRequest) {
+        this.maxRequest = maxRequest;
+        return this;
     }
 }
