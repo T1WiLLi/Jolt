@@ -913,6 +913,7 @@ public class Main extends JoltApplication {
                 User user = new UserBroker().findById(ctx.path("id").asInt()).get();
                 new UserBroker().save(form.updateEntity(user));
                 return ctx.ok().json(Map.of("Message", "User update"));
+                ctx.addCookie().name("").setValue("")
             });
         });
     }

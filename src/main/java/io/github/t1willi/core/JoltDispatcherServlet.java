@@ -24,6 +24,7 @@ import io.github.t1willi.routing.MimeInterpreter;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.routing.RouteMatch;
 import io.github.t1willi.routing.context.JoltContext;
+import io.github.t1willi.utils.HelpMethods;
 
 /**
  * The main servlet responsible for dispatching HTTP requests to the appropriate
@@ -234,6 +235,11 @@ public final class JoltDispatcherServlet extends HttpServlet {
      */
     private boolean tryServeStaticResource(String path, HttpServletResponse res) {
         try {
+            if (!HelpMethods.isValidStaticResourcePath(path)) {
+                log.warning(() -> "Illegal static resource path: " + path);
+                return false;
+            }
+
             String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
             String resourcePath = "static/" + normalizedPath;
 

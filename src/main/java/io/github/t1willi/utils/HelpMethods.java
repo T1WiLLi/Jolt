@@ -9,4 +9,20 @@ public class HelpMethods {
         }
         return sb.toString();
     }
+
+    public static boolean isValidStaticResourcePath(String path) {
+        if (path == null || path.isEmpty()) {
+            return false;
+        }
+
+        String clean = path.startsWith("/") ? path.substring(1) : path;
+
+        if (clean.contains("../") || clean.contains("..\\") ||
+                clean.startsWith("../") || clean.startsWith("..\\") ||
+                clean.contains("/..") || clean.contains("\\..")) {
+            return false;
+        }
+
+        return clean.matches("^[a-zA-Z0-9_\\-./]+$");
+    }
 }
