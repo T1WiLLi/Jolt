@@ -1,52 +1,27 @@
 package io.github.t1willi.security.utils;
 
-import java.nio.charset.StandardCharsets;
-import java.security.Key;
-import java.time.Instant;
-import java.util.Arrays;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import org.jose4j.jwe.ContentEncryptionAlgorithmIdentifiers;
-import org.jose4j.jwe.JsonWebEncryption;
-import org.jose4j.jwe.KeyManagementAlgorithmIdentifiers;
-import org.jose4j.jws.JsonWebSignature;
-import org.jose4j.jwt.JwtClaims;
-import org.jose4j.jwt.MalformedClaimException;
-import org.jose4j.jwt.NumericDate;
-import org.jose4j.jwt.consumer.InvalidJwtException;
-import org.jose4j.jwt.consumer.JwtConsumer;
-import org.jose4j.jwt.consumer.JwtConsumerBuilder;
-import org.jose4j.keys.AesKey;
-import org.jose4j.keys.HmacKey;
-import org.jose4j.lang.JoseException;
+import com.nimbusds.jose.*;
+import com.nimbusds.jose.crypto.*;
+import com.nimbusds.jwt.*;
 
 import io.github.t1willi.security.cryptography.Cryptography;
 import io.github.t1willi.server.config.ConfigurationManager;
 
+import java.text.ParseException;
+import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.crypto.spec.SecretKeySpec;
+
 /**
  * Comprehensive utility class for creating and verifying JWT (JSON Web Tokens)
- * with support for both JWS (signed) and JWE (encrypted) tokens.
+ * with support for both JWS (signed) and JWE (encrypted) tokens using Nimbus
+ * JOSE + JWT.
  * 
- * <p>
- * This class provides methods to generate, verify, and extract information
- * from JWT tokens using the jose4j library.
- * </p>
- * 
- * <p>
- * Configuration is dynamically retrieved from configuration properties:
- * </p>
- * <ul>
- * <li>server.security.secret_key</li>
- * <li>server.security.pepper</li>
- * <li>server.security.encryption_key</li>
- * </ul>
- * 
- * @author Your Name
- * @version 1.1
- * @since 2024-03-27
+ * @author William Beaudin
+ * @version 2.1
+ * @since 2025-03-28
  */
 public final class JwtToken {
     private static final Logger LOGGER = Logger.getLogger(JwtToken.class.getName());
@@ -94,22 +69,22 @@ public final class JwtToken {
      */
     public static String jws(String userID, Map<String, Object> claims, long expirationMs) {
         try {
-            JwtClaims jwtClaims = new JwtClaims();
-            jwtClaims.setSubject(userID);
-            jwtClaims.setIssuedAt(NumericDate.fromSeconds(Instant.now().getEpochSecond()));
-            jwtClaims.setExpirationTime(
-                    NumericDate.fromSeconds(Instant.now().plusMillis(expirationMs).getEpochSecond()));
+            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
+                    .subject(userID)
+                    .issueTime(new Date())
+                    .expirationTime(new Date(System.currentTimeMillis() + expirationMs));
 
-            for (Map.Entry<String, Object> entry : claims.entrySet()) {
-                jwtClaims.setClaim(entry.getKey(), entry.getValue());
-            }
+            claims.forEach(claimsBuilder::claim);
 
-            JsonWebSignature jws = new JsonWebSignature();
-            jws.setPayload(jwtClaims.toJson());
-            jws.setKey(getSigningKey());
-            jws.setAlgorithmHeaderValue("HS512");
-            jws.setHeader("typ", "JWT");
-            return jws.getCompactSerialization();
+            JWTClaimsSet jwtClaims = claimsBuilder.build();
+            JWSHeader header = new JWSHeader.Builder(JWSAlgorithm.HS256)
+                    .type(JOSEObjectType.JWT)
+                    .build();
+
+            SignedJWT signedJWT = new SignedJWT(header, jwtClaims);
+            signedJWT.sign(new MACSigner(getSigningKey()));
+
+            return signedJWT.serialize();
         } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to create JWS token", e);
             throw new RuntimeException("Failed to create JWS token", e);
@@ -128,33 +103,29 @@ public final class JwtToken {
      */
     public static String jwe(String userID, Map<String, Object> claims, long expirationMs) {
         try {
-            JwtClaims jwtClaims = new JwtClaims();
-            jwtClaims.setSubject(userID);
-            jwtClaims.setIssuedAt(NumericDate.fromSeconds(Instant.now().getEpochSecond()));
-            jwtClaims.setExpirationTime(
-                    NumericDate.fromSeconds(Instant.now().plusMillis(expirationMs).getEpochSecond()));
+            JWTClaimsSet.Builder claimsBuilder = new JWTClaimsSet.Builder()
+                    .subject(userID)
+                    .issueTime(new Date())
+                    .expirationTime(new Date(System.currentTimeMillis() + expirationMs));
 
-            for (Map.Entry<String, Object> entry : claims.entrySet()) {
-                jwtClaims.setClaim(entry.getKey(), entry.getValue());
-            }
+            claims.forEach(claimsBuilder::claim);
 
-            JsonWebEncryption jwe = new JsonWebEncryption();
-            jwe.setPayload(jwtClaims.toJson());
+            JWTClaimsSet jwtClaims = claimsBuilder.build();
 
-            Key key = getEncryptionKey();
+            JWEHeader header = new JWEHeader.Builder(JWEAlgorithm.A256KW, EncryptionMethod.A256GCM)
+                    .type(JOSEObjectType.JWT)
+                    .build();
 
-            jwe.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.A256KW);
-            jwe.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_256_GCM);
-            jwe.setKey(key);
+            EncryptedJWT encryptedJWT = new EncryptedJWT(header, jwtClaims);
+            encryptedJWT.encrypt(new AESEncrypter(getEncryptionKey()));
 
-            return jwe.getCompactSerialization();
-        } catch (JoseException e) {
+            return encryptedJWT.serialize();
+        } catch (Exception e) {
             LOGGER.log(Level.SEVERE, "Failed to create JWE token", e);
             throw new RuntimeException("Failed to create JWE token", e);
         }
     }
 
-    // Convenience methods with default expiration
     public static String jws(String userID, Map<String, Object> claims) {
         return jws(userID, claims, DEFAULT_EXPIRATION_MS);
     }
@@ -171,13 +142,15 @@ public final class JwtToken {
      */
     public static boolean verify(String token) {
         try {
-            JwtConsumer jwtConsumer = new JwtConsumerBuilder()
-                    .setVerificationKey(getSigningKey())
-                    .setDecryptionKey(getEncryptionKey())
-                    .build();
-            jwtConsumer.processToClaims(token);
+            if (token.split("\\.").length == 3) {
+                SignedJWT signedJWT = SignedJWT.parse(token);
+                signedJWT.verify(new MACVerifier(getSigningKey()));
+            } else {
+                EncryptedJWT encryptedJWT = EncryptedJWT.parse(token);
+                encryptedJWT.decrypt(new AESDecrypter(getEncryptionKey()));
+            }
             return true;
-        } catch (InvalidJwtException e) {
+        } catch (Exception e) {
             LOGGER.log(Level.INFO, "Token verification failed", e);
             return false;
         }
@@ -191,13 +164,9 @@ public final class JwtToken {
      */
     public static String getOwner(String token) {
         try {
-            JwtConsumer jwtConsumer = new JwtConsumerBuilder()
-                    .setVerificationKey(getSigningKey())
-                    .setDecryptionKey(getEncryptionKey())
-                    .build();
-            JwtClaims claims = jwtConsumer.processToClaims(token);
+            JWTClaimsSet claims = parseToken(token);
             return claims.getSubject();
-        } catch (InvalidJwtException | MalformedClaimException e) {
+        } catch (Exception e) {
             LOGGER.log(Level.INFO, "Could not extract owner from token", e);
             return null;
         }
@@ -211,13 +180,9 @@ public final class JwtToken {
      */
     public static Map<String, Object> getClaims(String token) {
         try {
-            JwtConsumer jwtConsumer = new JwtConsumerBuilder()
-                    .setVerificationKey(getSigningKey())
-                    .setDecryptionKey(getEncryptionKey())
-                    .build();
-            JwtClaims claims = jwtConsumer.processToClaims(token);
-            return new HashMap<>(claims.getClaimsMap());
-        } catch (InvalidJwtException e) {
+            JWTClaimsSet claims = parseToken(token);
+            return new HashMap<>(claims.getClaims());
+        } catch (Exception e) {
             LOGGER.log(Level.INFO, "Could not extract claims from token", e);
             return null;
         }
@@ -236,13 +201,34 @@ public final class JwtToken {
     }
 
     /**
+     * Parse and verify the JWT token based on its type.
+     *
+     * @param token JWT token
+     * @return Parsed claims set
+     * @throws ParseException if token parsing fails
+     * @throws JOSEException  if token verification fails
+     */
+    private static JWTClaimsSet parseToken(String token) throws ParseException, JOSEException {
+        if (token.split("\\.").length == 3) {
+            SignedJWT signedJWT = SignedJWT.parse(token);
+            signedJWT.verify(new MACVerifier(getSigningKey()));
+            return signedJWT.getJWTClaimsSet();
+        } else {
+            EncryptedJWT encryptedJWT = EncryptedJWT.parse(token);
+            encryptedJWT.decrypt(new AESDecrypter(getEncryptionKey()));
+            return encryptedJWT.getJWTClaimsSet();
+        }
+    }
+
+    /**
      * Creates a secure signing key using secret key and pepper.
      *
      * @return Signing key for JWT
      */
-    private static Key getSigningKey() {
+    private static SecretKeySpec getSigningKey() {
         String combined = SECRET_KEY + PEPPER;
-        return new HmacKey(combined.getBytes(StandardCharsets.UTF_8));
+        byte[] keyBytes = combined.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return new SecretKeySpec(Arrays.copyOf(keyBytes, 32), "HmacSHA256");
     }
 
     /**
@@ -250,8 +236,8 @@ public final class JwtToken {
      *
      * @return Encryption key for JWT
      */
-    private static Key getEncryptionKey() {
-        byte[] keyBytes = Arrays.copyOf(ENCRYPTION_KEY.getBytes(StandardCharsets.UTF_8), 32);
-        return new AesKey(keyBytes);
+    private static SecretKeySpec getEncryptionKey() {
+        byte[] keyBytes = ENCRYPTION_KEY.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        return new SecretKeySpec(Arrays.copyOf(keyBytes, 32), "AES");
     }
 }

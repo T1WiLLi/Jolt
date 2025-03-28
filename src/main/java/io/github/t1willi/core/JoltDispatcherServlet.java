@@ -24,6 +24,7 @@ import io.github.t1willi.routing.MimeInterpreter;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.routing.RouteMatch;
 import io.github.t1willi.routing.context.JoltContext;
+import io.github.t1willi.utils.DirectoryListingHtmlTemplateBuilder;
 import io.github.t1willi.utils.HelpMethods;
 
 /**
@@ -195,8 +196,13 @@ public final class JoltDispatcherServlet extends HttpServlet {
             return handleRoute(match, context, start);
         }
 
-        if (context.method.equals("GET") && tryServeStaticResource(context.path, context.res)) {
-            return true;
+        if (context.method.equals("GET")) {
+            if (tryServeStaticResource(context.path, context.res)) {
+                return true;
+            }
+            if (DirectoryListingHtmlTemplateBuilder.tryServeDirectoryListing(context.path, context.res)) {
+                return true;
+            }
         }
 
         if (router.pathExistsWithDifferentMethod(context.method, context.path)) {
@@ -254,6 +260,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
                 return true;
             } else {
                 log.warning(() -> "Static resource not found: " + resourcePath);
+                return false;
             }
         } catch (IOException e) {
             log.warning(() -> "Error serving static resource: " + path + " - " + e.getMessage());

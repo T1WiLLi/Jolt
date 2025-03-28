@@ -14,14 +14,15 @@ import jakarta.servlet.http.HttpServletResponse;
 public class DirectoryListingHtmlTemplateBuilder {
 
     /**
-     * A function to try and serve a directory listing as an HTML page.
-     * 
+     * Tries to serve a directory listing as an HTML page if enabled, even if the
+     * directory is empty.
+     *
      * @param path the path to the directory to serve
      * @param res  the HttpServletResponse object to write to
      * @return true if the directory listing was served, false otherwise
      * @throws IOException if an I/O error occurs
      */
-    public static boolean tryServeDirectoryListing(String path, HttpServletResponse res) throws IOException {
+    public static boolean tryServeDirectoryListing(String path, HttpServletResponse res) {
         ServerConfig serverConfig = ConfigurationManager.getInstance().getServerConfig();
         if (!serverConfig.isDirectoryListingEnabled()) {
             return false;
@@ -33,28 +34,31 @@ public class DirectoryListingHtmlTemplateBuilder {
         }
 
         URL staticUrl = DirectoryListingHtmlTemplateBuilder.class.getClassLoader().getResource("static");
-        if (staticUrl == null) {
-            return false;
-        }
-
-        File staticDir;
-        try {
-            staticDir = new File(staticUrl.toURI());
-        } catch (URISyntaxException e) {
-            return false;
-        }
-
-        if (!staticDir.isDirectory()) {
-            return false;
+        File staticDir = null;
+        if (staticUrl != null) {
+            try {
+                staticDir = new File(staticUrl.toURI());
+            } catch (URISyntaxException e) {
+                // Log the error if needed, but proceed with an empty listing
+            }
         }
 
         DirectoryListingHtmlTemplateBuilder builder = new DirectoryListingHtmlTemplateBuilder()
                 .setTitle("Directory Listing 📂");
-        buildDirectoryEntries(staticDir, builder);
+
+        // Always build the listing, even if staticDir is null or not a directory
+        if (staticDir != null && staticDir.isDirectory()) {
+            buildDirectoryEntries(staticDir, builder);
+        }
+        // If no entries were added, the "empty" message will appear in the build step
 
         String html = builder.build();
         res.setContentType("text/html;charset=UTF-8");
-        res.getWriter().write(html);
+        try {
+            res.getWriter().write(html);
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
         return true;
     }
 
@@ -94,36 +98,16 @@ public class DirectoryListingHtmlTemplateBuilder {
     private String title = "Directory Listing";
     private final List<DirectoryEntry> entries = new ArrayList<>();
 
-    /**
-     * Sets the title for the directory listing page.
-     *
-     * @param title The page title.
-     * @return This builder instance.
-     */
     public DirectoryListingHtmlTemplateBuilder setTitle(String title) {
         this.title = title;
         return this;
     }
 
-    /**
-     * Adds a file entry to the listing.
-     *
-     * @param fileName The name of the file.
-     * @return This builder instance.
-     */
     public DirectoryListingHtmlTemplateBuilder addFile(String fileName) {
         entries.add(new DirectoryEntry(fileName, false));
         return this;
     }
 
-    /**
-     * Adds a directory entry to the listing with its nested contents.
-     *
-     * @param directoryName The name of the directory.
-     * @param subBuilder    A builder containing the nested entries of the
-     *                      directory.
-     * @return This builder instance.
-     */
     public DirectoryListingHtmlTemplateBuilder addDirectory(String directoryName,
             DirectoryListingHtmlTemplateBuilder subBuilder) {
         DirectoryEntry dir = new DirectoryEntry(directoryName, true);
@@ -132,11 +116,6 @@ public class DirectoryListingHtmlTemplateBuilder {
         return this;
     }
 
-    /**
-     * Builds the final HTML string for the directory listing.
-     *
-     * @return A string containing the complete HTML.
-     */
     public String build() {
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>\n");
@@ -153,23 +132,21 @@ public class DirectoryListingHtmlTemplateBuilder {
         return sb.toString();
     }
 
-    /**
-     * Recursively builds the HTML for a list of directory entries.
-     *
-     * @param entries The list of entries to process.
-     * @return A string representing nested HTML unordered lists.
-     */
     private String buildEntries(List<DirectoryEntry> entries) {
         StringBuilder sb = new StringBuilder();
         sb.append("  <ul>\n");
-        for (DirectoryEntry entry : entries) {
-            String icon = entry.isDirectory ? "📁" : "📄";
-            sb.append("    <li>").append(icon).append(" ").append(entry.name);
-            if (entry.isDirectory && !entry.children.isEmpty()) {
-                sb.append("\n").append(buildEntries(entry.children));
-                sb.append("    ");
+        if (entries.isEmpty()) {
+            sb.append("    <li>📭 Empty directory listing</li>\n");
+        } else {
+            for (DirectoryEntry entry : entries) {
+                String icon = entry.isDirectory ? "📁" : "📄";
+                sb.append("    <li>").append(icon).append(" ").append(entry.name);
+                if (entry.isDirectory && !entry.children.isEmpty()) {
+                    sb.append("\n").append(buildEntries(entry.children));
+                    sb.append("    ");
+                }
+                sb.append("</li>\n");
             }
-            sb.append("</li>\n");
         }
         sb.append("  </ul>\n");
         return sb.toString();
