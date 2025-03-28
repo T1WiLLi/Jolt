@@ -5,6 +5,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.function.Consumer;
 import java.util.regex.Matcher;
 
 import com.fasterxml.jackson.core.type.TypeReference;
@@ -633,6 +634,35 @@ public final class JoltContext {
      */
     public Cookie getCookie(String name) {
         return requestContext.getCookie(name);
+    }
+
+    /**
+     * Retrieves the value of a given cookie as an Optional.
+     * 
+     * @param name The cookie name to look up.
+     * @return The value of the cookie, or an empty Optional if not found.
+     */
+    public Optional<String> getCookieValue(String name) {
+        return getCookie(name) != null && getCookie(name).getValue() != null
+                ? Optional.of(getCookie(name).getValue())
+                : Optional.empty();
+    }
+
+    /**
+     * Retrieves the value of a given cookie as a String and process it with
+     * optional actions.
+     * 
+     * @param name       The cookie name to look up.
+     * @param onFound    The action to perform if the cookie is found.
+     * @param onNotFound The action to perform if the cookie is not found.
+     */
+    public void getCookieValue(String name, Consumer<String> onFound, Runnable onNotFound) {
+        Cookie cookie = getCookie(name);
+        if (cookie != null && cookie.getValue() != null) {
+            onFound.accept(cookie.getValue());
+        } else {
+            onNotFound.run();
+        }
     }
 
     /**
