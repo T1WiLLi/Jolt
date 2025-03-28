@@ -43,45 +43,5 @@ Here is an example of the futur version for security route configuration and CSR
     .anyRoute().denyAll();
 
 
-
-@NoArgsConstructor
-@Getter 
-@Setter
-@Table(table = "users", unique = {"name"})
-public class User {
-
-    @Id(generationType = GenerationType.IDENTITY)
-    private Integer id;
-
-    @Column(value = "name", length = 255, nullable = false)
-    private String name;
-
-    @JoinColumn("user_product_id", nullable = false)
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, FetchType.LAZY, orphanRemoval = true) // 1 user can have many products
-    private List<Product> products;
-}
-
-@NoArgsConstructor
-@Table(table = "product", unique = { "name" }, indexes = { "name" })
-@Getter
-@Setter
-public class Product {
-    @Id(generationType = GenerationType.IDENTITY)
-    private Integer id;
-
-    @Column(value = "name", length = 255, nullable = false)
-    private String name;
-
-    @Column(value = "description", nullable = true)
-    private String description;
-
-    @Column(value = "price", nullable = false)
-    private Double price;
-
-    @CheckEnum(values = { "AVAILABLE", "UNAVAILABLE" })
-    @Column(value = "status", nullable = true)
-    private String status;
-
-    @Column(value = "user_id")
-    private User user;
-}
+# Which language to use as default
+server.defaultLanguage=fr
