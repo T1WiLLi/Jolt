@@ -18,6 +18,7 @@ import java.util.stream.Collectors;
 
 import io.github.t1willi.database.exception.DatabaseErrorType;
 import io.github.t1willi.database.exception.DatabaseException;
+import io.github.t1willi.utils.StringUtils;
 
 /**
  * The `RestBroker` class is an abstract base class for managing CRUD operations
@@ -321,7 +322,7 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
                     try {
                         Object value = method.invoke(entity);
                         if (value != null) {
-                            fields.put(fieldName, value);
+                            fields.put(StringUtils.camelToSnakeCase(fieldName), value);
                         }
                     } catch (Exception e) {
                         logger.severe(
