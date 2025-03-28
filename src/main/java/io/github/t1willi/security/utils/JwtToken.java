@@ -1,49 +1,66 @@
 package io.github.t1willi.security.utils;
 
 import java.nio.charset.StandardCharsets;
+import java.security.Key;
 import java.time.Instant;
-import java.util.Collections;
-import java.util.Date;
+import java.util.Arrays;
+import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
-import javax.crypto.SecretKey;
+import org.jose4j.jwe.ContentEncryptionAlgorithmIdentifiers;
+import org.jose4j.jwe.JsonWebEncryption;
+import org.jose4j.jwe.KeyManagementAlgorithmIdentifiers;
+import org.jose4j.jws.JsonWebSignature;
+import org.jose4j.jwt.JwtClaims;
+import org.jose4j.jwt.MalformedClaimException;
+import org.jose4j.jwt.NumericDate;
+import org.jose4j.jwt.consumer.InvalidJwtException;
+import org.jose4j.jwt.consumer.JwtConsumer;
+import org.jose4j.jwt.consumer.JwtConsumerBuilder;
+import org.jose4j.keys.AesKey;
+import org.jose4j.keys.HmacKey;
+import org.jose4j.lang.JoseException;
 
 import io.github.t1willi.security.cryptography.Cryptography;
 import io.github.t1willi.server.config.ConfigurationManager;
-import io.jsonwebtoken.Claims;
-import io.jsonwebtoken.JwtBuilder;
-import io.jsonwebtoken.JwtException;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
-import io.jsonwebtoken.security.Keys;
 
 /**
- * Utility class for creating and verifying JWS (signed) JWT tokens.
- * <p>
- * Configuration is read from:
- * <ul>
- * <li>server.jwt.secret_key</li>
- * <li>server.jwt.pepper</li>
- * </ul>
- * <p>
- * Example usage:
+ * Comprehensive utility class for creating and verifying JWT (JSON Web Tokens)
+ * with support for both JWS (signed) and JWE (encrypted) tokens.
  * 
- * <pre>{@code
- * String token = JwtToken.create("user123", Map.of("role", "ADMIN"));
- * boolean valid = JwtToken.verify(token);
- * String userID = JwtToken.getOwner(token);
- * Map<String, Object> claims = JwtToken.getClaims(token);
- * }</pre>
+ * <p>
+ * This class provides methods to generate, verify, and extract information
+ * from JWT tokens using the jose4j library.
+ * </p>
+ * 
+ * <p>
+ * Configuration is dynamically retrieved from configuration properties:
+ * </p>
+ * <ul>
+ * <li>server.security.secret_key</li>
+ * <li>server.security.pepper</li>
+ * <li>server.security.encryption_key</li>
+ * </ul>
+ * 
+ * @author Your Name
+ * @version 1.1
+ * @since 2024-03-27
  */
 public final class JwtToken {
+    private static final Logger LOGGER = Logger.getLogger(JwtToken.class.getName());
 
     private static final String SECRET_KEY;
     private static final String PEPPER;
+    private static final String ENCRYPTION_KEY;
 
-    private static final long DEFAULT_EXPIRATION_MS = 1_800_000; // 30 minutes
+    /** Default token expiration time: 30 minutes in milliseconds */
+    private static final long DEFAULT_EXPIRATION_MS = 1_800_000;
 
     /**
-     * Static block prepare the secret key and pepper.
+     * Static initializer to load security keys from configuration.
+     * Generates random keys if not explicitly configured.
      */
     static {
         SECRET_KEY = ConfigurationManager.getInstance().getProperty(
@@ -54,152 +71,187 @@ public final class JwtToken {
                 "server.security.pepper",
                 Cryptography.randomBase64(32) // 256 bits
         );
+        ENCRYPTION_KEY = ConfigurationManager.getInstance().getProperty(
+                "server.security.encryption_key",
+                Cryptography.randomBase64(32) // 256 bits
+        );
     }
 
-    /**
-     * Prevent instantiation.
-     */
+    /** Prevent instantiation of utility class */
     private JwtToken() {
-        // Prevent instantiation
+        throw new UnsupportedOperationException("Utility class cannot be instantiated");
     }
 
     /**
-     * Generate a new JWT Token with the given owner and claims.
-     * <p>
-     * This implementation generate a JWS (signed) JWT token. And not a JWE
-     * (encrypted) JWT token. It is signed with the Secret-key and pepper.
-     * 
-     * @param userID       the user ID
-     * @param claims       the claims
-     * @param expirationMs the expiration time in milliseconds
-     * @return the JWT token
-     */
-    public static String create(String userID, Map<String, Object> claims, long expirationMs) {
-        SecretKey secretKey = getSecretKey();
-
-        JwtBuilder builder = Jwts.builder()
-                .setSubject(userID)
-                .addClaims(claims)
-                .setIssuedAt(Date.from(Instant.now()))
-                .setExpiration(Date.from(Instant.now().plusMillis(expirationMs)))
-                .signWith(secretKey, SignatureAlgorithm.HS512);
-
-        return builder.compact();
-    }
-
-    /**
-     * A convenience method to generate a new JWT token with the given owner and
-     * claims with the default expiration time (Same as cookie for JWT) of 30
-     * minutes.
-     * 
-     * @param userID the user ID
-     * @param claims the claims
-     * @return the JWT token
-     */
-    public static String create(String userID, Map<String, Object> claims) {
-        return create(userID, claims, DEFAULT_EXPIRATION_MS);
-    }
-
-    /**
-     * A convenience method to generate a new JWT token with the given owner only.
-     * 
-     * @param userID the user ID
-     * @return the JWT token
-     */
-    public static String create(String userID) {
-        return create(userID, Collections.emptyMap(), DEFAULT_EXPIRATION_MS);
-    }
-
-    /**
-     * Creates a JWT token for the specified user ID with the provided claims.
+     * Generates a signed JWT (JWS) token with detailed claims and custom
+     * expiration.
      *
-     * @param userID The unique identifier of the user for whom the token is being
-     *               created.
-     * @param claims A map of additional claims to include in the token payload.
-     * @return A JWT token as a string.
+     * @param userID       User identifier
+     * @param claims       Additional claims to be included in the token
+     * @param expirationMs Token expiration time in milliseconds
+     * @return Signed JWT token as a string
+     * @throws RuntimeException If token generation fails
      */
-    public static String create(int userID, Map<String, Object> claims) {
-        return create(String.valueOf(userID), claims);
+    public static String jws(String userID, Map<String, Object> claims, long expirationMs) {
+        try {
+            JwtClaims jwtClaims = new JwtClaims();
+            jwtClaims.setSubject(userID);
+            jwtClaims.setIssuedAt(NumericDate.fromSeconds(Instant.now().getEpochSecond()));
+            jwtClaims.setExpirationTime(
+                    NumericDate.fromSeconds(Instant.now().plusMillis(expirationMs).getEpochSecond()));
+
+            for (Map.Entry<String, Object> entry : claims.entrySet()) {
+                jwtClaims.setClaim(entry.getKey(), entry.getValue());
+            }
+
+            JsonWebSignature jws = new JsonWebSignature();
+            jws.setPayload(jwtClaims.toJson());
+            jws.setKey(getSigningKey());
+            jws.setAlgorithmHeaderValue("HS512");
+            jws.setHeader("typ", "JWT");
+            return jws.getCompactSerialization();
+        } catch (Exception e) {
+            LOGGER.log(Level.SEVERE, "Failed to create JWS token", e);
+            throw new RuntimeException("Failed to create JWS token", e);
+        }
     }
 
     /**
-     * Creates a JWT token for the specified user ID
-     * 
-     * @param userID The unique identifier of the user for whom the token is being
-     *               created.
-     * @return
+     * Generates an encrypted JWT (JWE) token with detailed claims and custom
+     * expiration.
+     *
+     * @param userID       User identifier
+     * @param claims       Additional claims to be included in the token
+     * @param expirationMs Token expiration time in milliseconds
+     * @return Encrypted JWT token as a string
+     * @throws RuntimeException If token encryption fails
      */
-    public static String create(int userID) {
-        return create(String.valueOf(userID));
+    public static String jwe(String userID, Map<String, Object> claims, long expirationMs) {
+        try {
+            JwtClaims jwtClaims = new JwtClaims();
+            jwtClaims.setSubject(userID);
+            jwtClaims.setIssuedAt(NumericDate.fromSeconds(Instant.now().getEpochSecond()));
+            jwtClaims.setExpirationTime(
+                    NumericDate.fromSeconds(Instant.now().plusMillis(expirationMs).getEpochSecond()));
+
+            for (Map.Entry<String, Object> entry : claims.entrySet()) {
+                jwtClaims.setClaim(entry.getKey(), entry.getValue());
+            }
+
+            JsonWebEncryption jwe = new JsonWebEncryption();
+            jwe.setPayload(jwtClaims.toJson());
+
+            Key key = getEncryptionKey();
+
+            jwe.setAlgorithmHeaderValue(KeyManagementAlgorithmIdentifiers.A256KW);
+            jwe.setEncryptionMethodHeaderParameter(ContentEncryptionAlgorithmIdentifiers.AES_256_GCM);
+            jwe.setKey(key);
+
+            return jwe.getCompactSerialization();
+        } catch (JoseException e) {
+            LOGGER.log(Level.SEVERE, "Failed to create JWE token", e);
+            throw new RuntimeException("Failed to create JWE token", e);
+        }
+    }
+
+    // Convenience methods with default expiration
+    public static String jws(String userID, Map<String, Object> claims) {
+        return jws(userID, claims, DEFAULT_EXPIRATION_MS);
+    }
+
+    public static String jwe(String userID, Map<String, Object> claims) {
+        return jwe(userID, claims, DEFAULT_EXPIRATION_MS);
     }
 
     /**
-     * Verify a JWT token expiration, signature and claims.
-     * 
-     * @param token the JWT token
-     * @return True if the token is valid, false otherwise
+     * Verifies the authenticity and validity of a JWT token.
+     *
+     * @param token JWT token to verify
+     * @return true if the token is valid, false otherwise
      */
     public static boolean verify(String token) {
         try {
-            SecretKey secretKey = getSecretKey();
-            Jwts.parserBuilder()
-                    .setSigningKey(secretKey)
-                    .build()
-                    .parseClaimsJws(token);
+            JwtConsumer jwtConsumer = new JwtConsumerBuilder()
+                    .setVerificationKey(getSigningKey())
+                    .setDecryptionKey(getEncryptionKey())
+                    .build();
+            jwtConsumer.processToClaims(token);
             return true;
-        } catch (JwtException | IllegalArgumentException e) {
+        } catch (InvalidJwtException e) {
+            LOGGER.log(Level.INFO, "Token verification failed", e);
             return false;
         }
     }
 
     /**
-     * Get the subject of the JWT token.
-     * 
-     * @param token the JWT token
-     * @return the subject (UserID).
+     * Extracts the user ID (subject) from a valid JWT token.
+     *
+     * @param token JWT token
+     * @return User ID or null if token is invalid
      */
     public static String getOwner(String token) {
-        if (verify(token)) {
-            return getClaims(token).getSubject();
+        try {
+            JwtConsumer jwtConsumer = new JwtConsumerBuilder()
+                    .setVerificationKey(getSigningKey())
+                    .setDecryptionKey(getEncryptionKey())
+                    .build();
+            JwtClaims claims = jwtConsumer.processToClaims(token);
+            return claims.getSubject();
+        } catch (InvalidJwtException | MalformedClaimException e) {
+            LOGGER.log(Level.INFO, "Could not extract owner from token", e);
+            return null;
         }
-        return null;
     }
 
     /**
-     * Retrieves the claims from the JWT token.
-     * 
-     * @param token the JWT token
-     * @return the claims
+     * Retrieves all claims from a valid JWT token.
+     *
+     * @param token JWT token
+     * @return Map of claims or null if token is invalid
      */
-    public static Claims getClaims(String token) {
-        if (verify(token)) {
-            try {
-                SecretKey secretKey = getSecretKey();
-                return Jwts.parserBuilder()
-                        .setSigningKey(secretKey)
-                        .build()
-                        .parseClaimsJws(token).getBody();
-            } catch (JwtException | IllegalArgumentException e) {
-                return null;
-            }
+    public static Map<String, Object> getClaims(String token) {
+        try {
+            JwtConsumer jwtConsumer = new JwtConsumerBuilder()
+                    .setVerificationKey(getSigningKey())
+                    .setDecryptionKey(getEncryptionKey())
+                    .build();
+            JwtClaims claims = jwtConsumer.processToClaims(token);
+            return new HashMap<>(claims.getClaimsMap());
+        } catch (InvalidJwtException e) {
+            LOGGER.log(Level.INFO, "Could not extract claims from token", e);
+            return null;
         }
-        return null;
     }
 
     /**
-     * Retrieve a claim from the JWT token.
-     * 
-     * @param token the JWT token
-     * @param key   the claim key
-     * @return the claim value
+     * Retrieves a specific claim from a valid JWT token.
+     *
+     * @param token JWT token
+     * @param key   Claim key to retrieve
+     * @return Claim value or null if token is invalid or claim not found
      */
     public static Object getClaim(String token, String key) {
-        Claims claims = getClaims(token);
-        return (claims != null) ? claims.get(key) : null;
+        Map<String, Object> claims = getClaims(token);
+        return claims != null ? claims.get(key) : null;
     }
 
-    private static SecretKey getSecretKey() {
+    /**
+     * Creates a secure signing key using secret key and pepper.
+     *
+     * @return Signing key for JWT
+     */
+    private static Key getSigningKey() {
         String combined = SECRET_KEY + PEPPER;
-        return Keys.hmacShaKeyFor(combined.getBytes(StandardCharsets.UTF_8));
+        return new HmacKey(combined.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Creates an encryption key for JWT.
+     *
+     * @return Encryption key for JWT
+     */
+    private static Key getEncryptionKey() {
+        byte[] keyBytes = Arrays.copyOf(ENCRYPTION_KEY.getBytes(StandardCharsets.UTF_8), 32);
+        return new AesKey(keyBytes);
     }
 }
