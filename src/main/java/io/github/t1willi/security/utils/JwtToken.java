@@ -39,6 +39,7 @@ public final class JwtToken {
 
     private static final String SECRET_KEY;
     private static final String PEPPER;
+    private static final String ENCRYPTION_KEY;
 
     private static final long DEFAULT_EXPIRATION_MS = 1_800_000; // 30 minutes
 
@@ -52,6 +53,10 @@ public final class JwtToken {
         );
         PEPPER = ConfigurationManager.getInstance().getProperty(
                 "server.security.pepper",
+                Cryptography.randomBase64(32) // 256 bits
+        );
+        ENCRYPTION_KEY = ConfigurationManager.getInstance().getProperty(
+                "server.security.encryption_key",
                 Cryptography.randomBase64(32) // 256 bits
         );
     }
