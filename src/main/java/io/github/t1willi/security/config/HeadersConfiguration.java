@@ -30,7 +30,7 @@ public class HeadersConfiguration {
 
     // HSTS settings
     @Getter
-    private boolean hstsEnabled = false;
+    private boolean hstsEnabled = true;
     @Getter
     private String hstsValue = "max-age=31536000; includeSubDomains";
 

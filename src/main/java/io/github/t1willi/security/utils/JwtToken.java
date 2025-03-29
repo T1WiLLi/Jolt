@@ -4,7 +4,7 @@ import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.*;
 import com.nimbusds.jwt.*;
 
-import io.github.t1willi.security.cryptography.Cryptography;
+import io.github.t1willi.security.cryptography.CryptographyUtils;
 import io.github.t1willi.server.config.ConfigurationManager;
 
 import java.text.ParseException;
@@ -40,15 +40,15 @@ public final class JwtToken {
     static {
         SECRET_KEY = ConfigurationManager.getInstance().getProperty(
                 "server.security.secret_key",
-                Cryptography.randomBase64(32) // 256 bits
+                CryptographyUtils.randomBase64(32) // 256 bits
         );
         PEPPER = ConfigurationManager.getInstance().getProperty(
                 "server.security.pepper",
-                Cryptography.randomBase64(32) // 256 bits
+                CryptographyUtils.randomBase64(32) // 256 bits
         );
         ENCRYPTION_KEY = ConfigurationManager.getInstance().getProperty(
                 "server.security.encryption_key",
-                Cryptography.randomBase64(32) // 256 bits
+                CryptographyUtils.randomBase64(32) // 256 bits
         );
     }
 
