@@ -18,3 +18,13 @@
 ::-webkit-scrollbar-thumb:hover {
     background: #2563eb;
 }
+
+* {
+    scroll-behavior: smooth !important;
+}
+
+@supports not (scroll-behavior: smooth) {
+    html {
+        overflow-y: auto;
+    }
+}
