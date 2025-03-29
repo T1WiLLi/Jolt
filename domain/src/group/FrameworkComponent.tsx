@@ -1,4 +1,5 @@
 import Cookies from "../sections/fc/Cookies"
+import FileUpload from "../sections/fc/FileUpload"
 import Filters from "../sections/fc/Filters"
 import Forms from "../sections/fc/Forms"
 import Logging from "../sections/fc/Logging"
@@ -10,6 +11,7 @@ function FrameworkComponent() {
             <Logging />
             <Cookies />
             <Forms />
+            <FileUpload />
         </div>
     )
 }
