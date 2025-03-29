@@ -13,6 +13,7 @@ public class LanguageService {
     private static final Logger logger = Logger.getLogger(LanguageService.class.getName());
 
     private static String lang;
+    @Getter
     private static LanguageConfig languageConfig;
     @Getter
     private static JoltModel globalLanguageModel;
