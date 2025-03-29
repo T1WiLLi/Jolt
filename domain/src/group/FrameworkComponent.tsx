@@ -1,3 +1,4 @@
+import Cookies from "../sections/fc/Cookies"
 import Filters from "../sections/fc/Filters"
 import Logging from "../sections/fc/Logging"
 
@@ -6,6 +7,7 @@ function FrameworkComponent() {
         <div className="flex flex-col gap-5">
             <Filters />
             <Logging />
+            <Cookies />
         </div>
     )
 }
