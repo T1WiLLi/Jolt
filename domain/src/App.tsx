@@ -1,6 +1,8 @@
+import LandingPage from "./components/LandingPage"
+
 function App() {
   return (
-    <h1>Hi</h1>
+    <LandingPage />
   )
 }
 

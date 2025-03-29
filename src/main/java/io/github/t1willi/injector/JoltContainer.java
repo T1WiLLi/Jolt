@@ -57,14 +57,8 @@ import lombok.Getter;
  * <blockquote>
  * 
  * <pre>
- * JoltContainer.getInstance()
- *         .scan("com.example.myapp.beans")
- *         .initialize();
- *
- * MyBean bean = container.getBean(MyBean.class);
+ * MyBean bean = JoltContainer.getInstance().getBean(MyBean.class);
  * // Use the bean...
- *
- * JoltContainer.getInstance().shutdown();
  * </pre>
  * 
  * </blockquote>
