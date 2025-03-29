@@ -3,6 +3,7 @@ import Sidebar from "./Sidebar";
 import { sidebarElements } from "../types/SidebarSections";
 import GettingStarted from "../group/GettingStarted";
 import CoreConcepts from "../group/CoreConcepts";
+import UnderConstruction from "../helper/StillBuilding";
 
 function LandingPage() {
     return (
@@ -12,6 +13,7 @@ function LandingPage() {
             <main className="flex p-8 overflow-y-auto flex-col gap-5">
                 <GettingStarted />
                 <CoreConcepts />
+                <UnderConstruction />
             </main>
         </div>
     );

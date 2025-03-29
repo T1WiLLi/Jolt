@@ -70,12 +70,13 @@ function Sidebar({ sections }: { sections: SidebarGroup[] }) {
                                 isCollapsed ? (
                                     <TooltipPrimitive.Root key={itemIndex}>
                                         <TooltipPrimitive.Trigger asChild>
-                                            <div
+                                            <a
+                                                href={`#${item.link}`}
                                                 className={`flex items-center px-4 py-2 mx-2 rounded-md cursor-pointer transition-all 
                                                 hover:bg-gray-700 ${itemIndex !== group.items.length - 1 ? "mb-1" : ""}`}
                                             >
                                                 <item.icon className="w-5 h-5 text-blue-400" />
-                                            </div>
+                                            </a>
                                         </TooltipPrimitive.Trigger>
                                         <TooltipPrimitive.Content
                                             side="right"
@@ -86,14 +87,15 @@ function Sidebar({ sections }: { sections: SidebarGroup[] }) {
                                         </TooltipPrimitive.Content>
                                     </TooltipPrimitive.Root>
                                 ) : (
-                                    <div
+                                    <a
                                         key={itemIndex}
+                                        href={`#${item.link}`}
                                         className={`flex items-center px-4 py-2 mx-2 rounded-md cursor-pointer transition-all 
                                         hover:bg-gray-700 ${itemIndex !== group.items.length - 1 ? "mb-1" : ""}`}
                                     >
                                         <item.icon className="w-5 h-5 text-blue-400" />
                                         <span className="text-gray-300 ml-3 truncate w-full">{item.label}</span>
-                                    </div>
+                                    </a>
                                 )
                             ))}
                         </div>

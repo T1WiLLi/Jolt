@@ -19,7 +19,7 @@ public class MyApp extends JoltApplication {
     `.trim();
 
     return (
-        <div className="bg-gray-900 text-gray-100 rounded-lg shadow-lg p-6 w-full max-w-8xl mx-auto sm:p-4">
+        <div id="jolt" className="bg-gray-900 text-gray-100 rounded-lg shadow-lg p-6 w-full max-w-8xl mx-auto sm:p-4">
             <div className="flex items-center mb-4">
                 <Server className="w-8 h-8 text-blue-400 mr-3" />
                 <h1 className="text-3xl font-bold text-blue-400">JoltApplication</h1>
