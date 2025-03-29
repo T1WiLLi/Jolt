@@ -1,6 +1,6 @@
-import Configuration from "../sections/Configuration"
-import Installation from "../sections/Installation"
-import Introduction from "../sections/Introduction"
+import Configuration from "../sections/gs/Configuration"
+import Installation from "../sections/gs/Installation"
+import Introduction from "../sections/gs/Introduction"
 
 function GettingStarted() {
     return (

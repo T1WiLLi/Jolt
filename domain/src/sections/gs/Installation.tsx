@@ -1,6 +1,6 @@
 // Installation.jsx
 import { Download, AlertTriangle, Rocket } from 'lucide-react';
-import CodeBlock from '../lib/CodeBlock';
+import CodeBlock from '../../lib/CodeBlock';
 
 function Installation() {
     return (
@@ -73,10 +73,10 @@ function Installation() {
                             Add the following dependency to your <code className="text-blue-400 bg-gray-800 px-1 rounded">pom.xml</code>:
                         </p>
                         <CodeBlock code="<dependency>
-                                <groupId>io.github.t1willi</groupId>
-                                <artifactId>jolt</artifactId>
-                                <version>2.5.6</version>
-                            </dependency>" language='xml' />
+    <groupId>io.github.t1willi</groupId>
+    <artifactId>jolt</artifactId>
+    <version>2.5.6</version>
+</dependency>" language='xml' />
                         <p className="text-yellow-400 mt-3">
                             <strong>Warning:</strong> You'll need to manually create a <code className="text-blue-400 bg-gray-800 px-1 rounded">Dockerfile</code> and ensure your <code className="text-blue-400 bg-gray-800 px-1 rounded">pom.xml</code> is properly configured for deployment, which can be error-prone.
                         </p>

@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Book, Server, Shield, Globe, FileText } from 'lucide-react';
-import CodeBlock from "../lib/CodeBlock";
+import CodeBlock from "../../lib/CodeBlock";
 
 function Configuration() {
     const [activeTab, setActiveTab] = useState('server');
@@ -68,7 +68,7 @@ server.multipart.maxFileSize=5242880  # 5MB
 server.multipart.maxRequestSize=20971520  # 20MB`;
 
     return (
-        <div id="configuration" className="p-6 w-full text-gray-200 bg-gray-900 min-h-screen">
+        <div id="configuration" className="bg-gray-900 text-gray-100 rounded-lg shadow-lg p-6 w-full max-w-8xl mx-auto sm:p-4">
             <div className="mb-8">
                 <div className="flex items-center mb-2">
                     <Book className="mr-2 text-blue-400" size={24} />
@@ -160,7 +160,7 @@ server.multipart.maxRequestSize=20971520  # 20MB`;
 
             <div className="mt-6">
                 <h3 className="text-lg font-semibold text-white mb-2">Loading Configuration</h3>
-                <p className="text-gray-300 mb-4">
+                <p className="text-gray-300">
                     Jolt automatically loads the <code className="bg-gray-800 px-1 py-0.5 rounded text-blue-400">application.properties</code> file
                     from the classpath.
                 </p>
