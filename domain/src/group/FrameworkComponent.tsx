@@ -1,5 +1,6 @@
 import Cookies from "../sections/fc/Cookies"
 import Filters from "../sections/fc/Filters"
+import Forms from "../sections/fc/Forms"
 import Logging from "../sections/fc/Logging"
 
 function FrameworkComponent() {
@@ -8,6 +9,7 @@ function FrameworkComponent() {
             <Filters />
             <Logging />
             <Cookies />
+            <Forms />
         </div>
     )
 }
