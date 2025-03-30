@@ -1,4 +1,6 @@
 import Cookies from "../sections/fc/Cookies"
+import Database from "../sections/fc/Database"
+import ExternalApiRequest from "../sections/fc/ExternalApiRequest"
 import FileUpload from "../sections/fc/FileUpload"
 import Filters from "../sections/fc/Filters"
 import Forms from "../sections/fc/Forms"
@@ -12,6 +14,8 @@ function FrameworkComponent() {
             <Cookies />
             <Forms />
             <FileUpload />
+            <ExternalApiRequest />
+            <Database />
         </div>
     )
 }
