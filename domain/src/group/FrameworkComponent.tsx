@@ -5,6 +5,7 @@ import FileUpload from "../sections/fc/FileUpload"
 import Filters from "../sections/fc/Filters"
 import Forms from "../sections/fc/Forms"
 import Logging from "../sections/fc/Logging"
+import TemplatingEngine from "../sections/fc/TemplatingEngine"
 
 function FrameworkComponent() {
     return (
@@ -16,6 +17,7 @@ function FrameworkComponent() {
             <FileUpload />
             <ExternalApiRequest />
             <Database />
+            <TemplatingEngine />
         </div>
     )
 }
