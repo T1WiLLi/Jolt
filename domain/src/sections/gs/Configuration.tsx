@@ -8,6 +8,7 @@ function Configuration() {
     const categories = [
         { id: 'server', name: 'Server Configuration', icon: <Server size={18} /> },
         { id: 'security', name: 'Security Settings', icon: <Shield size={18} /> },
+        { id: 'database', name: 'Database Configuration', icon: <Globe size={18} /> },
         { id: 'multipart', name: 'Multipart Settings', icon: <FileText size={18} /> },
         { id: 'language', name: 'Language & Localization', icon: <Globe size={18} /> },
     ];
@@ -33,6 +34,11 @@ function Configuration() {
             { key: 'server.security.secret_key', defaultValue: '<random-base64-value>', description: 'Secret key used for various security operations (auto-generated if not specified)' },
             { key: 'server.security.pepper', defaultValue: '<random-base64-value>', description: 'Cryptographic pepper for password hashing (auto-generated if not specified)' },
             { key: 'server.security.encryption_key', defaultValue: '<random-base64-value>', description: 'Key used for data encryption (auto-generated if not specified)' }
+        ],
+        database: [
+            { key: 'db.url', defaultValue: 'Na', description: 'Database URL, e.g. jdbc:mysql://localhost:3306/mydb' },
+            { key: 'db.username', defaultValue: 'Na', description: 'Database username' },
+            { key: 'db.password', defaultValue: 'Na', description: 'Database password' },
         ],
         multipart: [
             { key: 'server.multipart.maxFileSize', defaultValue: '1048576', description: 'Maximum file size in bytes for multipart uploads (1MB default)' },
@@ -62,6 +68,10 @@ server.directory.listing.path=/public/resources
 
 # Set default language
 server.defaultLanguage=en
+
+db.url={DB_URL}
+db.username={DB_USERNAME}
+db.password={DB_PASSWORD}
 
 # Configure file uploads
 server.multipart.maxFileSize=5242880  # 5MB
@@ -164,6 +174,11 @@ server.multipart.maxRequestSize=20971520  # 20MB`;
                     Jolt automatically loads the <code className="bg-gray-800 px-1 py-0.5 rounded text-blue-400">application.properties</code> file
                     from the classpath.
                 </p>
+            </div>
+
+            <div className="mt-6">
+                <h3 className="text-lg font-semibold text-white mb-2"><span className="text-blue-400">.env</span> File in Jolt !</h3>
+                <p>You might have also, found it weird that for properties such as the database properties, we were passing what look like variables. That's normal, it's because, in Jolt, .env file properties are automatically replaced with their values.</p>
             </div>
         </div>
     );
