@@ -438,21 +438,4 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         logger.warning("Unsupported ID type conversion: " + dbValue.getClass() + " to " + id);
         return (ID) dbValue;
     }
-
-    /**
-     * Resets the connection's auto-commit state and releases it back to the pool.
-     *
-     * @param conn The database connection to reset and release.
-     */
-    private void resetConnectionAndRelease(Connection conn) {
-        try {
-            if (conn != null && !conn.isClosed()) {
-                conn.setAutoCommit(true);
-            }
-        } catch (SQLException e) {
-            logger.warning(() -> "Failed to reset connection state: " + e.getMessage());
-        } finally {
-            Database.getInstance().releaseConnection(conn);
-        }
-    }
 }

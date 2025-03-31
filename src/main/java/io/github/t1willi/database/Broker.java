@@ -353,7 +353,7 @@ public abstract class Broker<T> {
      *
      * @param conn The database connection to reset and release.
      */
-    private void resetConnectionAndRelease(Connection conn) {
+    void resetConnectionAndRelease(Connection conn) {
         try {
             if (conn != null && !conn.isClosed()) {
                 conn.setAutoCommit(true);
