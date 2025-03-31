@@ -314,11 +314,23 @@ public abstract class Broker<T> {
      * @throws SQLException If a database access error occurs.
      */
     private PreparedStatement prepareStatement(Connection conn, String sql, Object... params) throws SQLException {
-        PreparedStatement stmt = conn.prepareStatement(sql);
-        for (int i = 0; i < params.length; i++) {
-            stmt.setObject(i + 1, params[i]);
+        PreparedStatement stmt = null;
+        try {
+            stmt = conn.prepareStatement(sql);
+            for (int i = 0; i < params.length; i++) {
+                stmt.setObject(i + 1, params[i]);
+            }
+            return stmt;
+        } catch (SQLException e) {
+            if (stmt != null) {
+                try {
+                    stmt.close();
+                } catch (SQLException closeEx) {
+                    logger.warning(() -> "Failed to close PreparedStatement: " + closeEx.getMessage());
+                }
+            }
+            throw e;
         }
-        return stmt;
     }
 
     /**
