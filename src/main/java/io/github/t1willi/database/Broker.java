@@ -234,66 +234,7 @@ public abstract class Broker<T> {
      */
     protected T mapToEntity(ResultSet rs) throws SQLException {
         try {
-            Map<String, Object> fieldMap = new HashMap<>();
-            ResultSetMetaData metaData = rs.getMetaData();
-            int columnCount = metaData.getColumnCount();
-
-            for (int i = 1; i <= columnCount; i++) {
-                String columnName = metaData.getColumnName(i);
-                String fieldName = StringUtils.snakeToCamelCase(columnName);
-                int columnType = metaData.getColumnType(i);
-
-                if (rs.getObject(i) == null) {
-                    fieldMap.put(fieldName, null);
-                    continue;
-                }
-
-                try {
-                    Object value = null;
-                    switch (columnType) {
-                        case Types.TIMESTAMP:
-                            value = rs.getTimestamp(i) != null ? rs.getTimestamp(i).toLocalDateTime() : null;
-                            break;
-                        case Types.DATE:
-                            value = rs.getDate(i) != null ? rs.getDate(i).toLocalDate() : null;
-                            break;
-                        case Types.TIME:
-                            value = rs.getTime(i) != null ? rs.getTime(i).toLocalTime() : null;
-                            break;
-                        case Types.NUMERIC:
-                        case Types.DECIMAL:
-                            value = rs.getBigDecimal(i);
-                            break;
-                        case Types.BOOLEAN:
-                        case Types.BIT:
-                            Object boolValue = rs.getObject(i);
-                            if (boolValue instanceof Boolean) {
-                                value = (Boolean) boolValue;
-                            } else if (boolValue instanceof String) {
-                                String strValue = (String) boolValue;
-                                value = "t".equalsIgnoreCase(strValue) || "true".equalsIgnoreCase(strValue);
-                            } else if (boolValue instanceof Number) {
-                                value = ((Number) boolValue).intValue() != 0;
-                            } else {
-                                value = false;
-                            }
-                            break;
-                        case Types.INTEGER:
-                        case Types.SMALLINT:
-                        case Types.TINYINT:
-                            value = rs.getObject(i);
-                            break;
-                        default:
-                            value = rs.getObject(i);
-                            break;
-                    }
-
-                    fieldMap.put(fieldName, value);
-
-                } catch (SQLException ex) {
-                    fieldMap.put(fieldName, rs.getObject(i));
-                }
-            }
+            Map<String, Object> fieldMap = extractFieldMap(rs);
             return JacksonUtil.getObjectMapper().convertValue(fieldMap, entityClass);
         } catch (Exception e) {
             logger.severe(() -> "Error mapping ResultSet to entity: " + e.getMessage());
@@ -301,6 +242,85 @@ public abstract class Broker<T> {
                     "An unexpected database error occurred. Please try again later.",
                     "Unhandled database error: " + e.getMessage(),
                     e);
+        }
+    }
+
+    /**
+     * Extracts a map of field names and their corresponding values from a
+     * ResultSet.
+     *
+     * @param rs The ResultSet containing the data to extract.
+     * @return A map of field names to their values.
+     * @throws SQLException If a database access error occurs.
+     */
+    private Map<String, Object> extractFieldMap(ResultSet rs) throws SQLException {
+        Map<String, Object> fieldMap = new HashMap<>();
+        ResultSetMetaData metaData = rs.getMetaData();
+        int columnCount = metaData.getColumnCount();
+
+        for (int i = 1; i <= columnCount; i++) {
+            String columnName = metaData.getColumnName(i);
+            String fieldName = StringUtils.snakeToCamelCase(columnName);
+            int columnType = metaData.getColumnType(i);
+
+            Object value = mapColumnValue(rs, i, columnType);
+            fieldMap.put(fieldName, value);
+        }
+        return fieldMap;
+    }
+
+    /**
+     * Maps a column value from the ResultSet based on its SQL type.
+     *
+     * @param rs          The ResultSet containing the data.
+     * @param columnIndex The index of the column to map.
+     * @param columnType  The SQL type of the column.
+     * @return The mapped value.
+     * @throws SQLException If a database access error occurs.
+     */
+    private Object mapColumnValue(ResultSet rs, int columnIndex, int columnType) throws SQLException {
+        if (rs.getObject(columnIndex) == null) {
+            return null;
+        }
+
+        switch (columnType) {
+            case Types.TIMESTAMP:
+                return rs.getTimestamp(columnIndex) != null ? rs.getTimestamp(columnIndex).toLocalDateTime() : null;
+            case Types.DATE:
+                return rs.getDate(columnIndex) != null ? rs.getDate(columnIndex).toLocalDate() : null;
+            case Types.TIME:
+                return rs.getTime(columnIndex) != null ? rs.getTime(columnIndex).toLocalTime() : null;
+            case Types.NUMERIC:
+            case Types.DECIMAL:
+                return rs.getBigDecimal(columnIndex);
+            case Types.BOOLEAN:
+            case Types.BIT:
+                return mapBooleanValue(rs.getObject(columnIndex));
+            case Types.INTEGER:
+            case Types.SMALLINT:
+            case Types.TINYINT:
+                return rs.getObject(columnIndex);
+            default:
+                return rs.getObject(columnIndex);
+        }
+    }
+
+    /**
+     * Maps a value to a boolean based on its type.
+     *
+     * @param value The value to map.
+     * @return The mapped boolean value.
+     */
+    private Object mapBooleanValue(Object value) {
+        if (value instanceof Boolean) {
+            return value;
+        } else if (value instanceof String) {
+            String strValue = (String) value;
+            return "t".equalsIgnoreCase(strValue) || "true".equalsIgnoreCase(strValue);
+        } else if (value instanceof Number) {
+            return ((Number) value).intValue() != 0;
+        } else {
+            return false;
         }
     }
 
