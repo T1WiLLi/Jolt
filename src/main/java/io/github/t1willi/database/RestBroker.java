@@ -440,21 +440,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
     }
 
     /**
-     * Rolls back a transaction silently, logging any errors that occur.
-     *
-     * @param conn The database connection to roll back.
-     */
-    private void rollbackSilently(Connection conn) {
-        try {
-            if (conn != null && !conn.isClosed()) {
-                conn.rollback();
-            }
-        } catch (SQLException e) {
-            logger.warning(() -> "Failed to rollback transaction: " + e.getMessage());
-        }
-    }
-
-    /**
      * Resets the connection's auto-commit state and releases it back to the pool.
      *
      * @param conn The database connection to reset and release.

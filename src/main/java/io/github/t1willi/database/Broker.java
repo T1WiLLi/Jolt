@@ -338,7 +338,7 @@ public abstract class Broker<T> {
      *
      * @param conn The database connection to roll back.
      */
-    private void rollbackSilently(Connection conn) {
+    void rollbackSilently(Connection conn) {
         try {
             if (conn != null && !conn.isClosed()) {
                 conn.rollback();
