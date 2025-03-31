@@ -13,8 +13,7 @@ final class SqlSecurity {
             "(?i)(\\b)(union|select|insert|update|delete|drop|alter|exec|execute|create|where|having|or|and)(\\b)");
     private static final Pattern SAFE_WHERE_CLAUSE_PATTERN = Pattern.compile(
             "^(WHERE\\s+)?(([a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)?)\\s*(=|!=|<>|>|<|>=|<=|LIKE|IN|IS NULL|IS NOT NULL|BETWEEN)\\s*((\\?)|('[^']*')|([0-9]+)))"
-                    +
-                    "(\\s+(AND|OR)\\s+([a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)?)\\s*(=|!=|<>|>|<|>=|<=|LIKE|IN|IS NULL|IS NOT NULL|BETWEEN)\\s*((\\?)|('[^']*')|([0-9]+)))*$");
+                    + "(\\s+(AND|OR)\\s+\\2)*$");
 
     static {
         String[] keywords = {
