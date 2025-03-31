@@ -176,15 +176,15 @@ public final class JwtToken {
      * Retrieves all claims from a valid JWT token.
      *
      * @param token JWT token
-     * @return Map of claims or null if token is invalid
+     * @return Map of claims or an empty map if token is invalid
      */
     public static Map<String, Object> getClaims(String token) {
         try {
             JWTClaimsSet claims = parseToken(token);
-            return new HashMap<>(claims.getClaims());
+            return claims != null ? new HashMap<>(claims.getClaims()) : new HashMap<>();
         } catch (Exception e) {
             LOGGER.log(Level.INFO, "Could not extract claims from token", e);
-            return null;
+            return new HashMap<>();
         }
     }
 
@@ -212,11 +212,19 @@ public final class JwtToken {
         if (token.split("\\.").length == 3) {
             SignedJWT signedJWT = SignedJWT.parse(token);
             signedJWT.verify(new MACVerifier(getSigningKey()));
-            return signedJWT.getJWTClaimsSet();
+            JWTClaimsSet claims = signedJWT.getJWTClaimsSet();
+            if (claims == null) {
+                throw new JOSEException("JWT claims set is null after parsing signed token");
+            }
+            return claims;
         } else {
             EncryptedJWT encryptedJWT = EncryptedJWT.parse(token);
             encryptedJWT.decrypt(new AESDecrypter(getEncryptionKey()));
-            return encryptedJWT.getJWTClaimsSet();
+            JWTClaimsSet claims = encryptedJWT.getJWTClaimsSet();
+            if (claims == null) {
+                throw new JOSEException("JWT claims set is null after parsing encrypted token");
+            }
+            return claims;
         }
     }
 
