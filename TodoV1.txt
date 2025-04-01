@@ -12,11 +12,6 @@ in application.properties file:
 server.jwt.secret_key={SECRET_KEY}
 server.jwt.pepper={PEPPER}
 
-V-2.5
-CSP enum value configuration for easier management.
-Re-add Cookie configuration for easy creation of session, jwt and unsecure cookies.
-Add a function for database column name to snake_case, example userId -> user_id
-
 V-3
 Add CSRF management and protection throughout the framework.
 Add Session management to the framework and make it secure and easy to use, built on top of Jakarta HttpSession
