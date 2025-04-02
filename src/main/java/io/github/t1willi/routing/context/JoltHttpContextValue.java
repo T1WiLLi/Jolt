@@ -43,15 +43,8 @@ public abstract class JoltHttpContextValue {
         return value.isPresent();
     }
 
-    /**
-     * Retrieves the underlying string value or throws an exception if not present.
-     *
-     * @return
-     *         The non-null string value.
-     * @throws IllegalStateException
-     *                               If the value is absent.
-     */
-    public String get() {
-        return value.orElseThrow(() -> new IllegalStateException("The value is not present."));
+    @Override
+    public String toString() {
+        return value.orElse("empty");
     }
 }

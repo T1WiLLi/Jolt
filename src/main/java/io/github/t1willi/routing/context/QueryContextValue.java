@@ -74,7 +74,7 @@ public final class QueryContextValue extends JoltHttpContextValue {
             return defaultValue;
         }
         try {
-            return Integer.parseInt(get());
+            return Integer.parseInt(this.toString());
         } catch (NumberFormatException e) {
             return defaultValue;
         }
@@ -94,7 +94,7 @@ public final class QueryContextValue extends JoltHttpContextValue {
             return defaultValue;
         }
         try {
-            return Double.parseDouble(get());
+            return Double.parseDouble(this.toString());
         } catch (NumberFormatException e) {
             return defaultValue;
         }
@@ -117,6 +117,6 @@ public final class QueryContextValue extends JoltHttpContextValue {
             return defaultValue;
         }
         // Boolean.parseBoolean returns false if the value is null or not "true"
-        return Boolean.parseBoolean(get().trim());
+        return Boolean.parseBoolean(this.toString().trim());
     }
 }

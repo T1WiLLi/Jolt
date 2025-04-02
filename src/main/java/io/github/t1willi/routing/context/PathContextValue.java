@@ -40,7 +40,7 @@ public final class PathContextValue extends JoltHttpContextValue {
             throw new IllegalStateException("value is not present");
         }
         try {
-            return Integer.parseInt(get());
+            return Integer.parseInt(this.toString());
         } catch (NumberFormatException e) {
             throw new IllegalStateException("value is not an integer", e);
         }
@@ -59,7 +59,7 @@ public final class PathContextValue extends JoltHttpContextValue {
             throw new IllegalStateException("value is not present");
         }
         try {
-            return Double.parseDouble(get());
+            return Double.parseDouble(this.toString());
         } catch (NumberFormatException e) {
             throw new IllegalStateException("value is not a double", e);
         }
