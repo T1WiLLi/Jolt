@@ -45,6 +45,6 @@ public abstract class JoltHttpContextValue {
 
     @Override
     public String toString() {
-        return value.orElse("empty");
+        return value.orElse("");
     }
 }
