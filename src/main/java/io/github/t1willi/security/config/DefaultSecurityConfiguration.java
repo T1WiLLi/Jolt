@@ -63,9 +63,15 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
                 .withFrameOptions(FrameOptionsPolicy.DENY)
                 .withHsts(HstsPolicy.ONE_YEAR_WITH_SUBDOMAINS_PRELOAD)
                 .withReferrerPolicy(ReferrerPolicy.SAME_ORIGIN)
-                .httpsOnly(false)
-                .contentSecurityPolicy(true)
-                .withCacheControl(CacheControlPolicy.NO_CACHE);
+                .withCacheControl(CacheControlPolicy.NO_CACHE)
+                .withCSP()
+                .withFontSources(ContentSecurityPolicy.SELF)
+                .withStyleSources(ContentSecurityPolicy.SELF)
+                .withScriptSources(ContentSecurityPolicy.SELF)
+                .withChildSources(ContentSecurityPolicy.SELF)
+                .withWorkerSources(ContentSecurityPolicy.SELF)
+                .withConnectSources(ContentSecurityPolicy.SELF)
+                .withImageSources(ContentSecurityPolicy.SELF);
 
         return this;
     }

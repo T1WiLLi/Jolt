@@ -45,8 +45,8 @@ public class HeadersConfiguration {
     // Content Security Policy (CSP) settings
     @Getter
     private boolean contentSecurityPolicyEnabled = true;
-    @Getter
     private String contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self';";
+    private ContentSecurityPolicy cspBuilder = new ContentSecurityPolicy();
 
     @Getter
     private String cacheControlDirective;
@@ -212,29 +212,31 @@ public class HeadersConfiguration {
     // -------------------- Content Security Policy (CSP) --------------------
 
     /**
-     * Enables or disables Content Security Policy (CSP) using a strict default.
-     * When enabled, the default strict CSP is:
-     * "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self';
-     * connect-src 'self';"
-     *
-     * @param enabled true to enable CSP using the default strict configuration.
-     * @return this HeadersConfiguration for fluent chaining.
+     * Provides access to the CSP configuration for fluent configuration.
      */
-    public HeadersConfiguration contentSecurityPolicy(boolean enabled) {
-        this.contentSecurityPolicyEnabled = enabled;
-        return this;
+    public ContentSecurityPolicy withCSP() {
+        this.contentSecurityPolicyEnabled = true;
+        return cspBuilder;
     }
 
     /**
-     * Sets a custom Content Security Policy.
-     *
-     * @param policy a custom CSP string.
-     * @return this HeadersConfiguration for fluent chaining.
+     * Sets a custom Content Security Policy string, bypassing the builder.
      */
     public HeadersConfiguration contentSecurityPolicy(String policy) {
         this.contentSecurityPolicyEnabled = true;
         this.contentSecurityPolicy = policy;
+        this.cspBuilder = null; // Reset builder if a custom string is provided
         return this;
+    }
+
+    /**
+     * Gets the CSP string, either from the builder or the custom string.
+     */
+    public String getContentSecurityPolicy() {
+        if (!contentSecurityPolicyEnabled) {
+            return null;
+        }
+        return (cspBuilder != null) ? cspBuilder.build() : contentSecurityPolicy;
     }
 
     /**
