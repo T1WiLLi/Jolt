@@ -21,7 +21,7 @@ import io.github.t1willi.server.config.ServerConfig;
  * <p>
  * This class manages the embedded Tomcat server, provides a DSL for creating
  * routes, and enforces a single running instance per JVM. Subclasses implement
- * {@link #setup()} to define the application's routes and any additional
+ * {@link #init()} to define the application's routes and any additional
  * configuration.
  * <p>
  * <strong>Usage Example:</strong>
@@ -34,7 +34,7 @@ import io.github.t1willi.server.config.ServerConfig;
  *     }
  *
  *     @Override
- *     protected void setup() {
+ *     protected void init() {
  *         get("/", () -> "Hello, World!");
  *         get("/user/{id:int}", ctx -> "Hello, User #" + ctx.path("id"));
  *     }
@@ -107,7 +107,7 @@ public abstract class JoltApplication {
             Database.init();
             JoltContainer.getInstance().initialize();
             router = JoltContainer.getInstance().getBean(Router.class);
-            instance.setup();
+            instance.init();
             ServerConfig config = ConfigurationManager.getInstance().getServerConfig();
             instance.server = new TomcatServer(config);
             instance.server.start();
@@ -158,7 +158,7 @@ public abstract class JoltApplication {
      * <p>
      * This method is invoked automatically by {@link #launch(Class, String)}.
      */
-    protected abstract void setup();
+    protected abstract void init();
 
     /**
      * Registers a before-handler for the specified routes.
