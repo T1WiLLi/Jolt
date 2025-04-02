@@ -71,7 +71,9 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
                 .withChildSources(ContentSecurityPolicy.SELF)
                 .withWorkerSources(ContentSecurityPolicy.SELF)
                 .withConnectSources(ContentSecurityPolicy.SELF)
-                .withImageSources(ContentSecurityPolicy.SELF);
+                .withImageSources(ContentSecurityPolicy.SELF)
+                .and()
+                .httpsOnly(false);
 
         return this;
     }

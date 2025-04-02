@@ -46,7 +46,7 @@ public class HeadersConfiguration {
     @Getter
     private boolean contentSecurityPolicyEnabled = true;
     private String contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self';";
-    private ContentSecurityPolicy cspBuilder = new ContentSecurityPolicy();
+    private ContentSecurityPolicy cspBuilder = new ContentSecurityPolicy(this);
 
     @Getter
     private String cacheControlDirective;

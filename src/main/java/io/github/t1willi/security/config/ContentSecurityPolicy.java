@@ -27,6 +27,12 @@ public class ContentSecurityPolicy {
     @Getter
     private String imageSrc;
 
+    private final HeadersConfiguration parent;
+
+    public ContentSecurityPolicy(HeadersConfiguration parent) {
+        this.parent = parent;
+    }
+
     /**
      * Sets the default-src directive.
      */
@@ -89,6 +95,10 @@ public class ContentSecurityPolicy {
     public ContentSecurityPolicy withImageSources(String... sources) {
         this.imageSrc = "img-src " + String.join(" ", sources);
         return this;
+    }
+
+    public HeadersConfiguration and() {
+        return this.parent;
     }
 
     /**
