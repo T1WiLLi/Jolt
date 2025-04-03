@@ -67,7 +67,7 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
                 .withCSP()
                 .withFontSources(ContentSecurityPolicy.SELF)
                 .withStyleSources(ContentSecurityPolicy.SELF)
-                .withScriptSources(ContentSecurityPolicy.UNSAFE_INLINE)
+                .withScriptSources(ContentSecurityPolicy.SELF)
                 .withChildSources(ContentSecurityPolicy.SELF)
                 .withWorkerSources(ContentSecurityPolicy.SELF)
                 .withConnectSources(ContentSecurityPolicy.SELF)
