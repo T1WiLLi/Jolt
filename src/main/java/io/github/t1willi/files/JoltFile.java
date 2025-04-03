@@ -11,6 +11,7 @@ import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.routing.MimeInterpreter;
 import lombok.Getter;
+import lombok.Setter;
 
 /**
  * Represents an uploaded file stored in memory.
@@ -54,7 +55,8 @@ public class JoltFile {
     /**
      * The original file name.
      */
-    private final String fileName;
+    @Setter
+    private String fileName;
 
     /**
      * The content type of the file (e.g., {@code "image/png"}).

@@ -16,6 +16,7 @@ import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.files.JoltFile;
 import io.github.t1willi.form.Form;
 import io.github.t1willi.http.HttpStatus;
+import io.github.t1willi.security.utils.InputSanitizer;
 import io.github.t1willi.template.JoltModel;
 import io.github.t1willi.utils.JacksonUtil;
 import jakarta.servlet.http.Cookie;
@@ -271,7 +272,16 @@ public final class JoltContext {
      * @return List<{@link JoltFile}> of JoltFile objects.
      */
     public List<JoltFile> getFiles() {
-        return requestContext.getFiles();
+        List<JoltFile> files = requestContext.getFiles();
+
+        for (JoltFile file : files) {
+            String originalFilename = file.getFileName();
+            if (originalFilename != null) {
+                file.setFileName(InputSanitizer.sanitizeFilename(originalFilename));
+            }
+        }
+
+        return files;
     }
 
     /**
@@ -407,7 +417,7 @@ public final class JoltContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot write text after response has been committed");
         }
-        responseContext.text(data);
+        responseContext.text(InputSanitizer.sanitizeString(data));
         return this;
     }
 
@@ -428,7 +438,19 @@ public final class JoltContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot write JSON after response has been committed");
         }
-        responseContext.json(data);
+        if (data instanceof Map) {
+            Map<Object, Object> sanitizedMap = new HashMap<>();
+            ((Map<?, ?>) data).forEach((key, value) -> {
+                Object sanitizedValue = value;
+                if (value instanceof String) {
+                    sanitizedValue = InputSanitizer.sanitizeJsonString((String) value);
+                }
+                sanitizedMap.put(key, sanitizedValue);
+            });
+            responseContext.json(sanitizedMap);
+        } else {
+            responseContext.json(data);
+        }
         return this;
     }
 
@@ -449,7 +471,8 @@ public final class JoltContext {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot write HTML after response has been committed");
         }
-        responseContext.html(html);
+        String sanitized = InputSanitizer.HTML_SCRIPT_PATTERN.matcher(html).replaceAll("");
+        responseContext.html(sanitized);
         return this;
     }
 
@@ -467,6 +490,13 @@ public final class JoltContext {
         return this;
     }
 
+    /**
+     * Write whatever data the object is composed of to the response.
+     * This function doesn't sanitize the data, so use with caution.
+     * 
+     * @param data The data to write to the response.
+     * @return this {@code JoltHttpContext} for fluent chaining.
+     */
     public JoltContext write(Object data) {
         try {
             responseContext.write(data);
@@ -728,7 +758,13 @@ public final class JoltContext {
         Map<String, String> formData = new HashMap<>();
         addQueryParameters(formData, excludes);
         addJsonBodyParameters(formData, excludes);
-        formData.putAll(pathParams);
+
+        Map<String, String> sanitizedPathParams = new HashMap<>();
+        pathParams.forEach((key, value) -> {
+            sanitizedPathParams.put(key, InputSanitizer.sanitizeString(value));
+        });
+        formData.putAll(sanitizedPathParams);
+
         return new Form(formData);
     }
 
@@ -757,7 +793,7 @@ public final class JoltContext {
     private void addQueryParameters(Map<String, String> formData, String... excludes) {
         requestContext.getRequest().getParameterMap().forEach((key, values) -> {
             if (values != null && values.length > 0 && !shouldExclude(key, excludes)) {
-                formData.put(key, values[0]);
+                formData.put(key, InputSanitizer.sanitizeString(values[0]));
             }
         });
     }
@@ -782,7 +818,7 @@ public final class JoltContext {
                     parsed.forEach((key, object) -> {
                         if (!shouldExclude(key, excludes)) {
                             String valueStr = (object == null) ? "" : object.toString();
-                            formData.put(key, valueStr);
+                            formData.put(key, InputSanitizer.sanitizeJsonString(valueStr));
                         }
                     });
                 } catch (IOException e) {
