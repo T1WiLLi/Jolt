@@ -34,7 +34,7 @@ final class TemplatingContext {
 
     private void render(ResponseContext response, String templatePath, Map<String, Object> dataModel) {
         try {
-            Template template = configuration.getTemplate(templatePath);
+            Template template = configuration.getTemplate(templatePath + ".ftl"); // .ftl is the default extension
             response.setContentType("text/html; charset=UTF-8");
             StringWriter stringWriter = new StringWriter();
             template.process(dataModel, stringWriter);
