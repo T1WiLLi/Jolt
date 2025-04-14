@@ -129,7 +129,7 @@ public class Session {
                     .httpOnly(true)
                     .secure(true)
                     .path("/")
-                    .sameSite("STRICT")
+                    .sameSite("Strict")
                     .build();
 
             storage.saveSession(sessionId, new HashMap<>());
