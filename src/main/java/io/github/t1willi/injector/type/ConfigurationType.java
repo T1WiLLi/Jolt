@@ -32,5 +32,10 @@ public enum ConfigurationType {
     /**
      * Represents a bean configured to manage cookies.
      */
-    COOKIE;
+    COOKIE,
+
+    /**
+     * Represents a bean configured to manage sessions.
+     */
+    SESSION;
 }
