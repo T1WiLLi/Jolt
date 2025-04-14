@@ -50,9 +50,14 @@ import io.github.t1willi.utils.HelpMethods;
 public final class JoltDispatcherServlet extends HttpServlet {
 
     private static final Logger log = Logger.getLogger(JoltDispatcherServlet.class.getName());
+    private static final ThreadLocal<JoltContext> CURRENT_CONTEXT = new ThreadLocal<>();
 
     private transient final Router router;
     private transient final GlobalExceptionHandler exceptionHandler;
+
+    public static JoltContext getCurrentContext() {
+        return CURRENT_CONTEXT.get();
+    }
 
     /**
      * Constructs a new {@code JoltDispatcherServlet}, retrieving necessary
@@ -69,6 +74,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
         RequestContext context = prepareRequestContext(req, res);
         JoltContext joltCtx = new JoltContext(req, res, null, Collections.emptyList());
         try {
+            CURRENT_CONTEXT.set(joltCtx);
             if (processFilters(context)) {
                 executeAfterHandlers(joltCtx);
                 return;
@@ -87,6 +93,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
                 joltCtx.commit();
                 executeAfterHandlers(joltCtx);
             }
+            CURRENT_CONTEXT.remove();
         }
     }
 
