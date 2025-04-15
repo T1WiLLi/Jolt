@@ -50,9 +50,14 @@ import io.github.t1willi.utils.HelpMethods;
 public final class JoltDispatcherServlet extends HttpServlet {
 
     private static final Logger log = Logger.getLogger(JoltDispatcherServlet.class.getName());
+    private static final ThreadLocal<JoltContext> CURRENT_CONTEXT = new ThreadLocal<>();
 
     private transient final Router router;
     private transient final GlobalExceptionHandler exceptionHandler;
+
+    public static JoltContext getCurrentContext() {
+        return CURRENT_CONTEXT.get();
+    }
 
     /**
      * Constructs a new {@code JoltDispatcherServlet}, retrieving necessary
@@ -69,6 +74,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
         RequestContext context = prepareRequestContext(req, res);
         JoltContext joltCtx = new JoltContext(req, res, null, Collections.emptyList());
         try {
+            CURRENT_CONTEXT.set(joltCtx);
             if (processFilters(context)) {
                 executeAfterHandlers(joltCtx);
                 return;
@@ -81,12 +87,17 @@ public final class JoltDispatcherServlet extends HttpServlet {
             }
         } catch (Exception e) {
             log.warning(() -> "Error in request processing: " + e.getMessage());
-            exceptionHandler.handle(e, context.res);
+            if (!context.res.isCommitted() && joltCtx != null) {
+                joltCtx.commit();
+                log.info("Committed context with status: " + joltCtx.getStatus().code());
+            }
+            exceptionHandler.handle(e, joltCtx.getResponse());
         } finally {
             if (!context.res.isCommitted() && joltCtx != null) {
                 joltCtx.commit();
                 executeAfterHandlers(joltCtx);
             }
+            CURRENT_CONTEXT.remove();
         }
     }
 
@@ -101,7 +112,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
     private RequestContext prepareRequestContext(HttpServletRequest req, HttpServletResponse res) {
         String method = req.getMethod();
         String path = getPath(req);
-        log.info(() -> String.format("Incoming %s %s", method, path));
+        log.info(() -> String.format("Incoming %s %s from %s", method, path, req.getRemoteAddr()));
         return new RequestContext(req, res, method, path);
     }
 
