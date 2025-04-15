@@ -7,6 +7,7 @@ import java.util.Objects;
 import java.util.logging.Logger;
 
 import io.github.t1willi.core.JoltDispatcherServlet;
+import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.routing.context.JoltContext;
 import io.github.t1willi.server.config.ConfigurationManager;
 import jakarta.servlet.http.HttpSession;
@@ -170,6 +171,7 @@ public class Session {
             logger.warning(() -> "IP address mismatch for session " + httpSession.getId() + ": expected "
                     + storedIp + ", got " + currentIp + ". Warning! This might indicate a session hijacking.");
             httpSession.invalidate();
+            ctx.status(HttpStatus.FORBIDDEN);
             throw new SecurityException("IP address mismatch");
         }
 
@@ -180,6 +182,7 @@ public class Session {
                     + storedUserAgent + ", got " + currentUserAgent
                     + ". Warning! This might indicate a session hijacking.");
             httpSession.invalidate();
+            ctx.status(HttpStatus.FORBIDDEN);
             throw new SecurityException("User-Agent mismatch");
         }
 
@@ -188,9 +191,9 @@ public class Session {
         if (currentTime > expireTime) {
             logger.warning("Session expired: " + httpSession.getId());
             httpSession.invalidate();
+            ctx.status(HttpStatus.FORBIDDEN);
             throw new SecurityException("Session expired");
         }
-
         return httpSession;
     }
 
