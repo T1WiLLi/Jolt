@@ -4,8 +4,10 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Deque;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.function.Consumer;
 import java.util.function.Supplier;
 import java.util.regex.Matcher;
@@ -63,10 +65,10 @@ public final class Router {
     private final List<LifecycleEntry> afterHandlers = new ArrayList<>();
 
     /**
-     * Internal list storing all registered routes.
+     * Internal list storing all registered routes. Separated by HTTP Method for
+     * faster lookup.
      */
-    private final List<Route> routes = new ArrayList<>();
-
+    private final Map<String, List<Route>> routes = new HashMap<>();
     /**
      * Maintains prefixes for grouped routes.
      */
@@ -211,17 +213,9 @@ public final class Router {
      *         {@code false} otherwise
      */
     public boolean pathExistsWithDifferentMethod(String currentMethod, String path) {
-        for (HttpMethod method : HttpMethod.values()) {
-            String methodName = method.toString();
-            if (methodName.equals(currentMethod)) {
-                continue;
-            }
-            if (match(methodName, path) != null) {
-                return true;
-            }
-        }
-
-        return false;
+        return routes.entrySet().stream()
+                .anyMatch(entry -> !entry.getKey().equals(currentMethod) &&
+                        entry.getValue().stream().anyMatch(route -> route.getPattern().matcher(path).matches()));
     }
 
     /**
@@ -234,9 +228,10 @@ public final class Router {
      * @return A list of valid HTTP methods, or an empty list if none match
      */
     public String getAllowedMethods(String path) {
-        return Arrays.stream(HttpMethod.values())
-                .filter(method -> match(method.toString(), path) != null)
-                .map(HttpMethod::toString)
+        return routes.entrySet().stream()
+                .filter(entry -> entry.getValue().stream()
+                        .anyMatch(route -> route.getPattern().matcher(path).matches()))
+                .map(Map.Entry::getKey)
                 .collect(Collectors.joining(", "));
     }
 
@@ -251,15 +246,27 @@ public final class Router {
      */
     public RouteMatch match(String method, String requestPath) {
         String upperMethod = method.toUpperCase(Locale.ROOT);
-        for (Route route : routes) {
-            if (route.getHttpMethod().equals(upperMethod)) {
-                Matcher m = route.getPattern().matcher(requestPath);
-                if (m.matches()) {
-                    return new RouteMatch(route, m);
-                }
+        List<Route> rawRoutes = routes.getOrDefault(upperMethod, List.of());
+        for (Route route : rawRoutes) {
+            Matcher m = route.getPattern().matcher(requestPath);
+            if (m.matches()) {
+                return new RouteMatch(route, m);
             }
         }
         return null;
+    }
+
+    /**
+     * List of routes.
+     * 
+     * @return The list of routes
+     */
+    public List<String> getRegisteredRoutes() {
+        return routes.entrySet().stream()
+                .flatMap(entry -> entry.getValue().stream()
+                        .map(route -> entry.getKey() + " " + route.getPath()))
+                .sorted()
+                .collect(Collectors.toList());
     }
 
     /**
@@ -270,14 +277,16 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method/path exists
      */
     private void addRoute(Route route) {
-        for (Route r : routes) {
-            if (r.getHttpMethod().equals(route.getHttpMethod()) && r.getPath().equals(route.getPath())) {
+        String method = route.getHttpMethod();
+        List<Route> methodRoutes = routes.computeIfAbsent(method, k -> new ArrayList<>());
+        for (Route r : methodRoutes) {
+            if (r.getPath().equals(route.getPath())) {
                 throw new DuplicateRouteException(
-                        "Route already exists for " + route.getHttpMethod() + " " + route.getPath());
+                        "Route already exists for " + method + " " + route.getPath());
             }
         }
-        routes.add(route);
-        logger.info(() -> "Registered route: " + route.getHttpMethod() + " " + route.getPath());
+        methodRoutes.add(route);
+        logger.info(() -> "Registered route: " + method + " " + route.getPath());
     }
 
     /**
@@ -296,7 +305,7 @@ public final class Router {
             return currentPrefix.isEmpty() ? "/" : currentPrefix;
         }
 
-        return normalizePath(currentPrefix + path);
+        return currentPrefix + path;
     }
 
     /**

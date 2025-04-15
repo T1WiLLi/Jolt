@@ -75,7 +75,7 @@ public final class Route {
      */
     public Route(String httpMethod, String path, RouteHandler handler) {
         this.httpMethod = httpMethod;
-        this.path = path;
+        this.path = normalizePath(path);
         this.handler = handler;
 
         RoutePattern compiled = compile(path);
@@ -110,5 +110,19 @@ public final class Route {
 
         matcher.appendTail(sb);
         return new RoutePattern(Pattern.compile("^" + sb.toString() + "$"), names);
+    }
+
+    private String normalizePath(String path) {
+        if (path == null || path.isEmpty()) {
+            return "/";
+        }
+        String normalized = path.replaceAll("//+", "/");
+        if (!normalized.startsWith("/")) {
+            normalized = "/" + normalized;
+        }
+        if (normalized.length() > 1 && normalized.endsWith("/")) {
+            normalized = normalized.substring(0, normalized.length() - 1);
+        }
+        return normalized;
     }
 }
