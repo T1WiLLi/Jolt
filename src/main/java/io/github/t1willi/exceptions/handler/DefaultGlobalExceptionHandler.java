@@ -21,7 +21,6 @@ public final class DefaultGlobalExceptionHandler extends GlobalExceptionHandler 
 
     @Override
     public void handle(Throwable t, HttpServletResponse res) {
-        System.out.println(res.getStatus());
         res.setHeader("Content-Security-Policy",
                 "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self'");
 
