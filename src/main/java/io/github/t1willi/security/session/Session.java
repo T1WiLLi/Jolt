@@ -1,143 +1,197 @@
 package io.github.t1willi.security.session;
 
-import java.util.HashMap;
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.Map;
 import java.util.Objects;
 import java.util.logging.Logger;
 
 import io.github.t1willi.core.JoltDispatcherServlet;
-import io.github.t1willi.database.Database;
-import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.routing.context.JoltContext;
+import io.github.t1willi.server.config.ConfigurationManager;
 import jakarta.servlet.http.HttpSession;
 
 public class Session {
     private static final Logger logger = Logger.getLogger(Session.class.getName());
 
-    private static final SessionConfig config = JoltContainer.getInstance().getBean(SessionConfig.class);
-    private static SessionStorage storage;
+    // Public constants for default session attribute keys
+    public static final String IP_ADDRESS_KEY = "ip_address";
+    public static final String USER_AGENT_KEY = "user_agent";
+    public static final String ACCESS_TIME_KEY = "access_time";
+    public static final String EXPIRE_TIME_KEY = "expire_time";
+    public static final String IS_AUTHENTICATED_KEY = "is_authenticated";
 
-    static {
-        initializeStorage();
-    }
-
-    public static void configure(SessionConfig newConfig) {
-        Objects.requireNonNull(newConfig, "SessionConfig cannot be null.");
-        Session.config // Self
-                .withSessionTableName(newConfig.getSessionTableName())
-                .withStorageType(newConfig.getStorageType())
-                .withFileStoragePath(newConfig.getFileStoragePath())
-                .withSessionLifetime(newConfig.getSessionLifetime());
-        initializeStorage();
-    }
+    private static final int DEFAULT_SESSION_LIFETIME = 1800;
+    private static volatile Integer sessionLifetime = null;
+    private static final SimpleDateFormat TIMESTAMP_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     public static void set(String key, Object value) {
-        String sessionId = ensureSession();
-        getAttributes(sessionId).put(key, value);
+        HttpSession httpSession = ensureSession(true);
+        httpSession.setAttribute(key, value);
     }
 
     public static void setAll(Map<String, Object> attributes) {
-        String sessionId = ensureSession();
-        getAttributes(sessionId).clear();
-        getAttributes(sessionId).putAll(attributes);
+        HttpSession httpSession = ensureSession(true);
+        for (Map.Entry<String, Object> entry : attributes.entrySet()) {
+            httpSession.setAttribute(entry.getKey(), entry.getValue());
+        }
     }
 
     public static void remove(String key) {
-        String sessionId = ensureSession();
-        getAttributes(sessionId).remove(key);
+        HttpSession httpSession = ensureSession(true);
+        httpSession.removeAttribute(key);
     }
 
     public static Object get(String key) {
-        String sessionId = ensureSession();
-        return getAttributes(sessionId).get(key);
+        HttpSession httpSession = ensureSession(true);
+        Object value = httpSession.getAttribute(key);
+        return value;
     }
 
     public static Object getOrDefault(String key, Object defaultValue) {
-        Object value = get(key);
-        return value != null ? value : defaultValue;
+        try {
+            Object value = get(key);
+            return value != null ? value : defaultValue;
+        } catch (SecurityException e) {
+            return defaultValue;
+        }
+    }
+
+    public static String getSessionId() {
+        HttpSession httpSession = ensureSession(true);
+        return httpSession.getId();
+    }
+
+    public static String getIpAddress() {
+        return (String) get(IP_ADDRESS_KEY);
+    }
+
+    public static String getUserAgent() {
+        return (String) get(USER_AGENT_KEY);
+    }
+
+    public static long getUnixAccess() {
+        String accessTime = (String) get(ACCESS_TIME_KEY);
+        return accessTime != null ? Long.parseLong(accessTime) : 0L;
+    }
+
+    public static long getUnixExpire() {
+        String expireTime = (String) get(EXPIRE_TIME_KEY);
+        return expireTime != null ? Long.parseLong(expireTime) : 0L;
+    }
+
+    public static String getAccess() {
+        long unixAccess = getUnixAccess();
+        return unixAccess != 0 ? TIMESTAMP_FORMAT.format(new Date(unixAccess)) : "N/A";
+    }
+
+    public static String getExpire() {
+        long unixExpire = getUnixExpire();
+        return unixExpire != 0 ? TIMESTAMP_FORMAT.format(new Date(unixExpire)) : "N/A";
+    }
+
+    public static boolean isAuthenticated() {
+        try {
+            Boolean isAuthenticated = (Boolean) get(IS_AUTHENTICATED_KEY);
+            return isAuthenticated != null && isAuthenticated;
+        } catch (SecurityException e) {
+            return false;
+        }
     }
 
     public static void destroy() {
         JoltContext ctx = getContext();
-        String sessionId = ctx.getCookieValue("JOLTSESSIONID").orElse(null);
-        if (sessionId != null) {
-            storage.deleteSession(sessionId);
-            ctx.removeCookie("JOLTSESSIONID");
-            HttpSession httpSession = ctx.getRequest().getSession(false);
-            if (httpSession != null) {
-                httpSession.invalidate();
-            }
+        HttpSession httpSession = ctx.getRequest().getSession(false);
+        if (httpSession != null) {
+            httpSession.invalidate();
         }
+    }
+
+    public static void invalidate() {
+        JoltContext ctx = getContext();
+        HttpSession oldSession = ctx.getRequest().getSession(false);
+        if (oldSession != null) {
+            oldSession.invalidate();
+        }
+        HttpSession newSession = ctx.getRequest().getSession(true);
+        initializeSession(newSession, ctx);
     }
 
     public static boolean exists() {
-        JoltContext ctx = getContext();
-        String sessionId = ctx.getCookieValue("JOLTSESSIONID").orElse(null);
-        if (sessionId == null) {
-            return false;
-        }
-        HttpSession httpSession = ctx.getRequest().getSession(false);
-        return httpSession != null && storage.loadSession(sessionId) != null;
+        return ensureSession(false) != null;
     }
 
-    public static boolean isAuthenticated() {
-        Boolean isAuthenticated = (Boolean) get("isAuthenticated");
-        return isAuthenticated != null && isAuthenticated;
-    }
-
-    static void syncSession() {
-        JoltContext ctx = getContext();
-        String sessionId = ctx.getCookieValue("JOLTSESSIONID").orElse(null);
-        if (sessionId != null) {
-            HttpSession httpSession = ctx.getRequest().getSession(false);
-            if (httpSession != null) {
-                @SuppressWarnings("unchecked")
-                Map<String, Object> attributes = (Map<String, Object>) httpSession
-                        .getAttribute("joltSessionAttributes");
-                if (attributes != null) {
-                    storage.saveSession(sessionId, attributes);
+    private static void initializeSessionLifetime() {
+        if (sessionLifetime == null) {
+            synchronized (Session.class) {
+                if (sessionLifetime == null) {
+                    String lifetimeStr = ConfigurationManager.getInstance().getProperty("session.lifetime");
+                    try {
+                        sessionLifetime = lifetimeStr != null ? Integer.parseInt(lifetimeStr)
+                                : DEFAULT_SESSION_LIFETIME;
+                        if (sessionLifetime <= 0) {
+                            throw new IllegalArgumentException("Session lifetime must be positive");
+                        }
+                    } catch (NumberFormatException e) {
+                        sessionLifetime = DEFAULT_SESSION_LIFETIME;
+                    }
                 }
             }
         }
     }
 
-    private static Map<String, Object> getAttributes(String sessionId) {
-        HttpSession httpSession = getContext().getRequest().getSession(false);
-        @SuppressWarnings("unchecked")
-        Map<String, Object> attributes = (Map<String, Object>) httpSession.getAttribute("attributes");
-        if (attributes == null) {
-            attributes = storage.loadSession(sessionId);
-            if (attributes == null) {
-                attributes = new HashMap<>();
-                storage.saveSession(sessionId, attributes);
-            }
-            httpSession.setAttribute("joltSessionAttributes", attributes);
-        }
-        return attributes;
+    private static void initializeSession(HttpSession httpSession, JoltContext ctx) {
+        long accessTime = System.currentTimeMillis();
+        long expireTime = accessTime + (sessionLifetime * 1000L); // sessionLifetime is in seconds, convert to
+                                                                  // milliseconds
+
+        httpSession.setAttribute(IP_ADDRESS_KEY, ctx.clientIp());
+        httpSession.setAttribute(USER_AGENT_KEY, ctx.userAgent());
+        httpSession.setAttribute(ACCESS_TIME_KEY, String.valueOf(accessTime));
+        httpSession.setAttribute(EXPIRE_TIME_KEY, String.valueOf(expireTime));
+        httpSession.setAttribute(IS_AUTHENTICATED_KEY, false);
     }
 
-    private static String ensureSession() {
+    private static HttpSession ensureSession(boolean create) {
+        initializeSessionLifetime();
         JoltContext ctx = getContext();
-        HttpSession httpSession = ctx.getRequest().getSession(true);
-        String sessionId = httpSession.getId();
-
-        String existingSessionId = ctx.getCookieValue("JOLTSESSIONID").orElse(null);
-        if (existingSessionId == null || storage.loadSession(existingSessionId) == null) {
-            ctx.addCookie()
-                    .setName("JOLTSESSIONID")
-                    .setValue(sessionId)
-                    .httpOnly(true)
-                    .secure(true)
-                    .path("/")
-                    .sameSite("Strict")
-                    .build();
-
-            storage.saveSession(sessionId, new HashMap<>());
-        } else {
-            sessionId = existingSessionId;
+        HttpSession httpSession = ctx.getRequest().getSession(create);
+        if (httpSession == null) {
+            return null;
         }
 
-        return sessionId;
+        if (httpSession.isNew()) {
+            initializeSession(httpSession, ctx);
+        }
+
+        String storedIp = (String) httpSession.getAttribute(IP_ADDRESS_KEY);
+        String currentIp = ctx.clientIp();
+        if (!Objects.equals(currentIp, storedIp)) {
+            logger.warning(() -> "IP address mismatch for session " + httpSession.getId() + ": expected "
+                    + storedIp + ", got " + currentIp + ". Warning! This might indicate a session hijacking.");
+            httpSession.invalidate();
+            throw new SecurityException("IP address mismatch");
+        }
+
+        String storedUserAgent = (String) httpSession.getAttribute(USER_AGENT_KEY);
+        String currentUserAgent = ctx.userAgent();
+        if (!Objects.equals(currentUserAgent, storedUserAgent)) {
+            logger.warning(() -> "User-Agent mismatch for session " + httpSession.getId() + ": expected "
+                    + storedUserAgent + ", got " + currentUserAgent
+                    + ". Warning! This might indicate a session hijacking.");
+            httpSession.invalidate();
+            throw new SecurityException("User-Agent mismatch");
+        }
+
+        long expireTime = Long.parseLong((String) httpSession.getAttribute(EXPIRE_TIME_KEY));
+        long currentTime = System.currentTimeMillis();
+        if (currentTime > expireTime) {
+            logger.warning("Session expired: " + httpSession.getId());
+            httpSession.invalidate();
+            throw new SecurityException("Session expired");
+        }
+
+        return httpSession;
     }
 
     private static JoltContext getContext() {
@@ -149,18 +203,7 @@ public class Session {
         return ctx;
     }
 
-    private static void initializeStorage() {
-        if (Database.getInstance().isInitialized()) {
-            try {
-                storage = new DatabaseSessionStorage(config);
-                return;
-            } catch (Exception e) {
-                logger.warning(
-                        () -> "Session storage initialization failed with database. Falling back to in-memory storage.");
-            }
-        }
-        config.withStorageType(SessionConfig.StorageType.FILE);
-        storage = new FileSessionStorage(config);
+    private Session() {
+        // Private constructor to prevent instantiation
     }
-
 }

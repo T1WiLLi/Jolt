@@ -108,7 +108,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
     private RequestContext prepareRequestContext(HttpServletRequest req, HttpServletResponse res) {
         String method = req.getMethod();
         String path = getPath(req);
-        log.info(() -> String.format("Incoming %s %s", method, path));
+        log.info(() -> String.format("Incoming %s %s from %s", method, path, req.getRemoteAddr()));
         return new RequestContext(req, res, method, path);
     }
 

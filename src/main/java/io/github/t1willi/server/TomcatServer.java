@@ -1,6 +1,8 @@
 package io.github.t1willi.server;
 
 import jakarta.servlet.MultipartConfigElement;
+import lombok.Getter;
+
 import org.apache.catalina.Context;
 import org.apache.catalina.Wrapper;
 import org.apache.catalina.connector.Connector;
@@ -9,6 +11,7 @@ import org.apache.catalina.startup.Tomcat;
 
 import io.github.t1willi.core.JoltDispatcherServlet;
 import io.github.t1willi.exceptions.ServerException;
+import io.github.t1willi.security.session.SessionManager;
 import io.github.t1willi.server.config.ServerConfig;
 
 import java.io.File;
@@ -19,6 +22,8 @@ public final class TomcatServer {
     private static final Logger log = Logger.getLogger(TomcatServer.class.getName());
     private final ServerConfig config;
     private Tomcat tomcat;
+    @Getter
+    private Context context;
 
     public TomcatServer(ServerConfig config) {
         this.config = config;
@@ -31,6 +36,7 @@ public final class TomcatServer {
             tomcat.getService().addExecutor(createAndConfigureExecutor());
             tomcat.setConnector(createAndConfigureConnector());
             configureContext();
+            SessionManager.initialize(this);
             tomcat.start();
             logServerStart();
             addShutdownHook();
@@ -103,7 +109,8 @@ public final class TomcatServer {
 
     private void configureContext() throws ServerException {
         try {
-            Context context = tomcat.addContext("", new File(config.getTempDir()).getAbsolutePath());
+            context = tomcat.addContext("", new File(config.getTempDir()).getAbsolutePath());
+
             context.setMapperContextRootRedirectEnabled(false);
             context.setMapperDirectoryRedirectEnabled(false);
             context.setAllowCasualMultipartParsing(false);
@@ -126,7 +133,7 @@ public final class TomcatServer {
             servletWrapper.setMultipartConfigElement(multipartConfig);
             context.addServletMappingDecoded("/*", "JoltServlet");
         } catch (Exception e) {
-            throw new ServerException("Failed to configure context", e);
+            throw new ServerException("Failed to configure context " + e.getMessage(), e);
         }
     }
 
