@@ -5,6 +5,13 @@ import io.github.t1willi.http.HttpStatus;
 import jakarta.servlet.http.HttpServletResponse;
 
 public abstract class GlobalExceptionHandler implements ExceptionHandler {
+    private final ExceptionHandlerRegistry registry = new ExceptionHandlerRegistry();
+
+    @Override
+    public ExceptionHandlerRegistry getRegistry() {
+        return this.registry;
+    }
+
     /**
      * Processes the exception with standard {@link JoltHttpException} handling
      * and delegates to {@link #handle(Throwable, HttpServletResponse)}.
@@ -27,6 +34,9 @@ public abstract class GlobalExceptionHandler implements ExceptionHandler {
             }
         }
         response.setStatus(status.code());
-        handle(t, response);
+
+        if (!this.registry.handleSpecificException(t, response)) {
+            this.handle(t, response); // fallback to default handling
+        }
     }
 }

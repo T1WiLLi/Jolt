@@ -15,6 +15,7 @@ import java.util.stream.Stream;
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.exceptions.JoltRoutingException;
 import io.github.t1willi.exceptions.handler.ExceptionHandler;
+import io.github.t1willi.exceptions.handler.GlobalExceptionHandler;
 import io.github.t1willi.filters.FilterConfiguration;
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.http.HttpStatus;
@@ -65,7 +66,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
      */
     public JoltDispatcherServlet() {
         this.router = JoltContainer.getInstance().getBean(Router.class);
-        this.exceptionHandler = JoltContainer.getInstance().getBean(ExceptionHandler.class);
+        this.exceptionHandler = JoltContainer.getInstance().getBean(GlobalExceptionHandler.class);
     }
 
     @Override

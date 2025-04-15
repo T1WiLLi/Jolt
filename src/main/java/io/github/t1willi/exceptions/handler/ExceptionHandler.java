@@ -1,5 +1,7 @@
 package io.github.t1willi.exceptions.handler;
 
+import java.util.function.BiConsumer;
+
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.routing.context.JoltContext;
 import jakarta.servlet.http.HttpServletResponse;
@@ -49,4 +51,18 @@ public interface ExceptionHandler {
     default void handleException(Throwable t, HttpServletResponse response) {
         handle(t, response);
     }
+
+    /**
+     * Registers a handler for a specific exception type.
+     * 
+     * @param <T>           The type of exception to handle
+     * @param exceptionType The exception type to handle
+     * @param handler       The handler to use for the exception type
+     */
+    default <T extends Throwable> void registerHandler(Class<T> exceptionType,
+            BiConsumer<T, HttpServletResponse> handler) {
+        getRegistry().registerHandler(exceptionType, handler);
+    }
+
+    ExceptionHandlerRegistry getRegistry();
 }
