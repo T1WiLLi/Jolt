@@ -31,7 +31,7 @@ public final class Cryptography {
     private static final int GCM_TAG_LENGTH = 128; // 16 bytes
     private static final int GCM_IV_LENGTH = 12;
 
-    private static final String SECRET_KEY = ConfigurationManager.getInstance().getProperty(
+    private static final String PROJECT_SECRET_KEY = ConfigurationManager.getInstance().getProperty(
             "server.security.secret_key",
             CryptographyUtils.randomBase64(32));
 
@@ -116,12 +116,12 @@ public final class Cryptography {
         }
     }
 
-    public static String encrypt(String text) {
+    public static String encrypt(String text, String key) {
         try {
             byte[] iv = SecureRandomGenerator.generateRandomBytes(GCM_IV_LENGTH);
 
             SecretKey secretKey = new SecretKeySpec(
-                    Base64.getDecoder().decode(SECRET_KEY),
+                    Base64.getDecoder().decode(key),
                     "AES");
 
             Cipher cipher = Cipher.getInstance(ENCRYPTION_ALGORITHM);
@@ -141,7 +141,11 @@ public final class Cryptography {
         }
     }
 
-    public static String decrypt(String encryptedText) {
+    public static String encrypt(String text) {
+        return encrypt(text, PROJECT_SECRET_KEY);
+    }
+
+    public static String decrypt(String encryptedText, String key) {
         try {
             byte[] encryptedBytes = Base64.getDecoder().decode(encryptedText);
 
@@ -153,7 +157,7 @@ public final class Cryptography {
             byteBuffer.get(ciphertext);
 
             SecretKey secretKey = new SecretKeySpec(
-                    Base64.getDecoder().decode(SECRET_KEY),
+                    Base64.getDecoder().decode(key),
                     "AES");
 
             Cipher cipher = Cipher.getInstance(ENCRYPTION_ALGORITHM);
@@ -167,6 +171,10 @@ public final class Cryptography {
         } catch (Exception e) {
             throw new JoltSecurityException("Error decrypting password", e);
         }
+    }
+
+    public static String decrypt(String encryptedText) {
+        return decrypt(encryptedText, PROJECT_SECRET_KEY);
     }
 
     public static String generateRandomPassword(int length) {
