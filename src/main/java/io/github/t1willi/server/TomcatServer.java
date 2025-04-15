@@ -8,6 +8,8 @@ import org.apache.catalina.Wrapper;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardThreadExecutor;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.tomcat.util.net.SSLHostConfig;
+import org.apache.tomcat.util.net.SSLHostConfigCertificate;
 
 import io.github.t1willi.core.JoltDispatcherServlet;
 import io.github.t1willi.exceptions.ServerException;
@@ -34,7 +36,9 @@ public final class TomcatServer {
             validateEnvironment();
             initializeTomcat();
             tomcat.getService().addExecutor(createAndConfigureExecutor());
-            tomcat.setConnector(createAndConfigureConnector());
+            for (Connector connector : createAndConfigureConnectors()) {
+                tomcat.getService().addConnector(connector);
+            }
             configureContext();
             SessionManager.initialize(this);
             tomcat.start();
@@ -68,34 +72,59 @@ public final class TomcatServer {
     }
 
     private void validateEnvironment() throws ServerException {
-        if (!isPortAvailable(config.getPort())) {
+        if (config.isHttpEnabled() && !isPortAvailable(config.getPort())) {
             throw new ServerException("Port " + config.getPort() + " is already in use");
+        }
+        if (config.isSslEnabled() && !isPortAvailable(config.getSslPort())) {
+            throw new ServerException("Port " + config.getSslPort() + " is already in use");
         }
     }
 
     private void initializeTomcat() {
         tomcat = new Tomcat();
-        tomcat.setPort(config.getPort());
+        tomcat.setPort(config.isHttpEnabled() ? config.getPort() : config.getSslPort());
         tomcat.setBaseDir(new File(config.getTempDir()).getAbsolutePath());
     }
 
-    private Connector createAndConfigureConnector() throws ServerException {
-        Connector connector = new Connector();
-        connector.setPort(config.getPort());
-        connector.setURIEncoding("UTF-8");
+    private Connector[] createAndConfigureConnectors() throws ServerException {
+        java.util.List<Connector> connectors = new java.util.ArrayList<>();
+
+        if (config.isHttpEnabled()) {
+            Connector httpConnector = new Connector();
+            httpConnector.setPort(config.getPort());
+            httpConnector.setURIEncoding("UTF-8");
+            connectors.add(httpConnector);
+        }
 
         if (config.isSslEnabled()) {
             validateSslConfig();
-            connector.setSecure(true);
-            connector.setScheme("https");
-            connector.setPort(config.getSslPort());
-            connector.setProperty("keystoreFile", config.getKeyStore());
-            connector.setProperty("keystorePass", config.getKeyStorePassword());
-            connector.setProperty("keyAlias", config.getKeyAlias());
-            connector.setProperty("SSLEnabled", "true");
-            connector.setProperty("sslProtocol", "TLS");
+            Connector httpsConnector = new Connector();
+            httpsConnector.setSecure(true);
+            httpsConnector.setScheme("https");
+            httpsConnector.setPort(config.getSslPort());
+
+            SSLHostConfig sslHostConfig = new SSLHostConfig();
+            sslHostConfig.setHostName("_default_");
+            sslHostConfig.setSslProtocol("TLS");
+            sslHostConfig.setProtocols("+TLSv1.2,+TLSv1.3");
+
+            SSLHostConfigCertificate certificate = new SSLHostConfigCertificate(
+                    sslHostConfig, SSLHostConfigCertificate.Type.UNDEFINED);
+            certificate.setCertificateKeystoreFile(config.getKeyStore());
+            certificate.setCertificateKeystorePassword(config.getKeyStorePassword());
+            certificate.setCertificateKeyAlias(config.getKeyAlias());
+
+            sslHostConfig.addCertificate(certificate);
+            httpsConnector.addSslHostConfig(sslHostConfig);
+
+            httpsConnector.setProperty("SSLEnabled", "true");
+            connectors.add(httpsConnector);
         }
-        return connector;
+        if (connectors.isEmpty()) {
+            throw new ServerException("No connectors configured. At least one of HTTP or HTTPS must be enabled.");
+        }
+
+        return connectors.toArray(new Connector[0]);
     }
 
     private StandardThreadExecutor createAndConfigureExecutor() {
@@ -138,7 +167,8 @@ public final class TomcatServer {
     }
 
     private void logServerStart() {
-        String message = config.getAppName() + " started on port " + config.getPort();
+        String message = config.getAppName() + " started on port "
+                + (config.isHttpEnabled() ? config.getPort() : config.getSslPort());
         if (config.isSslEnabled()) {
             message += " (SSL on port " + config.getSslPort() + ")";
         }

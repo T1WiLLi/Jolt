@@ -104,6 +104,11 @@ public class ServerConfig {
      */
     private static final int DEFAULT_MULTIPART_FILE_SIZE_THRESHOLD = 1024 * 1024; // 1MB
 
+    /**
+     * Default HTTP access for port 80
+     */
+    private static final boolean DEFAULT_HTTP_ACCESS = true;
+
     // Actual fields
 
     /**
@@ -193,6 +198,11 @@ public class ServerConfig {
     private final int multipartFileSizeThreshold;
 
     /**
+     * Indicates whether http-access is allowed from 80 port. Default is true.
+     */
+    private final boolean httpEnabled;
+
+    /**
      * Constructs a new ServerConfig instance using the provided builder.
      *
      * @param builder The {@link Builder} containing the configuration settings.
@@ -215,6 +225,7 @@ public class ServerConfig {
         this.multipartMaxFileSize = builder.multipartMaxFileSize;
         this.multipartMaxRequestSize = builder.multipartMaxRequestSize;
         this.multipartFileSizeThreshold = builder.multipartFileSizeThreshold;
+        this.httpEnabled = builder.httpEnabled;
     }
 
     // Getters...
@@ -374,6 +385,16 @@ public class ServerConfig {
     }
 
     /**
+     * Indicates whether the server allow connection from HTTP.
+     * 
+     * @return {@code true} if the server allow connection from HTTP, {@code false}
+     *         otherwise.
+     */
+    public boolean isHttpEnabled() {
+        return httpEnabled;
+    }
+
+    /**
      * Builder class for constructing {@link ServerConfig} instances.
      * <p>
      * Provides a fluent API to set server configuration properties, using default
@@ -397,6 +418,7 @@ public class ServerConfig {
         private long multipartMaxFileSize = DEFAULT_MULTIPART_MAX_FILE_SIZE;
         private long multipartMaxRequestSize = DEFAULT_MULTIPART_MAX_REQUEST_SIZE;
         private int multipartFileSizeThreshold = DEFAULT_MULTIPART_FILE_SIZE_THRESHOLD;
+        private boolean httpEnabled = DEFAULT_HTTP_ACCESS;
 
         /**
          * Sets the port number for the server.
@@ -574,6 +596,17 @@ public class ServerConfig {
         }
 
         /**
+         * Sets whether the server accept HTTP port 80 connection or not.
+         * 
+         * @param httpEnabled Whether the server accept HTTP port 80 connection or not.
+         * @return This {@code Builder} instance for chaining.
+         */
+        public Builder httpEnabled(boolean httpEnabled) {
+            this.httpEnabled = httpEnabled;
+            return this;
+        }
+
+        /**
          * Builds a new {@link ServerConfig} instance with the configured settings.
          *
          * @return A new {@code ServerConfig} instance.
@@ -624,6 +657,7 @@ public class ServerConfig {
                 String.valueOf(DEFAULT_MULTIPART_MAX_REQUEST_SIZE))));
         builder.multipartFileSizeThreshold(Integer.parseInt(props.getProperty("server.multipart.fileSizeThreshold",
                 String.valueOf(DEFAULT_MULTIPART_FILE_SIZE_THRESHOLD))));
+        builder.httpEnabled(Boolean.parseBoolean(props.getProperty("server.http.enabled", String.valueOf(true))));
         return builder.build();
     }
 }

@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.function.Consumer;
-import java.util.regex.Matcher;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 
@@ -16,6 +15,7 @@ import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.files.JoltFile;
 import io.github.t1willi.form.Form;
 import io.github.t1willi.http.HttpStatus;
+import io.github.t1willi.routing.RouteMatch;
 import io.github.t1willi.template.JoltModel;
 import io.github.t1willi.utils.JacksonUtil;
 import jakarta.servlet.http.Cookie;
@@ -70,23 +70,23 @@ public final class JoltContext {
      * path parameter matcher, and parameter names.
      *
      * @param req
-     *                    The underlying {@link HttpServletRequest}.
+     *                   The underlying {@link HttpServletRequest}.
      * @param res
-     *                    The underlying {@link HttpServletResponse}.
-     * @param pathMatcher
-     *                    A {@link Matcher} used to extract path parameters from the
-     *                    URL
-     *                    based on a route pattern.
+     *                   The underlying {@link HttpServletResponse}.
+     * @param matcher
+     *                   A {@link RouteMatcher} used to extract path parameters from
+     *                   the URL
+     *                   based on a route pattern.
      * @param paramNames
-     *                    The list of named parameters extracted from the route
-     *                    definition.
+     *                   The list of named parameters extracted from the route
+     *                   definition.
      */
     public JoltContext(HttpServletRequest req, HttpServletResponse res,
-            Matcher pathMatcher, List<String> paramNames) {
+            RouteMatch matcher, List<String> paramNames) {
         this.requestContext = new RequestContext(req);
         this.responseContext = new ResponseContext(res);
         this.templatingContext = new TemplatingContext();
-        this.pathParams = extractPathParams(pathMatcher, paramNames);
+        this.pathParams = (matcher != null) ? matcher.params() : new HashMap<>();
     }
 
     // -------------------------------------------------------
@@ -149,6 +149,16 @@ public final class JoltContext {
     }
 
     /**
+     * Return the value of the specified Path parameter.
+     * 
+     * @param name The name of the parameter.
+     * @return The value of the parameter, or null if it does not exist.
+     */
+    public String path(String name) {
+        return pathParams.getOrDefault(name, null);
+    }
+
+    /**
      * Returns a {@link PathContextValue} for a named path parameter.
      * <p>
      * For example, if the route is "/user/{id:int}" and the request
@@ -159,8 +169,18 @@ public final class JoltContext {
      * @return
      *         A {@link PathContextValue} (wrapping an optional string).
      */
-    public PathContextValue path(String name) {
+    public PathContextValue pathContext(String name) {
         return new PathContextValue(pathParams.get(name));
+    }
+
+    /**
+     * Return the value of a named query parameter.
+     * 
+     * @param name The name of the query parameter.
+     * @return The value of the query parameter, or null if it is not present.
+     */
+    public String query(String name) {
+        return requestContext.getParameter(name);
     }
 
     /**
@@ -174,7 +194,7 @@ public final class JoltContext {
      * @return
      *         A {@link QueryContextValue} object.
      */
-    public QueryContextValue query(String name) {
+    public QueryContextValue queryContext(String name) {
         return new QueryContextValue(requestContext.getParameter(name));
     }
 
@@ -802,18 +822,5 @@ public final class JoltContext {
             }
         }
         return false;
-    }
-
-    /**
-     * Extracts path parameters from the given {@link Matcher} and parameter names.
-     */
-    private Map<String, String> extractPathParams(Matcher matcher, List<String> paramNames) {
-        Map<String, String> params = new HashMap<>();
-        if (matcher != null && matcher.groupCount() > 0 && paramNames != null) {
-            for (int i = 0; i < paramNames.size(); i++) {
-                params.put(paramNames.get(i), matcher.group(i + 1));
-            }
-        }
-        return params;
     }
 }

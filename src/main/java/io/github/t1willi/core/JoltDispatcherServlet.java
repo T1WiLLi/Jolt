@@ -290,7 +290,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
      */
     private boolean handleRoute(RouteMatch match, RequestContext context, long start) {
         try {
-            JoltContext routeCtx = new JoltContext(context.req, context.res, match.matcher(),
+            JoltContext routeCtx = new JoltContext(context.req, context.res, match,
                     match.route().getParamNames());
             RouteHandler handler = match.route().getHandler();
             Object result = handler.handle(routeCtx);
