@@ -14,7 +14,7 @@ import java.util.stream.Stream;
 
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.exceptions.JoltRoutingException;
-import io.github.t1willi.exceptions.handler.GlobalExceptionHandler;
+import io.github.t1willi.exceptions.handler.ExceptionHandler;
 import io.github.t1willi.filters.FilterConfiguration;
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.http.HttpStatus;
@@ -53,7 +53,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
     private static final ThreadLocal<JoltContext> CURRENT_CONTEXT = new ThreadLocal<>();
 
     private transient final Router router;
-    private transient final GlobalExceptionHandler exceptionHandler;
+    private transient final ExceptionHandler exceptionHandler;
 
     public static JoltContext getCurrentContext() {
         return CURRENT_CONTEXT.get();
@@ -65,7 +65,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
      */
     public JoltDispatcherServlet() {
         this.router = JoltContainer.getInstance().getBean(Router.class);
-        this.exceptionHandler = JoltContainer.getInstance().getBean(GlobalExceptionHandler.class);
+        this.exceptionHandler = JoltContainer.getInstance().getBean(ExceptionHandler.class);
     }
 
     @Override
@@ -91,7 +91,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
                 joltCtx.commit();
                 log.info("Committed context with status: " + joltCtx.getStatus().code());
             }
-            exceptionHandler.handle(e, joltCtx.getResponse());
+            exceptionHandler.handleException(e, joltCtx.getResponse());
         } finally {
             if (!context.res.isCommitted() && joltCtx != null) {
                 joltCtx.commit();
@@ -148,7 +148,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
                     // No-op. The filter itself controls whether to pass to the next filter.
                 });
             } catch (IOException | ServletException e) {
-                exceptionHandler.handle(e, context.res);
+                exceptionHandler.handleException(e, context.res);
             }
             if (context.res.isCommitted()) {
                 return true;
@@ -187,7 +187,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
                     try {
                         entry.execute(ctx);
                     } catch (Exception e) {
-                        exceptionHandler.handle(e, ctx);
+                        exceptionHandler.handleException(e, ctx.getResponse());
                     }
                 });
     }
@@ -220,7 +220,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
             log.info(() -> "Method " + context.method + " not allowed for path: " + context.path);
             String allowedMethods = router.getAllowedMethods(context.path);
             context.res.setHeader("Allow", allowedMethods);
-            exceptionHandler.handle(
+            exceptionHandler.handleException(
                     new JoltHttpException(HttpStatus.METHOD_NOT_ALLOWED, "Method not allowed for " + context.path),
                     context.res);
             return true;
@@ -235,7 +235,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
      */
     private void sendNotFoundError(RequestContext context) {
         log.info(() -> "No route or static resource found for path: " + context.path);
-        exceptionHandler.handle(
+        exceptionHandler.handleException(
                 new JoltHttpException(HttpStatus.NOT_FOUND, "No route or static resource found for " + context.path),
                 context.res);
     }
@@ -310,7 +310,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
             return true;
         } catch (JoltRoutingException e) {
             log.warning(() -> "Error in route handler: " + e.getMessage());
-            exceptionHandler.handle(e, context.res);
+            exceptionHandler.handleException(e, context.res);
             return false;
         }
     }
