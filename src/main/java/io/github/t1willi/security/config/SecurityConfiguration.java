@@ -39,6 +39,9 @@ public abstract class SecurityConfiguration {
     @Getter
     private final HeadersConfiguration headersConfig = new HeadersConfiguration();
 
+    @Getter
+    private final CsrfConfiguration csrfConfig = new CsrfConfiguration(this);
+
     /**
      * Provides access to the CORS configuration for fluent configuration.
      *
@@ -55,6 +58,15 @@ public abstract class SecurityConfiguration {
      */
     public HeadersConfiguration withHeaders() {
         return headersConfig;
+    }
+
+    /**
+     * Provides access to the CSRF configuration for fluent configuration.
+     * 
+     * @return The CSRF configuration instance for method chaining
+     */
+    public CsrfConfiguration withCSRF() {
+        return csrfConfig;
     }
 
     /**

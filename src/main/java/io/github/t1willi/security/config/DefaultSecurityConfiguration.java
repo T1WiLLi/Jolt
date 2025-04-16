@@ -46,6 +46,12 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
      * - Doesn't enforce HTTPS only
      * - Enables Content-Security-Policy
      * - Sets Cache-Control to no-cache
+     * <p>
+     * Default CSRF configuration:
+     * - Enables CSRF protection
+     * - Ignores /login and /register paths
+     * - Uses default token name "_csrf"
+     * - Keeps HttpOnly true for the CSRF cookie
      *
      * @return This configuration instance for method chaining
      */
@@ -74,6 +80,9 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
                 .withImageSources(ContentSecurityPolicy.SELF)
                 .and()
                 .httpsOnly(false);
+
+        withCSRF()
+                .disable();
 
         return this;
     }
