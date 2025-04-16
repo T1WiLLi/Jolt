@@ -7,6 +7,9 @@ import java.util.Objects;
 import java.util.logging.Logger;
 
 import io.github.t1willi.core.JoltDispatcherServlet;
+import io.github.t1willi.exceptions.SessionExpiredException;
+import io.github.t1willi.exceptions.SessionIpMismatchException;
+import io.github.t1willi.exceptions.SessionUserAgentMismatchException;
 import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.routing.context.JoltContext;
 import io.github.t1willi.server.config.ConfigurationManager;
@@ -172,7 +175,7 @@ public class Session {
                     + storedIp + ", got " + currentIp + ". Warning! This might indicate a session hijacking.");
             httpSession.invalidate();
             ctx.status(HttpStatus.FORBIDDEN);
-            throw new SecurityException("IP address mismatch");
+            throw new SessionIpMismatchException();
         }
 
         String storedUserAgent = (String) httpSession.getAttribute(USER_AGENT_KEY);
@@ -183,7 +186,7 @@ public class Session {
                     + ". Warning! This might indicate a session hijacking.");
             httpSession.invalidate();
             ctx.status(HttpStatus.FORBIDDEN);
-            throw new SecurityException("User-Agent mismatch");
+            throw new SessionUserAgentMismatchException();
         }
 
         long expireTime = Long.parseLong((String) httpSession.getAttribute(EXPIRE_TIME_KEY));
@@ -192,7 +195,7 @@ public class Session {
             logger.warning("Session expired: " + httpSession.getId());
             httpSession.invalidate();
             ctx.status(HttpStatus.FORBIDDEN);
-            throw new SecurityException("Session expired");
+            throw new SessionExpiredException();
         }
         return httpSession;
     }
