@@ -25,6 +25,7 @@ import io.github.t1willi.routing.MimeInterpreter;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.routing.RouteMatch;
 import io.github.t1willi.routing.context.JoltContext;
+import io.github.t1willi.security.nonce.Nonce;
 import io.github.t1willi.utils.DirectoryListingHtmlTemplateBuilder;
 import io.github.t1willi.utils.HelpMethods;
 
@@ -99,6 +100,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
                 executeAfterHandlers(joltCtx);
             }
             CURRENT_CONTEXT.remove();
+            Nonce.clear();
         }
     }
 

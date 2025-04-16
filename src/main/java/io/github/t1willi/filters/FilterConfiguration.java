@@ -1,14 +1,19 @@
 package io.github.t1willi.filters;
 
+import io.github.t1willi.filters.security.CorsFilter;
+import io.github.t1willi.filters.security.CsrfFilter;
+import io.github.t1willi.filters.security.MaxRequestFilter;
+import io.github.t1willi.filters.security.NonceFilter;
+import io.github.t1willi.filters.security.SecureHeadersFilter;
+import io.github.t1willi.routing.context.JoltContext;
+import lombok.Getter;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Predicate;
-
-import io.github.t1willi.routing.context.JoltContext;
-import lombok.Getter;
 
 /**
  * Defines an abstract configuration mechanism for filters within
@@ -24,6 +29,13 @@ import lombok.Getter;
 public abstract class FilterConfiguration {
 
     /**
+     * Offset for internal filters to ensure they run before user-defined filters.
+     * Internal filters use orders from 1 to INTERNAL_FILTER_OFFSET.
+     * User-defined filters start at INTERNAL_FILTER_OFFSET + 1.
+     */
+    private static final int INTERNAL_FILTER_OFFSET = 100;
+
+    /**
      * A list of routes to be excluded from filtering.
      */
     @Getter
@@ -37,9 +49,9 @@ public abstract class FilterConfiguration {
     protected final List<Predicate<JoltContext>> exclusionPredicates = new ArrayList<>();
 
     /**
-     * Maintains filter instances mapped to their assigned order.
+     * Maintains filter classes mapped to their assigned order.
      */
-    protected final Map<JoltFilter, Integer> filterOrders = new HashMap<>();
+    protected final Map<Class<? extends JoltFilter>, Integer> filterOrders = new HashMap<>();
 
     /**
      * Performs any necessary filter configuration steps.
@@ -48,6 +60,14 @@ public abstract class FilterConfiguration {
      * additional setup logic.
      */
     public abstract void configure();
+
+    public FilterConfiguration() {
+        filterOrders.put(MaxRequestFilter.class, 1); // Runs first: validate request limits
+        filterOrders.put(CorsFilter.class, 2); // Runs second: handle CORS
+        filterOrders.put(NonceFilter.class, 3); // Runs third: generate nonce for CSP
+        filterOrders.put(CsrfFilter.class, 4); // Runs fourth: validate CSRF token
+        filterOrders.put(SecureHeadersFilter.class, 5); // Runs last: add security headers
+    }
 
     /**
      * Excludes the specified routes from filtering.
@@ -72,15 +92,25 @@ public abstract class FilterConfiguration {
     }
 
     /**
-     * Assigns an order to the given filter. Filters with lower
+     * Assigns an order to the given filter class. Filters with lower
      * order values are processed earlier.
+     * <p>
+     * If the order is less than or equal to INTERNAL_FILTER_OFFSET, it is treated
+     * as an internal filter order. Otherwise, it is adjusted to start after
+     * INTERNAL_FILTER_OFFSET to ensure internal filters run first.
      *
-     * @param order  The order to assign
-     * @param filter The filter instance to order
+     * @param order       The order to assign
+     * @param filterClass The filter class to order
      * @return This configuration instance for method chaining
      */
-    public FilterConfiguration setOrder(int order, JoltFilter filter) {
-        filterOrders.put(filter, order);
+    public FilterConfiguration setOrder(int order, Class<? extends JoltFilter> filterClass) {
+        if (order <= INTERNAL_FILTER_OFFSET) {
+            // Internal filter order, use as-is
+            filterOrders.put(filterClass, order);
+        } else {
+            // User-defined filter, adjust order to start after internal filters
+            filterOrders.put(filterClass, order + INTERNAL_FILTER_OFFSET);
+        }
         return this;
     }
 
@@ -91,7 +121,7 @@ public abstract class FilterConfiguration {
      * @return The order value, or {@code Integer.MAX_VALUE} if no order is set
      */
     public int getOrder(JoltFilter filter) {
-        return filterOrders.getOrDefault(filter, Integer.MAX_VALUE);
+        return filterOrders.getOrDefault(filter.getClass(), Integer.MAX_VALUE);
     }
 
     /**

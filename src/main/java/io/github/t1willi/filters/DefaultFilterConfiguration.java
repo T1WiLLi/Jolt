@@ -32,6 +32,6 @@ public final class DefaultFilterConfiguration extends FilterConfiguration {
      */
     @Override
     public void configure() {
-        // No additional configuration steps are performed by default.
+        // No-op
     }
 }

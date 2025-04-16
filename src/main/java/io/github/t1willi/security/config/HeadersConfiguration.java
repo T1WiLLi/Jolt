@@ -1,6 +1,7 @@
 package io.github.t1willi.security.config;
 
 import io.github.t1willi.security.policies.CacheControlPolicy;
+import io.github.t1willi.security.policies.ContentSecurityPolicy;
 import io.github.t1willi.security.policies.FrameOptionsPolicy;
 import io.github.t1willi.security.policies.HstsPolicy;
 import io.github.t1willi.security.policies.ReferrerPolicy;
@@ -10,11 +11,10 @@ import lombok.Getter;
 /**
  * Provides configuration for HTTP security headers including XSS protection,
  * frame options, HSTS, referrer policy, and Content Security Policy (CSP).
- * <p>
- * This simplified version allows you to either enable CSP using a strict
- * default configuration or supply a custom CSP string.
  */
 public class HeadersConfiguration {
+
+    private final SecurityConfiguration parent;
 
     // XSS Protection settings
     @Getter
@@ -45,43 +45,33 @@ public class HeadersConfiguration {
     // Content Security Policy (CSP) settings
     @Getter
     private boolean contentSecurityPolicyEnabled = true;
-    private String contentSecurityPolicy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self'; connect-src 'self';";
+    private String contentSecurityPolicy; // No default value; rely on builder
     private ContentSecurityPolicy cspBuilder = new ContentSecurityPolicy(this);
 
     @Getter
     private String cacheControlDirective;
 
+    public HeadersConfiguration(SecurityConfiguration parent) {
+        this.parent = parent;
+    }
+
+    public SecurityConfiguration and() {
+        return parent;
+    }
+
     // -------------------- XSS Protection --------------------
 
-    /**
-     * Enables or disables XSS protection.
-     *
-     * @param enabled true to enable, false to disable.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration withXssProtection(boolean enabled) {
         this.xssProtectionEnabled = enabled;
         return this;
     }
 
-    /**
-     * Sets XSS protection using a specific policy.
-     *
-     * @param policy the XSS protection policy.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration withXssProtection(XssProtectionPolicy policy) {
         this.xssProtectionEnabled = true;
         this.xssProtectionValue = policy.getValue();
         return this;
     }
 
-    /**
-     * Sets XSS protection with a report URI.
-     *
-     * @param reportUri the URI to which XSS reports will be sent.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration withXssProtectionReport(String reportUri) {
         this.xssProtectionEnabled = true;
         this.xssProtectionValue = XssProtectionPolicy.ENABLE_REPORT.getValue() + reportUri;
@@ -90,35 +80,17 @@ public class HeadersConfiguration {
 
     // -------------------- Frame Options --------------------
 
-    /**
-     * Enables or disables frame options.
-     *
-     * @param enabled true to enable, false to disable.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration denyFrameOption(boolean enabled) {
         this.frameOptionsEnabled = enabled;
         return this;
     }
 
-    /**
-     * Sets frame options using a specific policy.
-     *
-     * @param policy the frame options policy.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration withFrameOptions(FrameOptionsPolicy policy) {
         this.frameOptionsEnabled = true;
         this.frameOptionsValue = policy.getValue();
         return this;
     }
 
-    /**
-     * Allows frames from a specific origin.
-     *
-     * @param origin the origin that is allowed to frame this content.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration allowFramesFrom(String origin) {
         this.frameOptionsEnabled = true;
         this.frameOptionsValue = FrameOptionsPolicy.ALLOW_FROM.getValue() + origin;
@@ -127,38 +99,17 @@ public class HeadersConfiguration {
 
     // -------------------- HSTS --------------------
 
-    /**
-     * Enables or disables HTTP Strict Transport Security (HSTS).
-     *
-     * @param enabled true to enable, false to disable.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration httpStrictTransportSecurity(boolean enabled) {
         this.hstsEnabled = enabled;
         return this;
     }
 
-    /**
-     * Sets HSTS using a specific policy.
-     *
-     * @param policy the HSTS policy.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration withHsts(HstsPolicy policy) {
         this.hstsEnabled = true;
         this.hstsValue = policy.getValue();
         return this;
     }
 
-    /**
-     * Sets HSTS with a custom max-age, with options to include subdomains and
-     * preload.
-     *
-     * @param seconds           the max-age in seconds.
-     * @param includeSubDomains true to include subdomains.
-     * @param preload           true to include the preload directive.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration withHstsMaxAge(long seconds, boolean includeSubDomains, boolean preload) {
         this.hstsEnabled = true;
         StringBuilder value = new StringBuilder("max-age=").append(seconds);
@@ -174,23 +125,11 @@ public class HeadersConfiguration {
 
     // -------------------- Referrer Policy --------------------
 
-    /**
-     * Sets the referrer policy using a raw string.
-     *
-     * @param policy the referrer policy.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration referrerPolicy(String policy) {
         this.referrerPolicy = policy;
         return this;
     }
 
-    /**
-     * Sets the referrer policy using a predefined enum.
-     *
-     * @param policy the predefined referrer policy.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration withReferrerPolicy(ReferrerPolicy policy) {
         this.referrerPolicy = policy.getValue();
         return this;
@@ -198,12 +137,6 @@ public class HeadersConfiguration {
 
     // -------------------- HTTPS Only --------------------
 
-    /**
-     * Enables or disables HTTPS-only mode.
-     *
-     * @param httpsOnly true to enforce HTTPS, false to allow HTTP.
-     * @return this HeadersConfiguration for fluent chaining.
-     */
     public HeadersConfiguration httpsOnly(boolean httpsOnly) {
         this.httpsOnly = httpsOnly;
         return this;
@@ -211,17 +144,11 @@ public class HeadersConfiguration {
 
     // -------------------- Content Security Policy (CSP) --------------------
 
-    /**
-     * Provides access to the CSP configuration for fluent configuration.
-     */
     public ContentSecurityPolicy withCSP() {
         this.contentSecurityPolicyEnabled = true;
         return cspBuilder;
     }
 
-    /**
-     * Sets a custom Content Security Policy string, bypassing the builder.
-     */
     public HeadersConfiguration contentSecurityPolicy(String policy) {
         this.contentSecurityPolicyEnabled = true;
         this.contentSecurityPolicy = policy;
@@ -229,28 +156,26 @@ public class HeadersConfiguration {
         return this;
     }
 
-    /**
-     * Gets the CSP string, either from the builder or the custom string.
-     */
     public String getContentSecurityPolicy() {
         if (!contentSecurityPolicyEnabled) {
             return null;
         }
-        return (cspBuilder != null) ? cspBuilder.build() : contentSecurityPolicy;
+        if (cspBuilder != null) {
+            return cspBuilder.build();
+        }
+        if (contentSecurityPolicy != null) {
+            return contentSecurityPolicy;
+        }
+        return new ContentSecurityPolicy(this).build();
     }
 
-    /**
-     * Sets the Cache-Control header using a predefined policy.
-     *
-     * @param policy the CacheControlPolicy to apply
-     * @return this HeadersConfiguration for fluent chaining.
-     */
+    // -------------------- Cache Control --------------------
+
     public HeadersConfiguration withCacheControl(CacheControlPolicy policy) {
         this.cacheControlDirective = policy.getValue();
         return this;
     }
 
-    // Optionally, you could also provide a raw setter if needed:
     public HeadersConfiguration withCacheControl(String cacheDirectives) {
         this.cacheControlDirective = cacheDirectives;
         return this;

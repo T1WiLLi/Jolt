@@ -7,6 +7,9 @@ import lombok.Getter;
  * Provides methods to configure various CORS parameters for HTTP requests.
  */
 public class CorsConfiguration {
+
+    private final SecurityConfiguration parent;
+
     @Getter
     private String allowedOrigins = "*";
     @Getter
@@ -17,6 +20,14 @@ public class CorsConfiguration {
     private boolean allowCredentials = false;
     @Getter
     private long maxAge = 3600;
+
+    public CorsConfiguration(SecurityConfiguration parent) {
+        this.parent = parent;
+    }
+
+    public SecurityConfiguration and() {
+        return parent;
+    }
 
     /**
      * Sets the allowed origins for CORS requests.

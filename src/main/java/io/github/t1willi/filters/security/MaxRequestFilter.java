@@ -18,7 +18,7 @@ import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
 @JoltBean
-public final class MaxRequest extends JoltFilter {
+public final class MaxRequestFilter extends JoltFilter {
 
     private final Map<String, RequestTracker> requestTrackers = new ConcurrentHashMap<>();
 

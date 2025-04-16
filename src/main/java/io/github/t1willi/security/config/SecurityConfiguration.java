@@ -30,17 +30,28 @@ public abstract class SecurityConfiguration {
      * Initialized with default values.
      */
     @Getter
-    private final CorsConfiguration corsConfig = new CorsConfiguration();
+    private final CorsConfiguration corsConfig = new CorsConfiguration(this);
 
     /**
      * The HTTP headers configuration for this security setup.
      * Initialized with default values.
      */
     @Getter
-    private final HeadersConfiguration headersConfig = new HeadersConfiguration();
+    private final HeadersConfiguration headersConfig = new HeadersConfiguration(this);
 
+    /**
+     * The CSRF configuration for this security setup. Initialized with default
+     * values.
+     */
     @Getter
     private final CsrfConfiguration csrfConfig = new CsrfConfiguration(this);
+
+    /**
+     * The Nonce configuration for this security setup. Initialized with default
+     * values.
+     */
+    @Getter
+    private final NonceConfiguration nonceConfig = new NonceConfiguration(this);
 
     /**
      * Provides access to the CORS configuration for fluent configuration.
@@ -67,6 +78,15 @@ public abstract class SecurityConfiguration {
      */
     public CsrfConfiguration withCSRF() {
         return csrfConfig;
+    }
+
+    /**
+     * Provides access to the nonce configuration for fluent configuration.
+     * 
+     * @return The nonce configuration instance for method chaining
+     */
+    public NonceConfiguration withNonce() {
+        return nonceConfig;
     }
 
     /**

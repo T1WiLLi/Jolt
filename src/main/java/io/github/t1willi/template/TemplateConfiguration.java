@@ -8,6 +8,7 @@ import java.util.Map;
 import freemarker.template.Configuration;
 import freemarker.template.TemplateExceptionHandler;
 import io.github.t1willi.exceptions.TemplatingException;
+import io.github.t1willi.security.nonce.NonceDirective;
 import lombok.Getter;
 
 /**
@@ -41,6 +42,8 @@ public abstract class TemplateConfiguration {
         this.configuration.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
         this.configuration.setLogTemplateExceptions(true);
         this.configuration.setWrapUncheckedExceptions(true);
+        this.configuration.setSharedVariable("nonce", new NonceDirective());
+        this.configure();
     }
 
     /**

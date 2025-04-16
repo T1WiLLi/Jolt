@@ -1,12 +1,14 @@
 package io.github.t1willi.filters.security;
 
 import java.io.IOException;
+import java.util.logging.Logger;
 
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.injector.annotation.JoltBean;
 import io.github.t1willi.security.config.HeadersConfiguration;
 import io.github.t1willi.security.config.SecurityConfiguration;
+import io.github.t1willi.security.nonce.Nonce;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.ServletRequest;
@@ -26,6 +28,7 @@ import jakarta.servlet.http.HttpServletResponse;
  */
 @JoltBean
 public final class SecureHeadersFilter extends JoltFilter {
+    private static final Logger logger = Logger.getLogger(SecureHeadersFilter.class.getName());
 
     /**
      * Sets security headers on the HTTP response and optionally enforces HTTPS.
@@ -51,7 +54,16 @@ public final class SecureHeadersFilter extends JoltFilter {
                 .getHeadersConfig();
 
         if (headers.isContentSecurityPolicyEnabled()) {
-            res.setHeader("Content-Security-Policy", headers.getContentSecurityPolicy());
+            String csp = headers.getContentSecurityPolicy();
+            String nonce = Nonce.get();
+            if (nonce != null) {
+                csp = csp.replace("'nonce-{{NONCE}}'", "'nonce-" + nonce + "'");
+                logger.info("CSP header set with nonce: " + nonce);
+            } else {
+                csp = csp.replace("'nonce-{{NONCE}}'", "");
+                logger.warning("CSP header set without nonce because no nonce was available");
+            }
+            res.setHeader("Content-Security-Policy", csp);
         }
         if (headers.isXssProtectionEnabled()) {
             res.setHeader("X-XSS-Protection", headers.getXssProtectionValue());

@@ -1,9 +1,5 @@
 package io.github.t1willi.filters.security;
 
-import java.io.IOException;
-import java.util.Collections;
-import java.util.logging.Logger;
-
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.http.HttpStatus;
@@ -20,19 +16,13 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
+import java.io.IOException;
+import java.util.Collections;
+import java.util.logging.Logger;
+
 /**
  * A filter that enforces CSRF protection for modifying HTTP methods.
- * <p>
- * This filter retrives the CSRF configuration and handler from the
- * {@link SecurityConfiguration},
- * validates the CSRF token for modifying methods (POST, PUT, DELETE, PATCH),
- * and thorws a
- * {@link JoltHttpException} with HTTP 403 status if validation fails.
- * 
- * <p>
- * The filter can be disabled or configured to ignore specific URL patterns via
- * the {@link CsrfConfiguration} which is configure through a custom
- * implementation of {@link SecurityConfiguration}.
+ * Skips all logic if CSRF protection is disabled in the configuration.
  */
 @JoltBean
 public final class CsrfFilter extends JoltFilter {
@@ -45,8 +35,16 @@ public final class CsrfFilter extends JoltFilter {
         HttpServletResponse res = (HttpServletResponse) response;
         JoltContext context = new JoltContext(req, res, null, Collections.emptyList());
 
+        CsrfConfiguration config = JoltContainer.getInstance()
+                .getBean(SecurityConfiguration.class)
+                .getCsrfConfig();
+        if (!config.isEnabled()) {
+            logger.info(() -> "CSRF protection is disabled, skipping filter logic");
+            chain.doFilter(request, response);
+            return;
+        }
+
         try {
-            CsrfConfiguration config = JoltContainer.getInstance().getBean(SecurityConfiguration.class).getCsrfConfig();
             CsrfHandler handler = config.getHandler();
             handler.validate(context, config);
             chain.doFilter(request, response);
@@ -54,7 +52,7 @@ public final class CsrfFilter extends JoltFilter {
             logger.warning(() -> "CSRF validation failed: " + e.getMessage());
             throw new JoltHttpException(e.getStatus(), e.getMessage());
         } catch (Exception e) {
-            logger.severe(() -> "Error validating CSRF token");
+            logger.severe(() -> "Error validating CSRF token: " + e.getMessage());
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error validating CSRF token");
         }
     }
