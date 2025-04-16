@@ -18,6 +18,8 @@ import io.github.t1willi.server.config.ServerConfig;
 
 import java.io.File;
 import java.net.ServerSocket;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.logging.Logger;
 
 public final class TomcatServer {
@@ -87,12 +89,17 @@ public final class TomcatServer {
     }
 
     private Connector[] createAndConfigureConnectors() throws ServerException {
-        java.util.List<Connector> connectors = new java.util.ArrayList<>();
+        List<Connector> connectors = new ArrayList<>();
 
         if (config.isHttpEnabled()) {
             Connector httpConnector = new Connector();
             httpConnector.setPort(config.getPort());
             httpConnector.setURIEncoding("UTF-8");
+            httpConnector.setProperty("compression", "on");
+            httpConnector.setProperty("compressionMinSize", "1024");
+            httpConnector.setProperty("compressionMethod", "gzip");
+            httpConnector.setProperty("compressableMimeType",
+                    "text/html,text/xml,text/css,text/javascript,application/javascript,application/json");
             connectors.add(httpConnector);
         }
 
@@ -152,7 +159,7 @@ public final class TomcatServer {
             context.addServletMappingDecoded("/", "default");
 
             MultipartConfigElement multipartConfig = new MultipartConfigElement(
-                    config.getTempDir(),
+                    (String) context.getServletContext().getAttribute("javax.servlet.context.tempdir"),
                     config.getMultipartMaxFileSize(),
                     config.getMultipartMaxRequestSize(),
                     config.getMultipartFileSizeThreshold());

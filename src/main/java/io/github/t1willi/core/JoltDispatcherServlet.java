@@ -91,7 +91,6 @@ public final class JoltDispatcherServlet extends HttpServlet {
             log.warning(() -> "Error in request processing: " + e.getMessage());
             if (!context.res.isCommitted() && joltCtx != null) {
                 joltCtx.commit();
-                log.info("Committed context with status: " + joltCtx.getStatus().code());
             }
             exceptionHandler.handleException(e, joltCtx.getResponse());
         } finally {
