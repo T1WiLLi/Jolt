@@ -5,6 +5,7 @@ import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
+import freemarker.core.HTMLOutputFormat;
 import freemarker.template.Configuration;
 import freemarker.template.TemplateExceptionHandler;
 import io.github.t1willi.exceptions.TemplatingException;
@@ -40,6 +41,8 @@ public abstract class TemplateConfiguration {
         this.configuration = new Configuration(Configuration.VERSION_2_3_32);
         this.configuration.setDefaultEncoding("UTF-8");
         this.configuration.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
+        this.configuration.setIncompatibleImprovements(Configuration.VERSION_2_3_32);
+        this.configuration.setOutputFormat(HTMLOutputFormat.INSTANCE);
         this.configuration.setLogTemplateExceptions(true);
         this.configuration.setWrapUncheckedExceptions(true);
         this.configuration.setSharedVariable("nonce", new NonceDirective());
