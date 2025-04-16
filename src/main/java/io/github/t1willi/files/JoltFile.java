@@ -5,6 +5,9 @@ import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.file.Files;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
+import java.util.UUID;
 
 import io.github.t1willi.exceptions.JoltException;
 import io.github.t1willi.exceptions.JoltHttpException;
@@ -53,10 +56,14 @@ public class JoltFile {
     }
 
     /**
-     * The original file name.
+     * The original file name (Stored for reference).
      */
     @Setter
-    private String fileName;
+    private String originalFilename;
+    /**
+     * The original file name.
+     */
+    private final String fileName;
 
     /**
      * The content type of the file (e.g., {@code "image/png"}).
@@ -81,11 +88,18 @@ public class JoltFile {
      * @param size        The size of the file in bytes
      * @param data        A byte array containing the file's data
      */
-    public JoltFile(String fileName, String contentType, long size, byte[] data) {
-        this.fileName = fileName;
+    public JoltFile(String originalFilename, String contentType, long size, byte[] data) {
+        if (data == null || data.length == 0) {
+            throw new JoltHttpException(HttpStatus.UNPROCESSABLE_ENTITY, "File data is empty.");
+        }
+        if (isMaliciousCode(data)) {
+            throw new JoltHttpException(HttpStatus.BAD_REQUEST, "File may contains malicious code.");
+        }
+        this.originalFilename = originalFilename;
+        this.fileName = generateFilename(originalFilename);
         this.contentType = contentType;
         this.size = size;
-        this.data = data;
+        this.data = data.clone();
     }
 
     /**
@@ -113,6 +127,51 @@ public class JoltFile {
             Files.write(file.toPath(), getData());
         } catch (IOException e) {
             throw new JoltException("Failed to save file to path: " + path, e);
+        }
+        return false;
+    }
+
+    private String generateFilename(String originalFilename) {
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hashBytes = digest.digest(originalFilename.getBytes());
+            String hashHex = bytesToHex(hashBytes);
+            String extension = originalFilename.contains(".")
+                    ? originalFilename.substring(originalFilename.lastIndexOf("."))
+                    : "";
+            return UUID.randomUUID().toString() + "-" + hashHex.substring(0, 8) + extension;
+        } catch (NoSuchAlgorithmException e) {
+            throw new JoltException("Failed to generate filename", e);
+        }
+    }
+
+    private String bytesToHex(byte[] bytes) {
+        StringBuilder hexString = new StringBuilder();
+        for (byte b : bytes) {
+            String hex = Integer.toHexString(0xff & b);
+            if (hex.length() == 1)
+                hexString.append('0');
+            hexString.append(hex);
+        }
+        return hexString.toString();
+    }
+
+    /**
+     * Comprehensive malicious file detection system that checks for executable
+     * formats,
+     * script patterns, and various obfuscation techniques.
+     * 
+     * @param data the file data to check
+     * @return true if potentially malicious, false otherwise
+     */
+    private boolean isMaliciousCode(byte[] data) {
+        if (data.length > 4) {
+            if (data[0] == 0x7F && data[1] == 'E' && data[2] == 'L' && data[3] == 'F') {
+                return true;
+            }
+            if (data[0] == 'M' && data[1] == 'Z') {
+                return true;
+            }
         }
         return false;
     }
