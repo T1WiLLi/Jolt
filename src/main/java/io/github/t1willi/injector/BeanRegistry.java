@@ -167,32 +167,6 @@ final class BeanRegistry {
     }
 
     /**
-     * Retrieves all beans annotated with the specified annotation.
-     * 
-     * @param annotation The annotation to filter beans by.
-     * @param <T>        The expected bean type.
-     * @return A list of beans annotated with the specified annotation.
-     * @throws NullPointerException if the annotation is null.
-     */
-    @SuppressWarnings("unchecked")
-    public <T> List<T> getBeans(Annotation annotation) {
-        Objects.requireNonNull(annotation, "Annotation cannot be null");
-        Class<? extends Annotation> annotationType = annotation.annotationType();
-        List<T> beans = new ArrayList<>();
-
-        for (Map.Entry<String, Class<?>> entry : beanDefinitions.entrySet()) {
-            if (entry.getValue().isAnnotationPresent(annotationType)) {
-                beans.add((T) getBean(entry.getKey()));
-            }
-        }
-
-        if (beans.isEmpty()) {
-            logger.warning("No beans found with annotation: " + annotationType.getName());
-        }
-        return beans;
-    }
-
-    /**
      * Retrieve a bean by its type and name.
      * 
      * @param type the bean class
