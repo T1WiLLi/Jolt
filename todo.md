@@ -67,6 +67,22 @@ Update freemarker default configuration to always enforce escaping variables to 
 ```
 
 
+# Controllers : 
+
+```java
+@Controller
+@Root("[controller]") // '/user'
+public class UserController {
+
+    @JoltBeanInjection
+    private UserService userService;
+
+    public UserController() {
+        // Initialize the controller with a custom bean
+        }
+}
+```
+
 
 New server properties : 
 
