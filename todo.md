@@ -103,7 +103,12 @@ server.logging.logfile=jolt.log
 
 server.http.enabled=false // By default, HTTP is enabled. This is more of an SSL/TLS feature.
 
+session.expirationSliding=false // By default, this is false
+session.encrypt=false // By default, this is false.
 session.httponly=true // By default, this is true.
 session.secure=true // By default, this is true.
 session.path=/ // By default, this is "/".
 session.samesite=Strict // By default, this is "Strict".
+
+session.rate.limit.max=10 // By default, this is 10 session per the given rate.limit.window=60 seconds.
+session.rate.limit.window=60 // By default, this is 60sec.

@@ -32,8 +32,14 @@ public abstract class GlobalExceptionHandler implements ExceptionHandler {
             if (message == null || message.isBlank()) {
                 message = status.reason();
             }
+        } else {
+            status = HttpStatus.INTERNAL_SERVER_ERROR;
+            message = message != null && !message.isBlank() ? message : status.reason();
         }
-        response.setStatus(status.code());
+
+        if (response.getStatus() == HttpStatus.OK.code()) {
+            response.setStatus(status.code());
+        }
 
         if (!this.registry.handleSpecificException(t, response)) {
             this.handle(t, response); // fallback to default handling

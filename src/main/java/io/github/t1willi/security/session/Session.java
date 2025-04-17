@@ -1,228 +1,386 @@
 package io.github.t1willi.security.session;
 
-import java.text.SimpleDateFormat;
-import java.util.Date;
-import java.util.Map;
-import java.util.Objects;
-import java.util.logging.Logger;
-
 import io.github.t1willi.core.JoltDispatcherServlet;
 import io.github.t1willi.exceptions.SessionExpiredException;
 import io.github.t1willi.exceptions.SessionIpMismatchException;
 import io.github.t1willi.exceptions.SessionUserAgentMismatchException;
-import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.routing.context.JoltContext;
 import io.github.t1willi.server.config.ConfigurationManager;
+
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.util.Map;
+import java.util.Objects;
+import java.util.Optional;
+import java.util.function.Supplier;
 
-public class Session {
-    private static final Logger logger = Logger.getLogger(Session.class.getName());
-
-    /** Key for marking that session has been initialized. */
-    private static final String SESSION_INITIALIZED_KEY = "jolt_session_initialized";
-
-    // Public constants for default session attribute keys
-    public static final String IP_ADDRESS_KEY = "ip_address";
-    public static final String USER_AGENT_KEY = "user_agent";
-    public static final String ACCESS_TIME_KEY = "access_time";
-    public static final String EXPIRE_TIME_KEY = "expire_time";
+/**
+ * A central utility for managing and validating user {@link HttpSession}
+ * instances
+ * in the Jolt framework.
+ *
+ * <p>
+ * <strong>Features:</strong>
+ * </p>
+ * <ul>
+ * <li>Configurable session lifetime (with optional sliding expiration)</li>
+ * <li>Automatic IP &amp; User‑Agent binding to thwart hijacking</li>
+ * <li>Session‑ID rotation on authentication to prevent fixation</li>
+ * <li>“Last access” timestamp updates on every read/write</li>
+ * <li>Type‑safe, transparent encryption of stored values (via
+ * {@link JoltSession})</li>
+ * </ul>
+ *
+ * @see JoltSession
+ * @see SessionIpMismatchException
+ * @see SessionUserAgentMismatchException
+ * @see SessionExpiredException
+ */
+public final class Session {
     /**
-     * Key for storing the authentication status (Boolean) in the session
-     * attributes.
+     * When true, each access pushes expiration forward by {@link #getLifetime()}.
      */
-    public static final String IS_AUTHENTICATED_KEY = "is_authenticated";
+    private static final boolean SLIDING = Boolean.parseBoolean(
+            ConfigurationManager.getInstance()
+                    .getProperty("session.expirationSliding", "false"));
 
-    private static final int DEFAULT_SESSION_LIFETIME = 1800;
-    private static volatile Integer sessionLifetime = null;
-    private static final SimpleDateFormat TIMESTAMP_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+    /** Default lifetime in seconds if mis‑configured or missing. */
+    private static final int DEFAULT_LIFETIME = 1_800;
 
-    public static void set(String key, Object value) {
-        HttpSession session = ensureSession(true);
-        session.setAttribute(key, value);
-        session.setAttribute("_forceCommit", System.currentTimeMillis());
+    /** Single‑run loader for {@code session.lifetime}. */
+    private static volatile int lifetimeSeconds;
+
+    /** Initialization flag in the session to avoid re‑init. */
+    public static final String KEY_INITIALIZED = "jolt_session_initialized";
+    public static final String KEY_IP_ADDRESS = "ip_address";
+    public static final String KEY_USER_AGENT = "user_agent";
+    public static final String KEY_ACCESS_TIME = "access_time";
+    public static final String KEY_EXPIRE_TIME = "expire_time";
+    public static final String KEY_IS_AUTHENTICATED = "is_authenticated";
+
+    /** Formatter for human‑readable timestamps. */
+    private static final DateTimeFormatter TS_FMT = DateTimeFormatter
+            .ofPattern("yyyy‑MM‑dd HH:mm:ss")
+            .withZone(ZoneId.systemDefault());
+
+    static {
+        loadLifetime();
     }
 
-    public static void setAll(Map<String, Object> attributes) {
-        attributes.forEach(Session::set);
+    private Session() {
+        /* no instances */
     }
 
-    public static void remove(String key) {
-        HttpSession session = ensureSession(true);
-        session.removeAttribute(key);
-    }
-
-    public static Object get(String key) {
-        HttpSession session = ensureSession(false);
-        return session != null ? session.getAttribute(key) : null;
-    }
-
-    public static Object getOrDefault(String key, Object defaultValue) {
-        try {
-            Object value = get(key);
-            return value != null ? value : defaultValue;
-        } catch (SecurityException e) {
-            return defaultValue;
-        }
-    }
-
-    public static String getSessionId() {
-        HttpSession session = ensureSession(true);
-        return session.getId();
-    }
-
-    public static String getIpAddress() {
-        return (String) get(IP_ADDRESS_KEY);
-    }
-
-    public static String getUserAgent() {
-        return (String) get(USER_AGENT_KEY);
-    }
-
-    public static long getUnixAccess() {
-        String ts = (String) get(ACCESS_TIME_KEY);
-        return ts != null ? Long.parseLong(ts) : 0L;
-    }
-
-    public static long getUnixExpire() {
-        String ts = (String) get(EXPIRE_TIME_KEY);
-        return ts != null ? Long.parseLong(ts) : 0L;
-    }
-
-    public static String getAccess() {
-        long ua = getUnixAccess();
-        return ua != 0 ? TIMESTAMP_FORMAT.format(new Date(ua)) : "N/A";
-    }
-
-    public static String getExpire() {
-        long ue = getUnixExpire();
-        return ue != 0 ? TIMESTAMP_FORMAT.format(new Date(ue)) : "N/A";
-    }
-
-    public static void setAuthenticated(boolean authenticated) {
-        set(IS_AUTHENTICATED_KEY, authenticated);
-    }
-
-    public static boolean isAuthenticated() {
-        try {
-            HttpSession session = ensureSession(false);
-            if (session == null) {
-                return false;
-            }
-            Boolean auth = (Boolean) get(IS_AUTHENTICATED_KEY);
-            return Boolean.TRUE.equals(auth);
-        } catch (SecurityException e) {
-            return false;
-        }
-    }
-
-    public static void destroy() {
-        JoltContext ctx = getContext();
-        HttpSession httpSession = ctx.getRequest().getSession(false);
-        if (httpSession != null) {
-            httpSession.invalidate();
-        }
-    }
-
-    public static void invalidate() {
-        JoltContext ctx = getContext();
-        HttpSession oldSession = ctx.getRequest().getSession(false);
-        if (oldSession != null) {
-            oldSession.invalidate();
-        }
-        HttpSession newSession = ctx.getRequest().getSession(true);
-        initializeSession(newSession, ctx);
-    }
-
-    public static boolean exists() {
-        return ensureSession(false) != null;
-    }
-
-    private static void initializeSessionLifetime() {
-        if (sessionLifetime == null) {
+    /** Lazily loads {@code session.lifetime} exactly once. */
+    private static void loadLifetime() {
+        if (lifetimeSeconds == 0) {
             synchronized (Session.class) {
-                if (sessionLifetime == null) {
-                    String lifetimeStr = ConfigurationManager.getInstance().getProperty("session.lifetime");
+                if (lifetimeSeconds == 0) {
+                    String raw = ConfigurationManager.getInstance()
+                            .getProperty("session.lifetime");
                     try {
-                        sessionLifetime = lifetimeStr != null ? Integer.parseInt(lifetimeStr)
-                                : DEFAULT_SESSION_LIFETIME;
-                        if (sessionLifetime <= 0) {
-                            throw new IllegalArgumentException("Session lifetime must be positive");
-                        }
-                    } catch (NumberFormatException e) {
-                        sessionLifetime = DEFAULT_SESSION_LIFETIME;
+                        lifetimeSeconds = raw != null
+                                ? Integer.parseInt(raw)
+                                : DEFAULT_LIFETIME;
+                        if (lifetimeSeconds <= 0)
+                            throw new IllegalArgumentException();
+                    } catch (Exception e) {
+                        lifetimeSeconds = DEFAULT_LIFETIME;
                     }
                 }
             }
         }
     }
 
-    private static void initializeSession(HttpSession session, JoltContext ctx) {
-        long accessTime = System.currentTimeMillis();
-        long expireTime = accessTime + (sessionLifetime * 1000L); // sessionLifetime is in seconds, convert to
-                                                                  // milliseconds
-
-        session.setAttribute(SESSION_INITIALIZED_KEY, true);
-        session.setAttribute(IP_ADDRESS_KEY, ctx.clientIp());
-        session.setAttribute(USER_AGENT_KEY, ctx.userAgent());
-        session.setAttribute(ACCESS_TIME_KEY, String.valueOf(accessTime));
-        session.setAttribute(EXPIRE_TIME_KEY, String.valueOf(expireTime));
-        session.setAttribute(IS_AUTHENTICATED_KEY, false);
+    private static int getLifetime() {
+        loadLifetime();
+        return lifetimeSeconds;
     }
 
-    private static HttpSession ensureSession(boolean create) {
-        initializeSessionLifetime();
-        JoltContext ctx = getContext();
-        HttpSession httpSession = ctx.getRequest().getSession(create);
-        if (httpSession == null) {
+    // ─────────────────────────────────────────────────────────────────────
+    // Public API
+    // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Retrieves the value of the given session attribute, or returns
+     * {@code defaultValue}
+     * if missing or not a String.
+     *
+     * @param key          the session attribute name
+     * @param defaultValue the fallback to return if attribute absent
+     * @return the stored String or {@code defaultValue}
+     */
+    public static String get(String key, String defaultValue) {
+        return getOptional(key).orElse(defaultValue);
+    }
+
+    /**
+     * Retrieves the value of the given session attribute, or {@code null}
+     * if missing.
+     *
+     * @param key the session attribute name
+     * @return the stored String or {@code null}
+     */
+    public static String get(String key) {
+        return getOptional(key).orElse(null);
+    }
+
+    /**
+     * Retrieves the value of the given session attribute as an {@link Optional}.
+     *
+     * @param key the session attribute name
+     * @return an Optional containing the stored String, or empty
+     */
+    public static Optional<String> getOptional(String key) {
+        JoltSession js = ensure(false);
+        return (js == null)
+                ? Optional.empty()
+                : js.getAttribute(key);
+    }
+
+    /**
+     * Convenience for {@link #get(String)} on {@code ip_address}.
+     * 
+     * @return stored client IP or {@code null}
+     */
+    public static String getIpAddress() {
+        return get(KEY_IP_ADDRESS);
+    }
+
+    /**
+     * Convenience for {@link #get(String)} on {@code user_agent}.
+     * 
+     * @return stored UA or {@code null}
+     */
+    public static String getUserAgent() {
+        return get(KEY_USER_AGENT);
+    }
+
+    /**
+     * Stores a session attribute (and triggers initialization on first write).
+     *
+     * @param key   the attribute name
+     * @param value the value to store (Strings may be encrypted)
+     */
+    public static void set(String key, Object value) {
+        JoltSession js = ensure(true);
+        js.setAttribute(key, value);
+    }
+
+    /**
+     * Stores all entries of the provided map into the session.
+     *
+     * @param attrs map of attribute‑value pairs
+     */
+    public static void setAll(Map<String, ?> attrs) {
+        attrs.forEach(Session::set);
+    }
+
+    /**
+     * Removes the given attribute from the session.
+     *
+     * @param key the attribute name to remove
+     */
+    public static void remove(String key) {
+        JoltSession js = ensure(true);
+        js.removeAttribute(key);
+    }
+
+    /**
+     * Returns the active session’s ID, optionally creating one if none exists.
+     *
+     * @return the HTTP session ID
+     */
+    public static String getSessionId() {
+        return ensure(true).raw().getId();
+    }
+
+    /**
+     * Returns the stored access timestamp as epoch millis, or 0 if missing.
+     *
+     * @return last‑access in ms
+     */
+    public static long getUnixAccess() {
+        return getOptional(KEY_ACCESS_TIME)
+                .map(Long::valueOf)
+                .orElse(0L);
+    }
+
+    /**
+     * Returns the stored expiration timestamp as epoch millis, or 0 if missing.
+     *
+     * @return expire time in ms
+     */
+    public static long getUnixExpire() {
+        return getOptional(KEY_EXPIRE_TIME)
+                .map(Long::valueOf)
+                .orElse(0L);
+    }
+
+    /**
+     * Returns a human‑readable “last access” time or “N/A”.
+     *
+     * @return formatted access timestamp
+     */
+    public static String getAccess() {
+        long t = getUnixAccess();
+        return t > 0
+                ? TS_FMT.format(Instant.ofEpochMilli(t))
+                : "N/A";
+    }
+
+    /**
+     * Returns a human‑readable “expire” time or “N/A”.
+     *
+     * @return formatted expire timestamp
+     */
+    public static String getExpire() {
+        long t = getUnixExpire();
+        return t > 0
+                ? TS_FMT.format(Instant.ofEpochMilli(t))
+                : "N/A";
+    }
+
+    /**
+     * Marks the session authenticated or not. If turning <em>on</em> (false→true),
+     * rotates the session‑ID to prevent fixation.
+     *
+     * @param authenticated new authentication state
+     */
+    public static void setAuthenticated(boolean authenticated) {
+        JoltSession js = ensure(true);
+        boolean was = js.getAttribute(KEY_IS_AUTHENTICATED)
+                .map(Boolean::valueOf)
+                .orElse(false);
+        if (!was && authenticated) {
+            js.changeSessionId(getCtx().getRequest());
+        }
+        js.setAttribute(KEY_IS_AUTHENTICATED, authenticated);
+    }
+
+    /**
+     * Checks whether the session is marked authenticated.
+     *
+     * @return true if authenticated
+     */
+    public static boolean isAuthenticated() {
+        JoltSession js = ensure(false);
+        return js != null && js.getAttribute(KEY_IS_AUTHENTICATED)
+                .map(Boolean::valueOf)
+                .orElse(false);
+    }
+
+    /**
+     * Invalidates the current session (logout).
+     */
+    public static void destroy() {
+        HttpSession s = getCtx().getRequest().getSession(false);
+        if (s != null)
+            s.invalidate();
+    }
+
+    /**
+     * Fully invalidates and recreates a session, then re‑initializes it
+     * and rotates its ID.
+     */
+    public static void invalidate() {
+        JoltContext ctx = getCtx();
+        HttpServletRequest req = ctx.getRequest();
+        HttpSession old = req.getSession(false);
+        if (old != null)
+            old.invalidate();
+        HttpSession neu = req.getSession(true);
+        initialize(neu, ctx);
+        wrap(neu).changeSessionId(req);
+    }
+
+    /**
+     * Returns true if a session already exists for this request.
+     *
+     * @return true when unexpired session is present
+     */
+    public static boolean exists() {
+        return ensure(false) != null;
+    }
+
+    // ─────────────────────────────────────────────────────────────────────
+    // Internal pipeline — called by every public op
+    // ─────────────────────────────────────────────────────────────────────
+
+    private static JoltSession ensure(boolean create) {
+        loadLifetime();
+        JoltContext ctx = getCtx();
+        HttpSession raw = ctx.getRequest().getSession(create);
+        if (raw == null)
             return null;
+
+        JoltSession js = wrap(raw);
+
+        if (!js.getAttribute(KEY_INITIALIZED).isPresent()) {
+            initialize(raw, ctx);
         }
 
-        if (httpSession.getAttribute(SESSION_INITIALIZED_KEY) == null) {
-            initializeSession(httpSession, ctx);
-        }
+        validate(js, ctx);
+        expire(js);
 
-        String storedIp = (String) httpSession.getAttribute(IP_ADDRESS_KEY);
-        String currentIp = ctx.clientIp();
-        if (!Objects.equals(currentIp, storedIp)) {
-            logger.warning(() -> "IP address mismatch for session " + httpSession.getId() + ": expected "
-                    + storedIp + ", got " + currentIp + ". Warning! This might indicate a session hijacking.");
-            httpSession.invalidate();
-            ctx.status(HttpStatus.FORBIDDEN);
-            throw new SessionIpMismatchException();
-        }
+        js.setAttribute(KEY_ACCESS_TIME, Instant.now().toEpochMilli());
+        return js;
+    }
 
-        String storedUserAgent = (String) httpSession.getAttribute(USER_AGENT_KEY);
-        String currentUserAgent = ctx.userAgent();
-        if (!Objects.equals(currentUserAgent, storedUserAgent)) {
-            logger.warning(() -> "User-Agent mismatch for session " + httpSession.getId() + ": expected "
-                    + storedUserAgent + ", got " + currentUserAgent
-                    + ". Warning! This might indicate a session hijacking.");
-            httpSession.invalidate();
-            ctx.status(HttpStatus.FORBIDDEN);
-            throw new SessionUserAgentMismatchException();
-        }
+    private static void initialize(HttpSession s, JoltContext ctx) {
+        long now = Instant.now().toEpochMilli();
+        s.setAttribute(KEY_INITIALIZED, true);
+        s.setAttribute(KEY_IP_ADDRESS, ctx.clientIp());
+        s.setAttribute(KEY_USER_AGENT, ctx.userAgent());
+        s.setAttribute(KEY_ACCESS_TIME, now);
+        s.setAttribute(KEY_EXPIRE_TIME, now + Duration.ofSeconds(getLifetime()).toMillis());
+        s.setAttribute(KEY_IS_AUTHENTICATED, false);
+    }
 
-        long expireTime = Long.parseLong((String) httpSession.getAttribute(EXPIRE_TIME_KEY));
-        long currentTime = System.currentTimeMillis();
-        if (currentTime > expireTime) {
-            logger.warning("Session expired: " + httpSession.getId());
-            httpSession.invalidate();
-            ctx.status(HttpStatus.FORBIDDEN);
+    private static void validate(JoltSession js, JoltContext ctx) {
+        bind(js, KEY_IP_ADDRESS, ctx.clientIp(), SessionIpMismatchException::new);
+        bind(js, KEY_USER_AGENT, ctx.userAgent(), SessionUserAgentMismatchException::new);
+    }
+
+    private static void bind(JoltSession js,
+            String key,
+            String actual,
+            Supplier<RuntimeException> exceptionSupplier) {
+        String stored = js.getAttribute(key).orElse(null);
+        if (!Objects.equals(stored, actual)) {
+            js.raw().invalidate();
+            throw exceptionSupplier.get();
+        }
+    }
+
+    private static void expire(JoltSession js) {
+        Optional<String> raw = js.getAttribute(KEY_EXPIRE_TIME);
+        long exp = raw.map(Long::parseLong).orElse(0L);
+        long now = Instant.now().toEpochMilli();
+
+        if (now > exp) {
+            js.raw().invalidate();
             throw new SessionExpiredException();
         }
-        return httpSession;
+
+        if (SLIDING) {
+            js.setAttribute(KEY_EXPIRE_TIME,
+                    now + Duration.ofSeconds(getLifetime()).toMillis());
+        }
     }
 
-    private static JoltContext getContext() {
+    private static JoltContext getCtx() {
         JoltContext ctx = JoltDispatcherServlet.getCurrentContext();
-        if (ctx == null) {
-            throw new IllegalStateException(
-                    "No JoltContext available for the Session; ensure this is called within a request context");
-        }
+        if (ctx == null)
+            throw new IllegalStateException("No JoltContext");
         return ctx;
     }
 
-    private Session() {
-        // Private constructor to prevent instantiation
+    private static JoltSession wrap(HttpSession s) {
+        return new JoltSession(s);
     }
 }

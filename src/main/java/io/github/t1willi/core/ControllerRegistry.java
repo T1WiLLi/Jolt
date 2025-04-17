@@ -177,7 +177,7 @@ public final class ControllerRegistry {
         try {
             Method pathMethod = annotation.getClass().getMethod("value");
             return (String) pathMethod.invoke(annotation);
-        } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
+        } catch (Exception e) {
             throw new JoltDIException("Failed to extract path from annotation: " + e.getMessage(), e);
         }
     }
@@ -228,8 +228,7 @@ public final class ControllerRegistry {
             } catch (IllegalAccessException | IllegalArgumentException e) {
                 throw new JoltDIException(
                         "Cannot invoke " + method.getName() +
-                                " in " + controller.getClass().getSimpleName() +
-                                ": " + e.getMessage(),
+                                " in " + controller.getClass().getSimpleName() + ", " + e.getMessage(),
                         e);
             }
         };

@@ -46,7 +46,7 @@ public class AuthController extends BaseController {
         String userAgent = Session.getUserAgent();
         String accessTime = Session.getAccess();
         String expireTime = Session.getExpire();
-        String username = (String) Session.get("username");
+        String username = Session.get("username");
 
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>");
