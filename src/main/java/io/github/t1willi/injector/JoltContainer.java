@@ -1,5 +1,6 @@
 package io.github.t1willi.injector;
 
+import java.lang.annotation.Annotation;
 import java.util.List;
 import java.util.Objects;
 import java.util.logging.Logger;
@@ -268,6 +269,29 @@ public final class JoltContainer {
      */
     public <T> List<T> getBeans(Class<T> parentType) {
         return beanRegistry.getBeans(parentType);
+    }
+
+    /**
+     * Retrieves a list of beans annotated with the specified annotation.
+     *
+     * <p>
+     * This method searches through all registered bean definitions and returns a
+     * list
+     * of beans whose classes are annotated with the specified annotation. If no
+     * beans
+     * are found, an empty list is returned.
+     *
+     * <p>
+     * <strong>Type Safety:</strong> The returned objects are cast to the type
+     * inferred from the annotation context.
+     *
+     * @param annotation the annotation to search for; must not be {@code null}.
+     * @param <T>        the type of the beans to be retrieved.
+     * @return a list of beans annotated with the specified annotation.
+     * @throws NullPointerException if the {@code annotation} is {@code null}.
+     */
+    public <T> List<T> getBeans(Annotation annotation) {
+        return beanRegistry.getBeans(annotation);
     }
 
     /**

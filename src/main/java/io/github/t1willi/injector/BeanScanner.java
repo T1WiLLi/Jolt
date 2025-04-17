@@ -11,6 +11,7 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Logger;
 
+import io.github.t1willi.annotations.Controller;
 import io.github.t1willi.exceptions.JoltDIException;
 import io.github.t1willi.injector.annotation.JoltBean;
 import io.github.t1willi.injector.annotation.JoltConfiguration;
@@ -68,7 +69,7 @@ final class BeanScanner {
             if (clazz.isAnnotationPresent(JoltConfiguration.class)) {
                 configurationManager.registerConfiguration(clazz);
             }
-            if (clazz.isAnnotationPresent(JoltBean.class)) {
+            if (clazz.isAnnotationPresent(JoltBean.class) || clazz.isAnnotationPresent(Controller.class)) {
                 beanRegistry.registerBean(clazz);
             }
         }
