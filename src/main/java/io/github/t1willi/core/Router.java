@@ -45,7 +45,7 @@ import lombok.Getter;
  * @since 1.0
  */
 @JoltBean()
-public final class Router {
+final class Router {
 
     /**
      * The logger for this router.
