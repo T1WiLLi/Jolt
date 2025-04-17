@@ -1,11 +1,5 @@
 package io.github.t1willi.core;
 
-import java.lang.reflect.Method;
-import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.logging.Logger;
-
 import io.github.t1willi.annotations.Delete;
 import io.github.t1willi.annotations.Get;
 import io.github.t1willi.annotations.Mapping;
@@ -18,11 +12,51 @@ import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.routing.context.JoltContext;
 
+import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.function.Consumer;
+import java.util.logging.Logger;
+
+/**
+ * Manages registration of controllers in the Jolt framework.
+ * Retrieves classes extending BaseController, processes their
+ * routing annotations, and registers routes with the Router.
+ * Enforces strict method signatures for routing methods and
+ * registers controller-specific lifecycle handlers.
+ */
 public final class ControllerRegistry {
+
     private static final Logger logger = Logger.getLogger(ControllerRegistry.class.getName());
 
+    private ControllerRegistry() {
+        // Prevent instantiation
+    }
+
+    /**
+     * Scans for controllers (classes extending BaseController) and registers their
+     * routes
+     * and lifecycle handlers. Validates that annotated methods have the correct
+     * signature.
+     *
+     * @throws JoltDIException if controller registration fails or method signatures
+     *                         are invalid.
+     */
     public static void registerControllers() {
-        List<BaseController> controllers = JoltContainer.getInstance().getBeans(BaseController.class);
+        List<BaseController> controllers;
+        try {
+            controllers = JoltContainer.getInstance().getBeans(BaseController.class);
+        } catch (Exception e) {
+            throw new JoltDIException(
+                    "Failed to retrieve BaseController implementations from JoltContainer: " + e.getMessage(), e);
+        }
+
+        if (controllers.isEmpty()) {
+            logger.warning("No controllers found extending BaseController.");
+            return;
+        }
+
         for (BaseController controller : controllers) {
             registerController(controller);
         }
@@ -30,22 +64,54 @@ public final class ControllerRegistry {
 
     private static void registerController(BaseController controller) {
         try {
+            if (controller == null) {
+                throw new JoltDIException("Controller instance cannot be null");
+            }
+
             JoltContainer.getInstance().inject(controller);
             Class<?> controllerClass = controller.getClass();
 
             String rootPath = getRootPath(controllerClass);
 
-            for (Method method : controllerClass.getMethods()) {
+            registerLifecycleHandlers(controller, rootPath);
+
+            for (Method method : controllerClass.getDeclaredMethods()) {
                 registerRoutesForMethod(controller, method, rootPath);
             }
+
         } catch (Exception e) {
-            logger.severe(
-                    () -> "Failed to register controller " + controller.getClass().getName() + ": " + e.getMessage());
-            throw new JoltDIException("Controller registration failed", e);
+            String message = "Failed to register controller "
+                    + (controller != null ? controller.getClass().getName() : "null") + ": " + e.getMessage();
+            logger.severe(() -> message);
+            throw new JoltDIException(message, e);
+        }
+    }
+
+    private static void registerLifecycleHandlers(BaseController controller, String rootPath) {
+        Router router;
+        try {
+            router = JoltContainer.getInstance().getBean(Router.class);
+            if (router == null) {
+                throw new JoltDIException("Router bean not found in JoltContainer");
+            }
+        } catch (Exception e) {
+            throw new JoltDIException("Failed to retrieve Router bean: " + e.getMessage(), e);
+        }
+
+        for (Consumer<JoltContext> handler : controller.getBeforeHandlers()) {
+            router.before(handler, rootPath);
+        }
+
+        for (Consumer<JoltContext> handler : controller.getAfterHandlers()) {
+            router.after(handler, rootPath);
         }
     }
 
     private static String getRootPath(Class<?> controllerClass) {
+        if (controllerClass == null) {
+            throw new JoltDIException("Controller class cannot be null");
+        }
+
         Root root = controllerClass.getAnnotation(Root.class);
         String rootValue = (root != null) ? root.value() : "";
         if (rootValue.equals("[controller]")) {
@@ -61,7 +127,6 @@ public final class ControllerRegistry {
     private static void registerRoutesForMethod(BaseController controller, Method method, String rootPath) {
         List<RouteDefinition> routes = new ArrayList<>();
 
-        // Check for method-level annotations
         if (method.isAnnotationPresent(Get.class)) {
             validateMethodSignature(method, controller.getClass());
             Get get = method.getAnnotation(Get.class);
@@ -140,7 +205,9 @@ public final class ControllerRegistry {
             try {
                 return (JoltContext) method.invoke(controller, ctx);
             } catch (Exception e) {
-                throw new RuntimeException("Failed to invoke controller method " + method.getName(), e);
+                String message = "Failed to invoke controller method " + method.getName() + " in controller "
+                        + controller.getClass().getName() + ": " + e.getMessage();
+                throw new JoltDIException(message, e);
             }
         };
     }

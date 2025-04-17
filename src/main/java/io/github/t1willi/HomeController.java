@@ -7,8 +7,8 @@ import io.github.t1willi.core.BaseController;
 import io.github.t1willi.routing.context.JoltContext;
 
 @Controller
-@Root("/home")
-public class HomeController implements BaseController {
+@Root("[controller]")
+public class HomeController extends BaseController {
 
     @Get
     public JoltContext home(JoltContext context) {
