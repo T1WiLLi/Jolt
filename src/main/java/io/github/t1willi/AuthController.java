@@ -28,9 +28,9 @@ public class AuthController extends BaseController {
             Session.set("username", username);
             return context.redirect("/dashboard").status(HttpStatus.OK);
         } else {
-            context.status(HttpStatus.UNAUTHORIZED);
             context.html(
-                    "<!DOCTYPE html><html><body><h2>Login Failed</h2><p>Invalid username or password.</p><a href='/'>Try again</a></body></html>");
+                    "<!DOCTYPE html><html><body><h2>Login Failed</h2><p>Invalid username or password.</p><a href='/'>Try again</a></body></html>")
+                    .status(HttpStatus.UNAUTHORIZED);
             return context;
         }
     }
@@ -38,7 +38,6 @@ public class AuthController extends BaseController {
     @Get("/dashboard")
     public JoltContext dashboard(JoltContext context) {
         if (!Session.isAuthenticated()) {
-            context.status(HttpStatus.UNAUTHORIZED);
             return context.redirect("/");
         }
 

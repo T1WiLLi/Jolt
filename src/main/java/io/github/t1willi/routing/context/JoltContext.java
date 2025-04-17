@@ -66,7 +66,7 @@ public final class JoltContext {
     private final Map<String, String> pathParams;
 
     /**
-     * Constructs a {@code JoltHttpContext} with the specified request, response,
+     * Constructs a {@code JoltContext} with the specified request, response,
      * path parameter matcher, and parameter names.
      *
      * @param req
@@ -327,7 +327,7 @@ public final class JoltContext {
      * @param status
      *               The {@link HttpStatus} to set on the response.
      * @return
-     *         This {@code JoltHttpContext}, for fluent chaining.
+     *         This {@code JoltContext}, for fluent chaining.
      */
     public JoltContext status(HttpStatus status) {
         if (committed) {
@@ -344,7 +344,7 @@ public final class JoltContext {
      * @param code
      *             The numeric status code (e.g., 200, 404).
      * @return
-     *         This {@code JoltHttpContext}, for fluent chaining.
+     *         This {@code JoltContext}, for fluent chaining.
      */
     public JoltContext status(int code) {
         if (committed) {
@@ -367,7 +367,7 @@ public final class JoltContext {
      * @param value
      *              The header value.
      * @return
-     *         This {@code JoltHttpContext}, for fluent chaining.
+     *         This {@code JoltContext}, for fluent chaining.
      */
     public JoltContext setHeader(String name, String value) {
         if (committed) {
@@ -382,7 +382,7 @@ public final class JoltContext {
      * Redirect's the response to a new existing location.
      * 
      * @param location The new location to redirect to.
-     * @return This {@code JoltHttpContext}, for fluent chaining.
+     * @return This {@code JoltContext}, for fluent chaining.
      */
     public JoltContext redirect(String location) {
         if (committed) {
@@ -398,7 +398,7 @@ public final class JoltContext {
      * 
      * @param location        The newly created resource.
      * @param redirectedRoute The newly created resource's route.
-     * @return This {@code JoltHttpContext}, for fluent chaining.
+     * @return This {@code JoltContext}, for fluent chaining.
      */
     public JoltContext redirect(String location, Runnable redirectedRoute) {
         if (committed) {
@@ -418,7 +418,7 @@ public final class JoltContext {
      * @param data
      *             The text to write.
      * @return
-     *         This {@code JoltHttpContext}, for fluent chaining.
+     *         This {@code JoltContext}, for fluent chaining.
      * @throws JoltHttpException
      *                           If an I/O error occurs while writing.
      */
@@ -439,7 +439,7 @@ public final class JoltContext {
      * @param data
      *             The Java object to serialize as JSON.
      * @return
-     *         This {@code JoltHttpContext}, for fluent chaining.
+     *         This {@code JoltContext}, for fluent chaining.
      * @throws JoltHttpException
      *                           If an I/O error occurs while writing.
      */
@@ -460,7 +460,7 @@ public final class JoltContext {
      * @param html
      *             The HTML content to write.
      * @return
-     *         This {@code JoltHttpContext}, for fluent chaining.
+     *         This {@code JoltContext}, for fluent chaining.
      * @throws JoltHttpException
      *                           If an I/O error occurs while writing.
      */
@@ -480,7 +480,7 @@ public final class JoltContext {
      * 
      * @param template The name of the template file to render.
      * @param model    The model to pass to the template.
-     * @return this {@code JoltHttpContext} for fluent chaining.
+     * @return this {@code JoltContext} for fluent chaining.
      */
     public JoltContext render(String template, JoltModel model) {
         templatingContext.render(responseContext, template, model);
@@ -506,7 +506,7 @@ public final class JoltContext {
      *
      * @param resource the file name to serve (e.g., "index.html" or
      *                 "image.png")
-     * @return this {@code JoltHttpContext} for fluent chaining.
+     * @return this {@code JoltContext} for fluent chaining.
      */
     public JoltContext serve(String resource) {
         responseContext.serve(resource);
@@ -519,7 +519,7 @@ public final class JoltContext {
      * 
      * @param file     The file to download
      * @param filename The filename to use for the download
-     * @return this {@code JoltHttpContext} for fluent chaining.
+     * @return this {@code JoltContext} for fluent chaining.
      */
     public JoltContext download(JoltFile file, String filename) {
         responseContext.download(file, filename);
@@ -530,7 +530,7 @@ public final class JoltContext {
      * Sets the Content-Type header on the response.
      * 
      * @param type The content type to set.
-     * @return this {@code JoltHttpContext} for fluent chaining.
+     * @return this {@code JoltContext} for fluent chaining.
      */
     public JoltContext contentType(String type) {
         responseContext.setContentType(type);
@@ -540,7 +540,7 @@ public final class JoltContext {
     /**
      * Shortand for HTTP Status 200 OK.
      * 
-     * @return this {@code JoltHttpContext} for fluent chaining.
+     * @return this {@code JoltContext} for fluent chaining.
      */
     public JoltContext ok() {
         return status(HttpStatus.OK);
@@ -549,7 +549,7 @@ public final class JoltContext {
     /**
      * Shortand for HTTP Status 201 Created.
      * 
-     * @return this {@code JoltHttpContext} for fluent chaining.
+     * @return this {@code JoltContext} for fluent chaining.
      */
     public JoltContext created() {
         return status(HttpStatus.CREATED);
@@ -558,7 +558,7 @@ public final class JoltContext {
     /**
      * Shortand for HTTP Status 204 No Content.
      * 
-     * @return this {@code JoltHttpContext} for fluent chaining.
+     * @return this {@code JoltContext} for fluent chaining.
      */
     public JoltContext noContent() {
         return status(HttpStatus.NO_CONTENT);
@@ -723,7 +723,7 @@ public final class JoltContext {
      * @param name
      *             The cookie name to remove.
      * @return
-     *         This {@code JoltHttpContext}, for fluent chaining.
+     *         This {@code JoltContext}, for fluent chaining.
      */
     public JoltContext removeCookie(String name) {
         responseContext.removeCookie(name);
