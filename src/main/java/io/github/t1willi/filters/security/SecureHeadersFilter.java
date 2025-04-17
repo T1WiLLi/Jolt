@@ -58,7 +58,7 @@ public final class SecureHeadersFilter extends JoltFilter {
             String nonce = Nonce.get();
             if (nonce != null) {
                 csp = csp.replace("'nonce-{{NONCE}}'", "'nonce-" + nonce + "'");
-                logger.info("CSP header set with nonce: " + nonce);
+                logger.fine("CSP header set with nonce: " + nonce);
             } else {
                 csp = csp.replace("'nonce-{{NONCE}}'", "");
                 logger.warning("CSP header set without nonce because no nonce was available");

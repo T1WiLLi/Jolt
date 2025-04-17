@@ -107,6 +107,7 @@ public abstract class JoltApplication {
             Database.init();
             JoltContainer.getInstance().initialize();
             router = JoltContainer.getInstance().getBean(Router.class);
+            ControllerRegistry.registerControllers();
             instance.init();
             ServerConfig config = ConfigurationManager.getInstance().getServerConfig();
             instance.server = new TomcatServer(config);

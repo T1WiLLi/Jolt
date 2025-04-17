@@ -32,7 +32,7 @@ public class NonceFilter extends JoltFilter {
             throws IOException, ServletException {
         HttpServletRequest req = (HttpServletRequest) request;
 
-        logger.info("NonceFilter running for request: " + req.getRequestURI());
+        logger.fine("NonceFilter running for request: " + req.getRequestURI());
         SecurityConfiguration securityConfig = JoltContainer.getInstance()
                 .getBean(SecurityConfiguration.class);
         if (securityConfig.getNonceConfig().isEnabled()) {

@@ -2,6 +2,7 @@ package io.github.t1willi.injector;
 
 import java.io.File;
 import java.io.IOException;
+import java.lang.reflect.Modifier;
 import java.net.URISyntaxException;
 import java.net.URL;
 import java.util.Enumeration;
@@ -11,6 +12,8 @@ import java.util.jar.JarEntry;
 import java.util.jar.JarFile;
 import java.util.logging.Logger;
 
+import io.github.t1willi.annotations.Controller;
+import io.github.t1willi.core.BaseController;
 import io.github.t1willi.exceptions.JoltDIException;
 import io.github.t1willi.injector.annotation.JoltBean;
 import io.github.t1willi.injector.annotation.JoltConfiguration;
@@ -68,7 +71,15 @@ final class BeanScanner {
             if (clazz.isAnnotationPresent(JoltConfiguration.class)) {
                 configurationManager.registerConfiguration(clazz);
             }
-            if (clazz.isAnnotationPresent(JoltBean.class)) {
+            if (clazz.isAnnotationPresent(JoltBean.class) || clazz.isAnnotationPresent(Controller.class)) {
+                if (clazz.isAnnotationPresent(Controller.class)) {
+                    if (!BaseController.class.isAssignableFrom(clazz)) {
+                        throw new JoltDIException("Controller must implement BaseController: " + clazz.getName());
+                    }
+                }
+                if (Modifier.isAbstract(clazz.getModifiers()) || Modifier.isInterface(clazz.getModifiers())) {
+                    throw new JoltDIException("Bean must be a concrete class: " + clazz.getName());
+                }
                 beanRegistry.registerBean(clazz);
             }
         }
