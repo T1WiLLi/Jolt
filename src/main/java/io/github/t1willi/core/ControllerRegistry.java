@@ -38,8 +38,6 @@ public final class ControllerRegistry {
             for (Method method : controllerClass.getMethods()) {
                 registerRoutesForMethod(controller, method, rootPath);
             }
-            logger.info(() -> "Successfully registered controller: " + controllerClass.getName() + " with root path: "
-                    + rootPath);
         } catch (Exception e) {
             logger.severe(
                     () -> "Failed to register controller " + controller.getClass().getName() + ": " + e.getMessage());
@@ -99,8 +97,6 @@ public final class ControllerRegistry {
                     throw new JoltDIException("Router bean not found in JoltContainer");
                 }
                 router.route(route.method, fullPath, handler);
-                logger.info(
-                        () -> "Registered route: " + route.method + " " + fullPath + " for method " + method.getName());
             } catch (Exception e) {
                 throw new JoltDIException(
                         "Failed to register route " + route.method + " " + fullPath + " for method " + method.getName()

@@ -1,5 +1,17 @@
 package io.github.t1willi.injector;
 
+import io.github.t1willi.annotations.Controller;
+import io.github.t1willi.exceptions.BeanCreationException;
+import io.github.t1willi.exceptions.BeanNotFoundException;
+import io.github.t1willi.exceptions.CircularDependencyException;
+import io.github.t1willi.exceptions.JoltDIException;
+import io.github.t1willi.injector.annotation.JoltBean;
+import io.github.t1willi.injector.annotation.JoltBeanInjection;
+import io.github.t1willi.injector.type.BeanScope;
+import io.github.t1willi.injector.type.InitializationMode;
+import jakarta.annotation.PostConstruct;
+import jakarta.annotation.PreDestroy;
+
 import java.lang.annotation.Annotation;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
@@ -14,21 +26,9 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-import io.github.t1willi.exceptions.BeanCreationException;
-import io.github.t1willi.exceptions.BeanNotFoundException;
-import io.github.t1willi.exceptions.CircularDependencyException;
-import io.github.t1willi.exceptions.JoltDIException;
-import io.github.t1willi.injector.annotation.JoltBean;
-import io.github.t1willi.injector.annotation.JoltBeanInjection;
-import io.github.t1willi.injector.type.BeanScope;
-import io.github.t1willi.injector.type.InitializationMode;
-import jakarta.annotation.PostConstruct;
-import jakarta.annotation.PreDestroy;
-
 /**
  * The BeanRegistry is responsible for registering bean classes (annotated with
- * {@link io.github.injector.annotation.JoltBean JoltBean}) and their
- * associated,
+ * {@link JoltBean} or {@link Controller}) and their associated,
  * instantiating them, performing dependency injection, and managing their
  * lifecycle.
  */
@@ -49,7 +49,7 @@ final class BeanRegistry {
 
     /**
      * Registers the given bean class. The class must be annotated with
-     * {@link JoltBean}.
+     * {@link JoltBean} or {@link Controller}.
      *
      * @param beanClass the bean class.
      * @throws JoltDIException if the class is not annotated or if a bean with the
@@ -57,11 +57,13 @@ final class BeanRegistry {
      */
     public void registerBean(Class<?> beanClass) {
         Objects.requireNonNull(beanClass, "Bean class cannot be null");
-        JoltBean annotation = beanClass.getAnnotation(JoltBean.class);
-        if (annotation == null) {
-            throw new JoltDIException("Class " + beanClass.getName() + " is not annotated with @JoltBean");
+        JoltBean joltBeanAnnotation = beanClass.getAnnotation(JoltBean.class);
+        Controller controllerAnnotation = beanClass.getAnnotation(Controller.class);
+        if (joltBeanAnnotation == null && controllerAnnotation == null) {
+            throw new JoltDIException(
+                    "Class " + beanClass.getName() + " is not annotated with @JoltBean or @Controller");
         }
-        String beanName = getBeanName(beanClass, annotation);
+        String beanName = getBeanName(beanClass, joltBeanAnnotation);
         if (beanDefinitions.containsKey(beanName)) {
             throw new JoltDIException("Duplicate bean name: " + beanName);
         }
@@ -77,7 +79,7 @@ final class BeanRegistry {
         for (Map.Entry<String, Class<?>> entry : beanDefinitions.entrySet()) {
             Class<?> beanClass = entry.getValue();
             JoltBean annotation = beanClass.getAnnotation(JoltBean.class);
-            if (annotation.initialization() == InitializationMode.EAGER &&
+            if (annotation != null && annotation.initialization() == InitializationMode.EAGER &&
                     annotation.scope() == BeanScope.SINGLETON) {
                 logger.info("Eagerly initializing bean: " + entry.getKey());
                 getBean(entry.getKey());
@@ -167,6 +169,32 @@ final class BeanRegistry {
     }
 
     /**
+     * Retrieves all beans annotated with the specified annotation.
+     * 
+     * @param annotation The annotation to filter beans by.
+     * @param <T>        The expected bean type.
+     * @return A list of beans annotated with the specified annotation.
+     * @throws NullPointerException if the annotation is null.
+     */
+    @SuppressWarnings("unchecked")
+    public <T> List<T> getBeans(Annotation annotation) {
+        Objects.requireNonNull(annotation, "Annotation cannot be null");
+        Class<? extends Annotation> annotationType = annotation.annotationType();
+        List<T> beans = new ArrayList<>();
+
+        for (Map.Entry<String, Class<?>> entry : beanDefinitions.entrySet()) {
+            if (entry.getValue().isAnnotationPresent(annotationType)) {
+                beans.add((T) getBean(entry.getKey()));
+            }
+        }
+
+        if (beans.isEmpty()) {
+            logger.warning("No beans found with annotation: " + annotationType.getName());
+        }
+        return beans;
+    }
+
+    /**
      * Retrieve a bean by its type and name.
      * 
      * @param type the bean class
@@ -203,7 +231,7 @@ final class BeanRegistry {
         for (Field field : clazz.getDeclaredFields()) {
             if (field.isAnnotationPresent(JoltBeanInjection.class)) {
                 try {
-                    field.setAccessible(true); // Altought it's not clean, it's necessary for private fields
+                    field.setAccessible(true);
                     JoltBeanInjection injection = field.getAnnotation(JoltBeanInjection.class);
                     Object dependency = !injection.value().isEmpty() ? getBean(injection.value())
                             : getBean(field.getType());
@@ -278,6 +306,7 @@ final class BeanRegistry {
         for (Field field : clazz.getDeclaredFields()) {
             if (field.isAnnotationPresent(JoltBeanInjection.class)) {
                 try {
+                    field.setAccessible(true);
                     var injection = field.getAnnotation(JoltBeanInjection.class);
                     Object dependency = !injection.value().isEmpty() ? getBean(injection.value())
                             : getBean(field.getType());
@@ -309,8 +338,10 @@ final class BeanRegistry {
     }
 
     private String getBeanName(Class<?> beanClass, JoltBean annotation) {
-        String value = annotation.value();
-        return value.isEmpty() ? Character.toLowerCase(beanClass.getSimpleName().charAt(0))
-                + beanClass.getSimpleName().substring(1) : value;
+        if (annotation != null && !annotation.value().isEmpty()) {
+            return annotation.value();
+        }
+        return Character.toLowerCase(beanClass.getSimpleName().charAt(0))
+                + beanClass.getSimpleName().substring(1);
     }
 }

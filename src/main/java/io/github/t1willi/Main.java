@@ -10,7 +10,6 @@ public class Main extends JoltApplication {
 
     @Override
     public void init() {
-        get("/", ctx -> ctx.html("Hello World!"));
         get("/xss-test", ctx -> {
             String input = ctx.query("input");
             JoltModel model = JoltModel.create().with("input", input != null ? input : "");
