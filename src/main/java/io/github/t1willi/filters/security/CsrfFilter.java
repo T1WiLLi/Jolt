@@ -39,7 +39,7 @@ public final class CsrfFilter extends JoltFilter {
                 .getBean(SecurityConfiguration.class)
                 .getCsrfConfig();
         if (!config.isEnabled()) {
-            logger.info(() -> "CSRF protection is disabled, skipping filter logic");
+            logger.fine(() -> "CSRF protection is disabled, skipping filter logic");
             chain.doFilter(request, response);
             return;
         }

@@ -12,11 +12,11 @@ import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.routing.context.JoltContext;
 
+import java.lang.annotation.Annotation;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.logging.Logger;
 
 /**
@@ -24,7 +24,8 @@ import java.util.logging.Logger;
  * Retrieves classes extending BaseController, processes their
  * routing annotations, and registers routes with the Router.
  * Enforces strict method signatures for routing methods and
- * registers controller-specific lifecycle handlers.
+ * registers controller-specific lifecycle handlers, both general
+ * (for all routes) and specific (for designated routes).
  */
 public final class ControllerRegistry {
 
@@ -67,18 +68,13 @@ public final class ControllerRegistry {
             if (controller == null) {
                 throw new JoltDIException("Controller instance cannot be null");
             }
-
             JoltContainer.getInstance().inject(controller);
             Class<?> controllerClass = controller.getClass();
-
             String rootPath = getRootPath(controllerClass);
-
             registerLifecycleHandlers(controller, rootPath);
-
             for (Method method : controllerClass.getDeclaredMethods()) {
                 registerRoutesForMethod(controller, method, rootPath);
             }
-
         } catch (Exception e) {
             String message = "Failed to register controller "
                     + (controller != null ? controller.getClass().getName() : "null") + ": " + e.getMessage();
@@ -98,12 +94,21 @@ public final class ControllerRegistry {
             throw new JoltDIException("Failed to retrieve Router bean: " + e.getMessage(), e);
         }
 
-        for (Consumer<JoltContext> handler : controller.getBeforeHandlers()) {
-            router.before(handler, rootPath);
+        router.before(controller::before, rootPath);
+        router.after(controller::after, rootPath);
+
+        for (BaseController.LifecycleHandler handlerEntry : controller.getSpecificBeforeHandlers()) {
+            String[] fullPaths = handlerEntry.paths().stream()
+                    .map(path -> normalizePath(rootPath + (path.isEmpty() ? "" : path)))
+                    .toArray(String[]::new);
+            router.before(handlerEntry.handler(), fullPaths);
         }
 
-        for (Consumer<JoltContext> handler : controller.getAfterHandlers()) {
-            router.after(handler, rootPath);
+        for (BaseController.LifecycleHandler handlerEntry : controller.getSpecificAfterHandlers()) {
+            String[] fullPaths = handlerEntry.paths().stream()
+                    .map(path -> normalizePath(rootPath + (path.isEmpty() ? "" : path)))
+                    .toArray(String[]::new);
+            router.after(handlerEntry.handler(), fullPaths);
         }
     }
 
@@ -127,26 +132,11 @@ public final class ControllerRegistry {
     private static void registerRoutesForMethod(BaseController controller, Method method, String rootPath) {
         List<RouteDefinition> routes = new ArrayList<>();
 
-        if (method.isAnnotationPresent(Get.class)) {
-            validateMethodSignature(method, controller.getClass());
-            Get get = method.getAnnotation(Get.class);
-            routes.add(new RouteDefinition(HttpMethod.GET, get.path()));
-        }
-        if (method.isAnnotationPresent(Post.class)) {
-            validateMethodSignature(method, controller.getClass());
-            Post post = method.getAnnotation(Post.class);
-            routes.add(new RouteDefinition(HttpMethod.POST, post.path()));
-        }
-        if (method.isAnnotationPresent(Put.class)) {
-            validateMethodSignature(method, controller.getClass());
-            Put put = method.getAnnotation(Put.class);
-            routes.add(new RouteDefinition(HttpMethod.PUT, put.path()));
-        }
-        if (method.isAnnotationPresent(Delete.class)) {
-            validateMethodSignature(method, controller.getClass());
-            Delete delete = method.getAnnotation(Delete.class);
-            routes.add(new RouteDefinition(HttpMethod.DELETE, delete.path()));
-        }
+        processAnnotation(method, controller, Get.class, HttpMethod.GET, routes);
+        processAnnotation(method, controller, Post.class, HttpMethod.POST, routes);
+        processAnnotation(method, controller, Put.class, HttpMethod.PUT, routes);
+        processAnnotation(method, controller, Delete.class, HttpMethod.DELETE, routes);
+
         if (method.isAnnotationPresent(Mapping.class)) {
             validateMethodSignature(method, controller.getClass());
             Mapping mapping = method.getAnnotation(Mapping.class);
@@ -168,6 +158,25 @@ public final class ControllerRegistry {
                                 + " in controller " + controller.getClass().getName() + ": " + e.getMessage(),
                         e);
             }
+        }
+    }
+
+    private static void processAnnotation(Method method, BaseController controller,
+            Class<? extends Annotation> annotationClass, HttpMethod httpMethod, List<RouteDefinition> routes) {
+        if (method.isAnnotationPresent(annotationClass)) {
+            validateMethodSignature(method, controller.getClass());
+            Annotation annotation = method.getAnnotation(annotationClass);
+            String path = extractPathFromAnnotation(annotation);
+            routes.add(new RouteDefinition(httpMethod, path));
+        }
+    }
+
+    private static String extractPathFromAnnotation(Object annotation) {
+        try {
+            Method pathMethod = annotation.getClass().getMethod("path");
+            return (String) pathMethod.invoke(annotation);
+        } catch (Exception e) {
+            throw new JoltDIException("Failed to extract path from annotation: " + e.getMessage(), e);
         }
     }
 
