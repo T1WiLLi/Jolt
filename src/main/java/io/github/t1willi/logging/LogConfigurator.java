@@ -1,9 +1,15 @@
 package io.github.t1willi.logging;
 
+import java.io.File;
 import java.util.logging.ConsoleHandler;
+import java.util.logging.FileHandler;
+import java.util.logging.Filter;
 import java.util.logging.Handler;
 import java.util.logging.Level;
+import java.util.logging.LogRecord;
 import java.util.logging.Logger;
+
+import io.github.t1willi.server.config.ConfigurationManager;
 
 /**
  * Configures the logging system for the Jolt framework. This class sets up
@@ -54,6 +60,8 @@ public final class LogConfigurator {
             "org.slf4j"
     };
 
+    private static final String DEFAULT_LOG_LEVEL = "INFO";
+
     private LogConfigurator() {
         // Prevent instantiation
     }
@@ -70,12 +78,27 @@ public final class LogConfigurator {
             System.setProperty("java.util.logging.manager", "org.apache.juli.ClassLoaderLogManager");
             System.setProperty("java.util.logging.config.class", "ca.jolt.logging.LogConfigurator");
 
-            ConsoleHandler handler = new ConsoleHandler();
-            handler.setFormatter(new LogFormatter());
-            handler.setLevel(Level.INFO);
+            ConsoleHandler consoleHandler = new ConsoleHandler();
+            consoleHandler.setFormatter(new LogFormatter());
+            String logLevel = ConfigurationManager.getInstance().getProperty("server.logging.level");
+            consoleHandler.setLevel(Level.parse(logLevel != null ? logLevel.toUpperCase() : DEFAULT_LOG_LEVEL));
+
+            String logFile = ConfigurationManager.getInstance().getProperty("server.logging.logfile");
+            Handler fileHandler = null;
+            if (logFile != null && !logFile.trim().isEmpty()) {
+                fileHandler = new FileHandler(new File(logFile).getAbsolutePath(), true);
+                fileHandler.setFormatter(new LogFormatter());
+                fileHandler.setLevel(Level.ALL);
+                fileHandler.setFilter(new Filter() {
+                    @Override
+                    public boolean isLoggable(LogRecord record) {
+                        return record.getLevel() != Level.FINER;
+                    }
+                });
+            }
 
             for (String loggerName : DEFAULT_LOGGERS) {
-                configureLogger(Logger.getLogger(loggerName), handler);
+                configureLogger(Logger.getLogger(loggerName), consoleHandler, fileHandler);
             }
 
             Logger.getLogger(LogConfigurator.class.getName())
@@ -86,13 +109,14 @@ public final class LogConfigurator {
         }
     }
 
-    private static void configureLogger(Logger logger, Handler handler) {
+    private static void configureLogger(Logger logger, Handler consoleHandler, Handler fileHandler) {
         for (Handler h : logger.getHandlers()) {
             logger.removeHandler(h);
         }
 
-        logger.setLevel(Level.INFO);
-        logger.addHandler(handler);
+        logger.setLevel(Level.ALL);
+        logger.addHandler(consoleHandler);
+        logger.addHandler(fileHandler);
         logger.setUseParentHandlers(false);
     }
 }
