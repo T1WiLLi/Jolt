@@ -8,8 +8,8 @@ import java.lang.annotation.Target;
 import io.github.t1willi.http.HttpMethod;
 
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
+@Target(ElementType.METHOD)
 @Mapping(method = HttpMethod.DELETE)
 public @interface Delete {
-    String path() default "/";
+    String value() default "/";
 }

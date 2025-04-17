@@ -1,5 +1,6 @@
 package io.github.t1willi.security.session;
 
+import java.util.Collections;
 import java.util.logging.Logger;
 
 import org.apache.catalina.Context;
@@ -10,6 +11,9 @@ import org.apache.catalina.session.StandardManager;
 import io.github.t1willi.database.Database;
 import io.github.t1willi.server.TomcatServer;
 import io.github.t1willi.server.config.ConfigurationManager;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.SessionCookieConfig;
+import jakarta.servlet.SessionTrackingMode;
 
 public class SessionManager {
     private static final Logger logger = Logger.getLogger(SessionManager.class.getName());
@@ -23,12 +27,15 @@ public class SessionManager {
         context.addLifecycleListener(event -> {
             if (event.getType().equals(Lifecycle.BEFORE_START_EVENT)) {
                 logger.info("Configuring session cookies...");
-                jakarta.servlet.ServletContext servletContext = context.getServletContext();
-                jakarta.servlet.SessionCookieConfig cookieConfig = servletContext.getSessionCookieConfig();
+                ServletContext servletContext = context.getServletContext();
+                SessionCookieConfig cookieConfig = servletContext.getSessionCookieConfig();
                 cookieConfig.setHttpOnly(loadHttpOnly());
                 cookieConfig.setSecure(loadSecure());
                 cookieConfig.setPath(loadPath());
                 cookieConfig.setAttribute("SameSite", loadSameSite());
+
+                servletContext.setSessionTrackingModes(Collections.singleton(SessionTrackingMode.COOKIE));
+
                 logger.info("Session cookie configuration completed");
             }
         });

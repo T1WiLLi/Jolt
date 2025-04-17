@@ -22,5 +22,5 @@ public @interface Mapping {
      * 
      * @return The path of the mapping.
      */
-    String path() default "/";
+    String value() default "/";
 }

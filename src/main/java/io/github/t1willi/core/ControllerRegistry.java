@@ -7,12 +7,14 @@ import io.github.t1willi.annotations.Post;
 import io.github.t1willi.annotations.Put;
 import io.github.t1willi.annotations.Root;
 import io.github.t1willi.exceptions.JoltDIException;
+import io.github.t1willi.exceptions.JoltRoutingException;
 import io.github.t1willi.http.HttpMethod;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.routing.context.JoltContext;
 
 import java.lang.annotation.Annotation;
+import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.util.ArrayList;
@@ -140,7 +142,7 @@ public final class ControllerRegistry {
         if (method.isAnnotationPresent(Mapping.class)) {
             validateMethodSignature(method, controller.getClass());
             Mapping mapping = method.getAnnotation(Mapping.class);
-            routes.add(new RouteDefinition(mapping.method(), mapping.path()));
+            routes.add(new RouteDefinition(mapping.method(), mapping.value()));
         }
 
         for (RouteDefinition route : routes) {
@@ -173,9 +175,9 @@ public final class ControllerRegistry {
 
     private static String extractPathFromAnnotation(Object annotation) {
         try {
-            Method pathMethod = annotation.getClass().getMethod("path");
+            Method pathMethod = annotation.getClass().getMethod("value");
             return (String) pathMethod.invoke(annotation);
-        } catch (Exception e) {
+        } catch (InvocationTargetException | NoSuchMethodException | IllegalAccessException e) {
             throw new JoltDIException("Failed to extract path from annotation: " + e.getMessage(), e);
         }
     }
@@ -213,10 +215,22 @@ public final class ControllerRegistry {
         return ctx -> {
             try {
                 return (JoltContext) method.invoke(controller, ctx);
-            } catch (Exception e) {
-                String message = "Failed to invoke controller method " + method.getName() + " in controller "
-                        + controller.getClass().getName() + ": " + e.getMessage();
-                throw new JoltDIException(message, e);
+            } catch (InvocationTargetException ite) {
+                Throwable cause = ite.getCause();
+                if (cause instanceof RuntimeException re) {
+                    throw re;
+                }
+                throw new JoltRoutingException(
+                        "Error invoking " + method.getName() +
+                                " in " + controller.getClass().getSimpleName() + ": " +
+                                cause.getMessage(),
+                        cause);
+            } catch (IllegalAccessException | IllegalArgumentException e) {
+                throw new JoltDIException(
+                        "Cannot invoke " + method.getName() +
+                                " in " + controller.getClass().getSimpleName() +
+                                ": " + e.getMessage(),
+                        e);
             }
         };
     }

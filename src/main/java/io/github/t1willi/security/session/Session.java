@@ -18,11 +18,18 @@ import jakarta.servlet.http.HttpSession;
 public class Session {
     private static final Logger logger = Logger.getLogger(Session.class.getName());
 
+    /** Key for marking that session has been initialized. */
+    private static final String SESSION_INITIALIZED_KEY = "jolt_session_initialized";
+
     // Public constants for default session attribute keys
     public static final String IP_ADDRESS_KEY = "ip_address";
     public static final String USER_AGENT_KEY = "user_agent";
     public static final String ACCESS_TIME_KEY = "access_time";
     public static final String EXPIRE_TIME_KEY = "expire_time";
+    /**
+     * Key for storing the authentication status (Boolean) in the session
+     * attributes.
+     */
     public static final String IS_AUTHENTICATED_KEY = "is_authenticated";
 
     private static final int DEFAULT_SESSION_LIFETIME = 1800;
@@ -30,26 +37,23 @@ public class Session {
     private static final SimpleDateFormat TIMESTAMP_FORMAT = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
     public static void set(String key, Object value) {
-        HttpSession httpSession = ensureSession(true);
-        httpSession.setAttribute(key, value);
+        HttpSession session = ensureSession(true);
+        session.setAttribute(key, value);
+        session.setAttribute("_forceCommit", System.currentTimeMillis());
     }
 
     public static void setAll(Map<String, Object> attributes) {
-        HttpSession httpSession = ensureSession(true);
-        for (Map.Entry<String, Object> entry : attributes.entrySet()) {
-            httpSession.setAttribute(entry.getKey(), entry.getValue());
-        }
+        attributes.forEach(Session::set);
     }
 
     public static void remove(String key) {
-        HttpSession httpSession = ensureSession(true);
-        httpSession.removeAttribute(key);
+        HttpSession session = ensureSession(true);
+        session.removeAttribute(key);
     }
 
     public static Object get(String key) {
-        HttpSession httpSession = ensureSession(true);
-        Object value = httpSession.getAttribute(key);
-        return value;
+        HttpSession session = ensureSession(false);
+        return session != null ? session.getAttribute(key) : null;
     }
 
     public static Object getOrDefault(String key, Object defaultValue) {
@@ -62,8 +66,8 @@ public class Session {
     }
 
     public static String getSessionId() {
-        HttpSession httpSession = ensureSession(true);
-        return httpSession.getId();
+        HttpSession session = ensureSession(true);
+        return session.getId();
     }
 
     public static String getIpAddress() {
@@ -75,29 +79,37 @@ public class Session {
     }
 
     public static long getUnixAccess() {
-        String accessTime = (String) get(ACCESS_TIME_KEY);
-        return accessTime != null ? Long.parseLong(accessTime) : 0L;
+        String ts = (String) get(ACCESS_TIME_KEY);
+        return ts != null ? Long.parseLong(ts) : 0L;
     }
 
     public static long getUnixExpire() {
-        String expireTime = (String) get(EXPIRE_TIME_KEY);
-        return expireTime != null ? Long.parseLong(expireTime) : 0L;
+        String ts = (String) get(EXPIRE_TIME_KEY);
+        return ts != null ? Long.parseLong(ts) : 0L;
     }
 
     public static String getAccess() {
-        long unixAccess = getUnixAccess();
-        return unixAccess != 0 ? TIMESTAMP_FORMAT.format(new Date(unixAccess)) : "N/A";
+        long ua = getUnixAccess();
+        return ua != 0 ? TIMESTAMP_FORMAT.format(new Date(ua)) : "N/A";
     }
 
     public static String getExpire() {
-        long unixExpire = getUnixExpire();
-        return unixExpire != 0 ? TIMESTAMP_FORMAT.format(new Date(unixExpire)) : "N/A";
+        long ue = getUnixExpire();
+        return ue != 0 ? TIMESTAMP_FORMAT.format(new Date(ue)) : "N/A";
+    }
+
+    public static void setAuthenticated(boolean authenticated) {
+        set(IS_AUTHENTICATED_KEY, authenticated);
     }
 
     public static boolean isAuthenticated() {
         try {
-            Boolean isAuthenticated = (Boolean) get(IS_AUTHENTICATED_KEY);
-            return isAuthenticated != null && isAuthenticated;
+            HttpSession session = ensureSession(false);
+            if (session == null) {
+                return false;
+            }
+            Boolean auth = (Boolean) get(IS_AUTHENTICATED_KEY);
+            return Boolean.TRUE.equals(auth);
         } catch (SecurityException e) {
             return false;
         }
@@ -144,16 +156,17 @@ public class Session {
         }
     }
 
-    private static void initializeSession(HttpSession httpSession, JoltContext ctx) {
+    private static void initializeSession(HttpSession session, JoltContext ctx) {
         long accessTime = System.currentTimeMillis();
         long expireTime = accessTime + (sessionLifetime * 1000L); // sessionLifetime is in seconds, convert to
                                                                   // milliseconds
 
-        httpSession.setAttribute(IP_ADDRESS_KEY, ctx.clientIp());
-        httpSession.setAttribute(USER_AGENT_KEY, ctx.userAgent());
-        httpSession.setAttribute(ACCESS_TIME_KEY, String.valueOf(accessTime));
-        httpSession.setAttribute(EXPIRE_TIME_KEY, String.valueOf(expireTime));
-        httpSession.setAttribute(IS_AUTHENTICATED_KEY, false);
+        session.setAttribute(SESSION_INITIALIZED_KEY, true);
+        session.setAttribute(IP_ADDRESS_KEY, ctx.clientIp());
+        session.setAttribute(USER_AGENT_KEY, ctx.userAgent());
+        session.setAttribute(ACCESS_TIME_KEY, String.valueOf(accessTime));
+        session.setAttribute(EXPIRE_TIME_KEY, String.valueOf(expireTime));
+        session.setAttribute(IS_AUTHENTICATED_KEY, false);
     }
 
     private static HttpSession ensureSession(boolean create) {
@@ -164,7 +177,7 @@ public class Session {
             return null;
         }
 
-        if (httpSession.isNew()) {
+        if (httpSession.getAttribute(SESSION_INITIALIZED_KEY) == null) {
             initializeSession(httpSession, ctx);
         }
 

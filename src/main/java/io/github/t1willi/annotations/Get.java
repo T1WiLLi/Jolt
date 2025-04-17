@@ -11,5 +11,5 @@ import io.github.t1willi.http.HttpMethod;
 @Target(ElementType.METHOD)
 @Mapping(method = HttpMethod.GET)
 public @interface Get {
-    String path() default "/";
+    String value() default "/";
 }
