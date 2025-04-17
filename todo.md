@@ -65,3 +65,17 @@ Update freemarker default configuration to always enforce escaping variables to 
         .route("/threads").permit(HttpMethod.GET, HttpMethod.PATCH).authenticated(Auth.Session)
         .anyRoute().denyAll();
 ```
+
+
+
+New server properties : 
+
+server.logging.level=SEVERE, WARNING, INFO, FINE, FINER, FINEST, ALL, OFF
+server.logging.logfile=jolt.log
+
+server.http.enabled=false // By default, HTTP is enabled. This is more of an SSL/TLS feature.
+
+session.httponly=true // By default, this is true.
+session.secure=true // By default, this is true.
+session.path=/ // By default, this is "/".
+session.samesite=Strict // By default, this is "Strict".

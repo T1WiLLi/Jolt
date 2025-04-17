@@ -65,7 +65,8 @@ public class SessionManager {
     }
 
     private static boolean loadSecure() {
-        return Boolean.parseBoolean(ConfigurationManager.getInstance().getProperty("session.secure"));
+        String secureStr = ConfigurationManager.getInstance().getProperty("session.secure");
+        return secureStr != null ? Boolean.parseBoolean(secureStr) : true;
     }
 
     private static String loadPath() {

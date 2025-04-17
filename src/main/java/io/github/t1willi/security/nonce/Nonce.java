@@ -28,7 +28,7 @@ public final class Nonce {
         SECURE_RANDOM.nextBytes(randomBytes);
         String nonce = Base64.getEncoder().encodeToString(randomBytes).replace("=", "");
         NONCE_HOLDER.set(nonce);
-        logger.info("Generated new nonce for request. New nonce: " + nonce);
+        logger.fine("Generated new nonce for request. New nonce: " + nonce);
         return nonce;
     }
 

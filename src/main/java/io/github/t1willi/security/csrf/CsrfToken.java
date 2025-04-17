@@ -35,7 +35,7 @@ public final class CsrfToken {
                 .getBean(SecurityConfiguration.class)
                 .getCsrfConfig();
         if (!config.isEnabled()) {
-            logger.info(() -> "CSRF protection is disabled, skipping token generation");
+            logger.fine(() -> "CSRF protection is disabled, skipping token generation");
             return null;
         }
 
@@ -48,7 +48,7 @@ public final class CsrfToken {
         CsrfHandler handler = config.getHandler();
         String token = CryptographyUtils.randomUrlSafeBase64(32);
         handler.sendToken(context, token, config);
-        logger.info(() -> "CSRF token generated and sent via handler: " + token);
+        logger.fine(() -> "CSRF token generated and sent via handler: " + token);
         return token;
     }
 
@@ -62,7 +62,7 @@ public final class CsrfToken {
                 .getBean(SecurityConfiguration.class)
                 .getCsrfConfig();
         if (!config.isEnabled()) {
-            logger.info(() -> "CSRF protection is disabled, skipping token rotation");
+            logger.fine(() -> "CSRF protection is disabled, skipping token rotation");
             return null;
         }
 
@@ -75,7 +75,7 @@ public final class CsrfToken {
         CsrfHandler handler = config.getHandler();
         String newToken = CryptographyUtils.randomUrlSafeBase64(32);
         handler.sendToken(context, newToken, config);
-        logger.info(() -> "CSRF token rotated: " + newToken);
+        logger.fine(() -> "CSRF token rotated: " + newToken);
         return newToken;
     }
 
@@ -99,7 +99,7 @@ public final class CsrfToken {
                 .sameSite("Strict")
                 .build();
 
-        logger.info(() -> "CSRF token stored in secure cookie: " + CSRF_COOKIE_NAME + " with value: " + token);
+        logger.fine(() -> "CSRF token stored in secure cookie: " + CSRF_COOKIE_NAME + " with value: " + token);
     }
 
     /**
@@ -110,7 +110,7 @@ public final class CsrfToken {
      */
     public static String getFromCookie(JoltContext context) {
         String token = context.getCookieValue(CSRF_COOKIE_NAME).orElse(null);
-        logger.info(() -> "Retrieved CSRF token from cookie: " + (token != null ? token : "none"));
+        logger.fine(() -> "Retrieved CSRF token from cookie: " + (token != null ? token : "none"));
         return token;
     }
 

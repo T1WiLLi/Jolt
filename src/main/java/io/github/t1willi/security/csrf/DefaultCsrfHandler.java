@@ -89,7 +89,7 @@ public final class DefaultCsrfHandler implements CsrfHandler {
         }
 
         CsrfToken.rotate();
-        logger.info(() -> "CSRF token validated successfully for path: " + path + " with method: " + method);
+        logger.fine(() -> "CSRF token validated successfully for path: " + path + " with method: " + method);
     }
 
     /**

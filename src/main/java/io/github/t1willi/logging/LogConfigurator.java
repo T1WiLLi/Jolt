@@ -18,7 +18,10 @@ import io.github.t1willi.server.config.ConfigurationManager;
  * <p>
  * The configuration:
  * <ul>
- * <li>Sets the log level to INFO by default</li>
+ * <li>Sets the console log level based on the 'server.logging.level' property
+ * (default: INFO)</li>
+ * <li>Optionally logs all levels except FINER to a file specified by
+ * 'server.logging.logfile' (if provided)</li>
  * <li>Applies the {@link io.github.logging.LogFormatter} to all logs</li>
  * <li>Configures both application and Tomcat logging</li>
  * <li>Removes existing handlers to ensure consistent formatting</li>
@@ -61,6 +64,7 @@ public final class LogConfigurator {
     };
 
     private static final String DEFAULT_LOG_LEVEL = "INFO";
+    private static final Logger LOGGER = Logger.getLogger(LogConfigurator.class.getName());
 
     private LogConfigurator() {
         // Prevent instantiation
@@ -81,42 +85,45 @@ public final class LogConfigurator {
             ConsoleHandler consoleHandler = new ConsoleHandler();
             consoleHandler.setFormatter(new LogFormatter());
             String logLevel = ConfigurationManager.getInstance().getProperty("server.logging.level");
-            consoleHandler.setLevel(Level.parse(logLevel != null ? logLevel.toUpperCase() : DEFAULT_LOG_LEVEL));
+            Level consoleLevel = Level.parse(logLevel != null ? logLevel.toUpperCase() : DEFAULT_LOG_LEVEL);
+            consoleHandler.setLevel(consoleLevel);
 
-            String logFile = ConfigurationManager.getInstance().getProperty("server.logging.logfile");
             Handler fileHandler = null;
+            String logFile = ConfigurationManager.getInstance().getProperty("server.logging.logfile");
             if (logFile != null && !logFile.trim().isEmpty()) {
-                fileHandler = new FileHandler(new File(logFile).getAbsolutePath(), true);
-                fileHandler.setFormatter(new LogFormatter());
-                fileHandler.setLevel(Level.ALL);
-                fileHandler.setFilter(new Filter() {
-                    @Override
-                    public boolean isLoggable(LogRecord record) {
-                        return record.getLevel() != Level.FINER;
-                    }
-                });
+                try {
+                    fileHandler = new FileHandler(new File(logFile).getAbsolutePath(), true);
+                    fileHandler.setFormatter(new LogFormatter());
+                    fileHandler.setLevel(Level.ALL);
+                    fileHandler.setFilter(new Filter() {
+                        @Override
+                        public boolean isLoggable(LogRecord record) {
+                            return record.getLevel() != Level.FINER;
+                        }
+                    });
+                } catch (Exception e) {
+                    System.err.println("Jolt [WARNING] - Failed to initialize file logging for '" + logFile + "': "
+                            + e.getMessage());
+                }
             }
 
             for (String loggerName : DEFAULT_LOGGERS) {
-                configureLogger(Logger.getLogger(loggerName), consoleHandler, fileHandler);
+                Logger logger = Logger.getLogger(loggerName);
+                for (Handler h : logger.getHandlers()) {
+                    logger.removeHandler(h);
+                }
+                logger.setLevel(Level.ALL);
+                logger.addHandler(consoleHandler);
+                if (fileHandler != null) {
+                    logger.addHandler(fileHandler);
+                }
+                logger.setUseParentHandlers(false);
             }
 
-            Logger.getLogger(LogConfigurator.class.getName())
-                    .info("Jolt logging system initialized successfully");
+            LOGGER.info("Jolt logging system initialized successfully");
 
         } catch (Exception e) {
             throw new LoggingConfigurationException("Failed to initialize logging system", e);
         }
-    }
-
-    private static void configureLogger(Logger logger, Handler consoleHandler, Handler fileHandler) {
-        for (Handler h : logger.getHandlers()) {
-            logger.removeHandler(h);
-        }
-
-        logger.setLevel(Level.ALL);
-        logger.addHandler(consoleHandler);
-        logger.addHandler(fileHandler);
-        logger.setUseParentHandlers(false);
     }
 }
