@@ -26,7 +26,7 @@ public class AuthController extends BaseController {
                 && users.get(username).equals(password)) {
             Session.setAuthenticated(true);
             Session.set("username", username);
-            return context.redirect("/dashboard").status(HttpStatus.OK);
+            return context.redirect("/dashboard");
         } else {
             context.html(
                     "<!DOCTYPE html><html><body><h2>Login Failed</h2><p>Invalid username or password.</p><a href='/'>Try again</a></body></html>")
@@ -75,6 +75,6 @@ public class AuthController extends BaseController {
     public JoltContext logout(JoltContext context) {
         Session.setAuthenticated(false);
         Session.invalidate();
-        return context.redirect("/").status(HttpStatus.OK);
+        return context.redirect("/");
     }
 }

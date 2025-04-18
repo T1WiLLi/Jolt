@@ -4,12 +4,14 @@ import io.github.t1willi.annotations.Controller;
 import io.github.t1willi.annotations.Get;
 import io.github.t1willi.core.BaseController;
 import io.github.t1willi.routing.context.JoltContext;
+import io.github.t1willi.security.csrf.CsrfToken;
 
 @Controller
 public class HomeController extends BaseController {
 
     @Get()
     public JoltContext home(JoltContext ctx) {
+        String csrf = CsrfToken.generate();
         StringBuilder sb = new StringBuilder();
         sb.append("<!DOCTYPE html>");
         sb.append("<html>");
@@ -21,6 +23,7 @@ public class HomeController extends BaseController {
         sb.append("  <input type='text' id='username' name='username'><br>");
         sb.append("  <label for='password'>Password:</label><br>");
         sb.append("  <input type='password' id='password' name='password'><br><br>");
+        sb.append("  <input type='hidden' name='_csrf' value='" + csrf + "'>");
         sb.append("  <input type='submit' value='Login'>");
         sb.append("</form>");
         sb.append("</body>");

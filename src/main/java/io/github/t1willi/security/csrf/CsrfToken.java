@@ -19,7 +19,6 @@ import java.util.logging.Logger;
  */
 public final class CsrfToken {
     private static final Logger logger = Logger.getLogger(CsrfToken.class.getName());
-    private static final String CSRF_COOKIE_NAME = "_csrf";
 
     private CsrfToken() {
     }
@@ -90,7 +89,8 @@ public final class CsrfToken {
         HttpServletRequest request = context.getRequest();
 
         context.addCookie()
-                .setName(CSRF_COOKIE_NAME)
+                .setName(
+                        JoltContainer.getInstance().getBean(SecurityConfiguration.class).getCsrfConfig().getTokenName())
                 .setValue(token)
                 .path("/")
                 .httpOnly(config.isHttpOnly())
@@ -99,7 +99,9 @@ public final class CsrfToken {
                 .sameSite("Strict")
                 .build();
 
-        logger.fine(() -> "CSRF token stored in secure cookie: " + CSRF_COOKIE_NAME + " with value: " + token);
+        logger.fine(() -> "CSRF token stored in secure cookie: "
+                + JoltContainer.getInstance().getBean(SecurityConfiguration.class).getCsrfConfig().getTokenName()
+                + " with value: " + token);
     }
 
     /**
@@ -109,7 +111,10 @@ public final class CsrfToken {
      * @return The CSRF token, or null if not found
      */
     public static String getFromCookie(JoltContext context) {
-        String token = context.getCookieValue(CSRF_COOKIE_NAME).orElse(null);
+        String token = context
+                .getCookieValue(
+                        JoltContainer.getInstance().getBean(SecurityConfiguration.class).getCsrfConfig().getTokenName())
+                .orElse(null);
         logger.fine(() -> "Retrieved CSRF token from cookie: " + (token != null ? token : "none"));
         return token;
     }

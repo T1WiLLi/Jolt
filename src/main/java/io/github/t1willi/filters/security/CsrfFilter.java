@@ -1,5 +1,6 @@
 package io.github.t1willi.filters.security;
 
+import io.github.t1willi.exceptions.CsrfTokenException;
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.http.HttpStatus;
@@ -50,7 +51,7 @@ public final class CsrfFilter extends JoltFilter {
             chain.doFilter(request, response);
         } catch (JoltHttpException e) {
             logger.warning(() -> "CSRF validation failed: " + e.getMessage());
-            throw new JoltHttpException(e.getStatus(), e.getMessage());
+            throw new CsrfTokenException(e.getStatus(), e.getMessage());
         } catch (Exception e) {
             logger.severe(() -> "Error validating CSRF token: " + e.getMessage());
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR, "Error validating CSRF token");
