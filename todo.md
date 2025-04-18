@@ -95,6 +95,25 @@ public class UserController implements BaseController {
 }
 ```
 
+# Scheduled
+
+```java
+@JoltBean
+public class ScheduledTask { // To schedule element, you must be within a @JoltBean
+
+    @Scheduled(fixe = 5, timeUnit = TimeUnit.SECONDS) // 5 secs 
+    public void hello() {
+        System.out.println("Hello!");
+    }
+
+    @Scheduled(cron="*/5 * * * * MON-FRI")
+    public void hello2() {
+        System.out.println("Hello2!");
+    }
+}
+```
+
+
 
 New server properties : 
 

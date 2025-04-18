@@ -297,6 +297,18 @@ public final class JoltContainer {
     }
 
     /**
+     * Retrives every bean instance that this application is currently using.
+     * 
+     * This is equivalent to calling getBeans(Object.class),
+     * so you don't have to pass Object.class yourself.
+     * 
+     * @return A list of all Jolt-managed bnean objects.
+     */
+    public List<Object> getAllBeans() {
+        return beanRegistry.getBeans(Object.class);
+    }
+
+    /**
      * Injects dependencies into fields annotated with {@link JoltBeanInjection} in
      * the given object.
      * The object does not need to be a managed bean.

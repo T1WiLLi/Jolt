@@ -124,6 +124,13 @@
             <version>2.3.2</version>
         </dependency>
 
+        <!-- Schedule Cron -->
+        <dependency>
+            <groupId>com.cronutils</groupId>
+            <artifactId>cron-utils</artifactId>
+            <version>9.2.1</version>
+        </dependency>
+
         <!-- JWT token -->
         <dependency>
             <groupId>com.nimbusds</groupId>

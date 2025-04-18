@@ -7,8 +7,13 @@ import java.lang.annotation.Target;
 
 import io.github.t1willi.http.HttpMethod;
 
+/**
+ * <strong>Warning</strong>: This annotation, altought it's possible to use on a
+ * class, it won't work, The annotation is designed to be used on methods, and
+ * is available for use on class only for internal purposes.
+ */
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.TYPE)
+@Target({ ElementType.METHOD, ElementType.TYPE })
 public @interface Mapping {
     /**
      * The HTTP method to use for the mapping.
