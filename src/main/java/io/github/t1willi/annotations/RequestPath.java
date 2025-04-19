@@ -5,8 +5,12 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
+@Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-@Target(ElementType.METHOD)
-public @interface Put {
-    String value() default "/";
+public @interface RequestPath {
+    /**
+     * Name of the path-variable to bind.
+     * If empty, the parameter name will be used.
+     */
+    String value() default "";
 }

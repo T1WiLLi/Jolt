@@ -9,4 +9,14 @@ import java.lang.annotation.Target;
 @Target(ElementType.TYPE)
 public @interface Controller {
 
+    // The default should be the controller name, we will follow ASP C# Convetion
+    // Example : @Controller("[controller]") for a controller named UserController,
+    // then
+    // the root would be "/user";
+    /**
+     * The root path of the controller.
+     * 
+     * @return The root path of the controller
+     */
+    String value() default "";
 }

@@ -18,6 +18,7 @@ import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.t1willi.exceptions.FormConversionException;
 import io.github.t1willi.template.JoltModel;
 import io.github.t1willi.utils.JacksonUtil;
+import lombok.ToString;
 
 /**
  * A container for form fields, field values, and their associated validators.
@@ -61,6 +62,7 @@ import io.github.t1willi.utils.JacksonUtil;
  * @author William
  * @since 1.0
  */
+@ToString
 public final class Form {
 
     private static final Logger logger = Logger.getLogger(Form.class.getName());

@@ -9,6 +9,6 @@ public class Main extends JoltApplication {
 
     @Override
     public void init() {
-        get("/hello", ctx -> ctx.html("Hello, World!"));
+        // No-Op
     }
 }

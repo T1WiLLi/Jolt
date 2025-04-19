@@ -13,7 +13,7 @@ import lombok.Getter;
  * A class that encapsulates validation logic for a single form field.
  * <p>
  * Each {@code FieldValidator} is associated with exactly one field name in
- * a {@link io.github.form.Form}. It maintains:
+ * a {@link io.github.t1willi.form.Form}. It maintains:
  * <ul>
  * <li>A list of {@link Rule} objects representing validation checks.</li>
  * <li>A list of {@link UnaryOperator} transformations that may alter or clean
@@ -36,13 +36,13 @@ import lombok.Getter;
  * }</pre>
  * <p>
  * When the {@link #verify()} method is called (typically
- * via the form’s {@link io.github.form.Form#verify(String[])} or
- * {@link io.github.form.Form#verifyAsync(String[])}),
+ * via the form’s {@link io.github.t1willi.form.Form#verify(String[])} or
+ * {@link io.github.t1willi.form.Form#verifyAsync(String[])}),
  * the field's value undergoes the specified transformations, then
  * each registered {@code Rule} runs in order. If any rule fails,
  * an error is recorded in the parent form.
  *
- * @see io.github.form.Form
+ * @see io.github.t1willi.form.Form
  * @see BaseRules
  * @see Rule
  * @see AsyncRule

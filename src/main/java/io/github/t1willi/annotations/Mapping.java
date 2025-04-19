@@ -13,7 +13,7 @@ import io.github.t1willi.http.HttpMethod;
  * is available for use on class only for internal purposes.
  */
 @Retention(RetentionPolicy.RUNTIME)
-@Target({ ElementType.METHOD, ElementType.TYPE })
+@Target(ElementType.METHOD)
 public @interface Mapping {
     /**
      * The HTTP method to use for the mapping.

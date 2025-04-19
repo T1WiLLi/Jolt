@@ -88,7 +88,8 @@ public final class JoltDispatcherServlet extends HttpServlet {
                 sendNotFoundError(context);
             }
         } catch (Exception e) {
-            log.warning(() -> "Error in request processing: " + e.getMessage());
+            log.severe("An exception occurred! Exception : " + e.getMessage() + ", Stack trace; "
+                    + HelpMethods.stackTraceElementToString(e.getStackTrace()));
             if (!context.res.isCommitted() && joltCtx != null) {
                 joltCtx.commit();
             }
