@@ -8,6 +8,7 @@ import org.apache.catalina.Wrapper;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardThreadExecutor;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.coyote.http2.Http2Protocol;
 import org.apache.tomcat.util.net.SSLHostConfig;
 import org.apache.tomcat.util.net.SSLHostConfigCertificate;
 
@@ -92,7 +93,7 @@ public final class TomcatServer {
         List<Connector> connectors = new ArrayList<>();
 
         if (config.isHttpEnabled()) {
-            Connector httpConnector = new Connector();
+            Connector httpConnector = new Connector("org.apache.coyote.http11.Http11Nio2Protocol");
             httpConnector.setPort(config.getPort());
             httpConnector.setURIEncoding("UTF-8");
             httpConnector.setProperty("compression", "on");
@@ -100,12 +101,13 @@ public final class TomcatServer {
             httpConnector.setProperty("compressionMethod", "gzip");
             httpConnector.setProperty("compressableMimeType",
                     "text/html,text/xml,text/css,text/javascript,application/javascript,application/json");
+            httpConnector.addUpgradeProtocol(new Http2Protocol()); // Support HTTP/2
             connectors.add(httpConnector);
         }
 
         if (config.isSslEnabled()) {
             validateSslConfig();
-            Connector httpsConnector = new Connector();
+            Connector httpsConnector = new Connector("org.apache.coyote.http11.Http11Nio2Protocol");
             httpsConnector.setSecure(true);
             httpsConnector.setScheme("https");
             httpsConnector.setPort(config.getSslPort());
@@ -113,7 +115,7 @@ public final class TomcatServer {
             SSLHostConfig sslHostConfig = new SSLHostConfig();
             sslHostConfig.setHostName("_default_");
             sslHostConfig.setSslProtocol("TLS");
-            sslHostConfig.setProtocols("+TLSv1.2,+TLSv1.3");
+            sslHostConfig.setProtocols("TLSv1.3,TLSv1.2");
 
             SSLHostConfigCertificate certificate = new SSLHostConfigCertificate(
                     sslHostConfig, SSLHostConfigCertificate.Type.UNDEFINED);
@@ -125,6 +127,7 @@ public final class TomcatServer {
             httpsConnector.addSslHostConfig(sslHostConfig);
 
             httpsConnector.setProperty("SSLEnabled", "true");
+            httpsConnector.addUpgradeProtocol(new Http2Protocol());
             connectors.add(httpsConnector);
         }
         if (connectors.isEmpty()) {

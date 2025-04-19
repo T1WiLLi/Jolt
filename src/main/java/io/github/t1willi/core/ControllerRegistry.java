@@ -47,12 +47,11 @@ public final class ControllerRegistry {
      *                         are invalid.
      */
     public static void registerControllers() {
-        List<BaseController> controllers;
+        List<BaseController> controllers = new ArrayList<>();
         try {
             controllers = JoltContainer.getInstance().getBeans(BaseController.class);
         } catch (Exception e) {
-            throw new JoltDIException(
-                    "Failed to retrieve BaseController implementations from JoltContainer: " + e.getMessage(), e);
+            // No-Op
         }
 
         if (controllers.isEmpty()) {

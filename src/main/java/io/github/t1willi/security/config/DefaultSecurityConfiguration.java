@@ -90,7 +90,6 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
                                 .disable();
                 withNonce()
                                 .enable();
-
                 return this;
         }
 }
