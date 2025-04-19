@@ -1,8 +1,10 @@
 package io.github.t1willi.core;
 
+import com.fasterxml.jackson.core.type.TypeReference;
 import io.github.t1willi.annotations.*;
 import io.github.t1willi.exceptions.JoltDIException;
 import io.github.t1willi.exceptions.JoltRoutingException;
+import io.github.t1willi.form.Form;
 import io.github.t1willi.http.HttpMethod;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.routing.RouteHandler;
@@ -29,8 +31,9 @@ public final class ControllerRegistry {
     public static void registerControllers() {
         List<Object> controllers = Optional.ofNullable(
                 JoltContainer.getInstance().getBeans(Object.class))
-                .orElse(List.of()).stream()
-                .filter(bean -> bean.getClass().isAnnotationPresent(Controller.class))
+                .orElse(List.of())
+                .stream()
+                .filter(b -> b.getClass().isAnnotationPresent(Controller.class))
                 .toList();
 
         if (controllers.isEmpty()) {
@@ -43,153 +46,157 @@ public final class ControllerRegistry {
     }
 
     private static void registerController(Object controller) {
-        Class<?> controllerClass = controller.getClass();
-        Controller controllerAnnotation = controllerClass.getAnnotation(Controller.class);
-        String basePath = normalizePath(controllerAnnotation.value().isBlank()
-                ? "/"
-                : controllerAnnotation.value());
+        Class<?> cls = controller.getClass();
+        Controller ann = cls.getAnnotation(Controller.class);
+        String base = normalizePath(ann.value().isBlank() ? "/" : ann.value());
 
         JoltContainer.getInstance().inject(controller);
-        Router router = Optional.ofNullable(JoltContainer.getInstance().getBean(Router.class))
+        var router = Optional.ofNullable(JoltContainer.getInstance().getBean(Router.class))
                 .orElseThrow(() -> new JoltDIException("Router bean not found"));
 
-        router.before(ctx -> ((BaseController) controller).before(ctx), basePath);
-        router.after(ctx -> ((BaseController) controller).after(ctx), basePath);
+        router.before(ctx -> ((BaseController) controller).before(ctx), base);
+        router.after(ctx -> ((BaseController) controller).after(ctx), base);
+        for (var h : ((BaseController) controller).getSpecificBeforeHandlers())
+            router.before(h.handler(), h.paths().stream().map(p -> normalizePath(base + p)).toArray(String[]::new));
+        for (var h : ((BaseController) controller).getSpecificAfterHandlers())
+            router.after(h.handler(), h.paths().stream().map(p -> normalizePath(base + p)).toArray(String[]::new));
 
-        for (var entry : ((BaseController) controller).getSpecificBeforeHandlers()) {
-            router.before(entry.handler(),
-                    entry.paths().stream()
-                            .map(p -> normalizePath(basePath + p))
-                            .toArray(String[]::new));
-        }
-        for (var entry : ((BaseController) controller).getSpecificAfterHandlers()) {
-            router.after(entry.handler(),
-                    entry.paths().stream()
-                            .map(p -> normalizePath(basePath + p))
-                            .toArray(String[]::new));
-        }
-
-        for (Method method : controllerClass.getDeclaredMethods()) {
-            List<RouteDefinition> routes = collectRouteDefinitions(method);
-            for (RouteDefinition route : routes) {
-                String fullPath = normalizePath(basePath + route.path());
-                router.route(route.method(), fullPath, createRouteHandler(controller, method));
+        for (Method m : cls.getDeclaredMethods()) {
+            List<RouteDef> defs = collectRoutes(m);
+            for (RouteDef def : defs) {
+                String full = normalizePath(base + def.path());
+                router.route(def.method(), full, createHandler(controller, m));
             }
         }
     }
 
-    private static List<RouteDefinition> collectRouteDefinitions(Method method) {
-        validateMethodSignature(method);
+    private static List<RouteDef> collectRoutes(Method m) {
+        int mods = m.getModifiers();
+        if (!Modifier.isPublic(mods) || Modifier.isStatic(mods))
+            return List.of();
 
-        List<RouteDefinition> definitions = new ArrayList<>();
+        List<RouteDef> out = new ArrayList<>();
+        record Pair(Class<? extends Annotation> A, HttpMethod M) {
+        }
+        List<Pair> map = List.of(
+                new Pair(Get.class, HttpMethod.GET),
+                new Pair(Post.class, HttpMethod.POST),
+                new Pair(Put.class, HttpMethod.PUT),
+                new Pair(Delete.class, HttpMethod.DELETE));
 
-        List<Map.Entry<Class<? extends Annotation>, HttpMethod>> mappings = List.of(
-                Map.entry(Get.class, HttpMethod.GET),
-                Map.entry(Post.class, HttpMethod.POST),
-                Map.entry(Put.class, HttpMethod.PUT),
-                Map.entry(Delete.class, HttpMethod.DELETE));
-
-        for (var mapEntry : mappings) {
-            Class<? extends Annotation> annotationType = mapEntry.getKey();
-            HttpMethod httpMethod = mapEntry.getValue();
-            if (method.isAnnotationPresent(annotationType)) {
-                Annotation annotation = method.getAnnotation(annotationType);
-                String pathValue = invokeValueMethod(annotation);
-                definitions.add(new RouteDefinition(httpMethod, pathValue));
+        for (var p : map) {
+            if (m.isAnnotationPresent(p.A)) {
+                Annotation ann = m.getAnnotation(p.A);
+                String path = invokeValue(ann);
+                out.add(new RouteDef(p.M, path));
             }
         }
-
-        if (method.isAnnotationPresent(Mapping.class)) {
-            Mapping mapping = method.getAnnotation(Mapping.class);
-            definitions.add(new RouteDefinition(mapping.method(), mapping.value()));
+        if (m.isAnnotationPresent(Mapping.class)) {
+            Mapping mp = m.getAnnotation(Mapping.class);
+            out.add(new RouteDef(mp.method(), mp.value()));
         }
-
-        return definitions;
+        return out;
     }
 
-    private static void validateMethodSignature(Method method) {
-        int mods = method.getModifiers();
-        if (!Modifier.isPublic(mods))
-            throw new JoltDIException(method.getName() + " must be public");
-        if (Modifier.isStatic(mods))
-            throw new JoltDIException(method.getName() + " must not be static");
-    }
-
-    private static RouteHandler createRouteHandler(Object controller, Method method) {
+    private static RouteHandler createHandler(Object controller, Method m) {
         return ctx -> {
             try {
-                Object[] args = Arrays.stream(method.getParameters())
-                        .map(param -> resolveParameter(param, ctx))
+                Object[] args = Arrays.stream(m.getParameters())
+                        .map(p -> resolveParam(p, ctx))
                         .toArray();
-                Object result = method.invoke(controller, args);
-                return handleReturn(ctx, result);
+                Object result = m.invoke(controller, args);
+                return dispatchReturn(ctx, result);
             } catch (InvocationTargetException ite) {
-                Throwable cause = ite.getCause();
-                if (cause instanceof RuntimeException re)
+                Throwable c = ite.getCause();
+                if (c instanceof RuntimeException re)
                     throw re;
-                throw new JoltRoutingException("Error invoking " + method.getName(), cause);
+                throw new JoltRoutingException("Error in " + m.getName(), c);
             } catch (Exception e) {
-                throw new JoltDIException("Cannot invoke " + method.getName(), e);
+                throw new JoltDIException("Cannot invoke " + m.getName(), e);
             }
         };
     }
 
-    private static Object resolveParameter(Parameter parameter, JoltContext ctx) {
-        if (parameter.isAnnotationPresent(RequestPath.class)) {
-            String raw = ctx.path(parameter.getAnnotation(RequestPath.class).value());
-            return HelpMethods.convert(raw, parameter.getType());
+    private static Object resolveParam(Parameter p, JoltContext ctx) {
+        if (p.isAnnotationPresent(RequestPath.class)) {
+            String key = p.getAnnotation(RequestPath.class).value();
+            String raw = ctx.path(key);
+            return HelpMethods.convert(raw, p.getType());
         }
-        if (parameter.isAnnotationPresent(RequestQuery.class)) {
-            String raw = ctx.query(parameter.getAnnotation(RequestQuery.class).value());
-            return HelpMethods.convert(raw, parameter.getType());
+        if (p.isAnnotationPresent(RequestQuery.class)) {
+            String key = p.getAnnotation(RequestQuery.class).value();
+            String raw = ctx.query(key);
+            return HelpMethods.convert(raw, p.getType());
         }
-        if (parameter.isAnnotationPresent(RequestBody.class)) {
-            return ctx.body(parameter.getType());
+        if (p.isAnnotationPresent(RequestForm.class)) {
+            RequestForm rf = p.getAnnotation(RequestForm.class);
+            String key = rf.value();
+            if (key.isBlank()) {
+                if (!Form.class.isAssignableFrom(p.getType()))
+                    throw new JoltDIException("@RequestForm without name must be Form");
+                return ctx.buildForm();
+            }
+            String raw = ctx.buildForm().getValue(key);
+            return HelpMethods.convert(raw, p.getType());
         }
-        if (parameter.isAnnotationPresent(RequestForm.class)) {
-            return ctx.buildForm();
+        if (p.isAnnotationPresent(RequestBody.class)) {
+            RequestBody rb = p.getAnnotation(RequestBody.class);
+            String key = rb.value();
+            if (key.isBlank()) {
+                if (p.getType().equals(String.class)) {
+                    return ctx.bodyRaw();
+                } else {
+                    return ctx.body(p.getType());
+                }
+            }
+            Map<String, Object> map = ctx.body(new TypeReference<>() {
+            });
+            Object v = map.get(key);
+            return HelpMethods.convert(v == null ? null : v.toString(), p.getType());
         }
-        if (JoltContext.class.isAssignableFrom(parameter.getType())) {
+        if (JoltContext.class.isAssignableFrom(p.getType())) {
             return ctx;
         }
-        throw new JoltDIException("Unsupported parameter: " + parameter.getName());
+        throw new JoltDIException("Unsupported parameter “" + p.getName() + "”");
     }
 
-    private static JoltContext handleReturn(JoltContext ctx, Object result) {
-        if (result == null) {
+    private static JoltContext dispatchReturn(JoltContext ctx, Object res) {
+        if (res == null)
             return ctx;
-        }
-        if (result instanceof JoltContext jc) {
+
+        if (res instanceof JoltContext jc) {
             return jc;
         }
-        if (result instanceof String html) {
-            return ctx.html(html);
-        }
-        if (result instanceof Template tpl) {
+        if (res instanceof Template tpl) {
             return ctx.render(tpl.getView(), tpl.getModel());
         }
-        return ctx.json(result);
+        if (res instanceof String s) {
+            try {
+                return ctx.serve(s);
+            } catch (Exception ignore) {
+                return ctx.html(s);
+            }
+        }
+        return ctx.json(res);
     }
 
-    private static String invokeValueMethod(Annotation annotation) {
+    private static String invokeValue(Annotation a) {
         try {
-            return (String) annotation.annotationType()
-                    .getMethod("value")
-                    .invoke(annotation);
+            return (String) a.annotationType().getMethod("value").invoke(a);
         } catch (Exception e) {
-            throw new JoltDIException("Failed to read path from " + annotation, e);
+            throw new JoltDIException("Cannot read @… value", e);
         }
     }
 
-    private static String normalizePath(String path) {
-        String p = path.replaceAll("//+", "/");
-        if (!p.startsWith("/"))
-            p = "/" + p;
-        if (p.endsWith("/") && p.length() > 1)
-            p = p.substring(0, p.length() - 1);
-        return p;
+    private static String normalizePath(String p) {
+        String s = p.replaceAll("//+", "/");
+        if (!s.startsWith("/"))
+            s = "/" + s;
+        if (s.endsWith("/") && s.length() > 1)
+            s = s.substring(0, s.length() - 1);
+        return s;
     }
 
-    private record RouteDefinition(HttpMethod method, String path) {
+    private record RouteDef(HttpMethod method, String path) {
     }
 }

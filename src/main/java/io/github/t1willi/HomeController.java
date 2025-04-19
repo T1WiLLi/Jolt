@@ -5,7 +5,6 @@ import io.github.t1willi.annotations.Get;
 import io.github.t1willi.annotations.Post;
 import io.github.t1willi.annotations.RequestForm;
 import io.github.t1willi.core.BaseController;
-import io.github.t1willi.form.Form;
 import io.github.t1willi.injector.annotation.JoltBeanInjection;
 import io.github.t1willi.template.JoltModel;
 import io.github.t1willi.template.Template;
@@ -18,7 +17,7 @@ public class HomeController extends BaseController {
 
     @Get("/")
     public String index() {
-        return "Hello, World!";
+        return "index.html";
     }
 
     @Get("/home")
@@ -27,8 +26,7 @@ public class HomeController extends BaseController {
     }
 
     @Post("/add")
-    public Template addItem(@RequestForm Form form) {
-        String newItem = form.getValue("item");
+    public Template addItem(@RequestForm("item") String newItem) {
         myService.addItem(newItem);
         return new Template("home", new JoltModel().with("items", myService.getList()));
     }
