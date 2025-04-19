@@ -3,7 +3,6 @@ package io.github.t1willi;
 import io.github.t1willi.annotations.Controller;
 import io.github.t1willi.annotations.Get;
 import io.github.t1willi.annotations.Post;
-import io.github.t1willi.annotations.RequestForm;
 import io.github.t1willi.core.BaseController;
 import io.github.t1willi.form.Form;
 import io.github.t1willi.injector.annotation.JoltBeanInjection;
@@ -27,9 +26,14 @@ public class HomeController extends BaseController {
     }
 
     @Post("/add")
-    public Template addItem(@RequestForm Form form) {
+    public Template addItem(Form form) {
         String newItem = form.getValue("item");
         myService.addItem(newItem);
         return new Template("home", new JoltModel().with("items", myService.getList()));
+    }
+
+    @Get("error")
+    public String error(Template template) {
+        return template.getView();
     }
 }

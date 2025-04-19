@@ -7,6 +7,7 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RequestForm {
-    /** Bind all form‐fields into a Map<String,String>. */
+public @interface Query {
+    /** Name of the query-parameter to bind. */
+    String value() default "";
 }

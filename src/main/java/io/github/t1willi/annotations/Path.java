@@ -7,7 +7,10 @@ import java.lang.annotation.Target;
 
 @Target(ElementType.PARAMETER)
 @Retention(RetentionPolicy.RUNTIME)
-public @interface RequestQuery {
-    /** Name of the query-parameter to bind. */
+public @interface Path {
+    /**
+     * Name of the path-variable to bind.
+     * If empty, the parameter name will be used.
+     */
     String value() default "";
 }
