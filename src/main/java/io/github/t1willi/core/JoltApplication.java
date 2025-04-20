@@ -98,10 +98,10 @@ public abstract class JoltApplication {
      * @param scan     A package to scan for beans in addition to {@code ca.jolt}
      * @throws IllegalStateException if an instance is already running
      */
-    public static <T extends JoltApplication> void launch() {
+    public static <T extends JoltApplication> void launch(Class<T> app) {
         try {
             if (instance == null) {
-                instance = detectAppClass().getDeclaredConstructor().newInstance();
+                instance = app.getDeclaredConstructor().newInstance();
             }
             JoltContainer.getInstance().autoScan();
             Database.init();
@@ -242,21 +242,5 @@ public abstract class JoltApplication {
      */
     protected static void group(String base, Runnable block) {
         router.group(base, block);
-    }
-
-    @SuppressWarnings("unchecked")
-    private static Class<? extends JoltApplication> detectAppClass() {
-        for (StackTraceElement e : Thread.currentThread().getStackTrace()) {
-            try {
-                Class<?> cand = Class.forName(e.getClassName());
-                if (JoltApplication.class.isAssignableFrom(cand)
-                        && !cand.equals(JoltApplication.class)) {
-                    return (Class<? extends JoltApplication>) cand;
-                }
-            } catch (ClassNotFoundException ignored) {
-                // No-Op
-            }
-        }
-        throw new IllegalStateException("Could not detect JoltApplication subclass on the stack");
     }
 }

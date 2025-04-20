@@ -60,10 +60,17 @@ Update freemarker default configuration to always enforce escaping variables to 
         .withHandler(new CustomHandler()) // A way to handle the CSRF token.
 
     .withRoutes()
-        .route("/**").permitAll() // denyAll()
-        .route("/admin").authenticated(Auth.Session) // .authenticated(Auth.JWT), .authenticated(new CustomAuth());
-        .route("/threads").permit(HttpMethod.GET, HttpMethod.PATCH).authenticated(Auth.Session)
-        .anyRoute().denyAll();
+        .route("/public/**")
+            .permitAll()
+        .route("/threads/**")
+            .methods(GET, PATCH)
+            .authenticated(Auth.Session)
+            .roles(DefaultRoles.ADMIN, DefaultRoles.MODERATOR)
+        .route("/admin/**")
+            .authenticated(Auth.Session)
+            .roles(DefaultRoles.ADMIN)
+        .anyRoute()
+            .denyAll();
 ```
 
 
@@ -113,7 +120,24 @@ public class ScheduledTask { // To schedule element, you must be within a @JoltB
 }
 ```
 
+# Routes securing 
 
+```java
+    .route("/special/**")
+        .authenticated(Auth.Session)
+        .roles(DefaultRoles.USER)
+        .check(ctx -> ctx.user().getDepartment().equals("Legal")); // This is a lambda, won't necessarily use CTX.
+
+    ... // Controller
+
+    @Controller("/orders")
+    @Authorize(auth=Auth.Session, roles={DefaultRoles.USER}) // Auth on the whole controller
+    public class OrderController { … }
+
+    @Get("/{id}")
+    @Authorize(auth=Auth.JWT, roles={MyAppRoles.PREMIUM}) // Auth on a specific function.
+    public Order fetchPremium(@Path int id) { … }
+```
 
 New server properties : 
 
