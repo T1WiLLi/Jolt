@@ -106,6 +106,11 @@ public final class ConfigLoader {
      *              resolution.
      */
     private static void resolvePlaceholders(Properties props) {
+        if (props.isEmpty()) {
+            logger.warning("No properties found to resolve placeholders.");
+            return;
+        }
+
         if (dotenv == null) {
             logger.warning("No .env file found. Placeholders will not be resolved.");
             return;
@@ -151,8 +156,11 @@ public final class ConfigLoader {
      */
     private static boolean resolveProperty(Properties props, String key) {
         String value = props.getProperty(key);
-        Matcher matcher = PLACEHOLDER_PATTERN.matcher(value);
+        if (value == null) {
+            return false;
+        }
 
+        Matcher matcher = PLACEHOLDER_PATTERN.matcher(value);
         if (!matcher.find()) {
             return false;
         }
