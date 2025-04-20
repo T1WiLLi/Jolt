@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta name="theme-color" content="#333"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css"
+        integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-aFq/bzH65dt+w6FI2ooMVUpc+21e0SRygnTpmBvdBgSdnuTN7QbdgL+OapgHtvPp" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-kQtW33rZJAHjgefvhyyzcGF3C5TFyBQBA13V1RKPf4uH+bwyzQxZ6CmMZHmNBEfJ"
+        crossorigin="anonymous"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.0.11/typed.min.js"></script>
+    <link rel="shortcut icon" href="/image/fav.png" type="image/x-icon"> 
+    <script defer src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="/style/root/root.css">
+    <link rel="stylesheet" href="/style/connexion.css">
+    <script defer type="module" src="/script/login.js"></script>
+    <title>VirtueBank</title>
+</head>
+<body>
+    <!-- Background -->
+    <!-- Darker -->
+    <div data-dark></div>
+    <div class="content-container">
+        <header class="royalty">
+            <a href="#">
+                VirtueBank
+                <i class="fa-solid fa-building-columns"></i>
+            </a>
+        </header>
+        <div class="wrapper-image">
+            <div id="carouselExampleSlidesOnly" class="carousel slide" data-bs-ride="carousel">
+                <div class="carousel-inner">
+                    <div class="carousel-item active">
+                        <img src="https://g.foolcdn.com/editorial/images/705777/a-person-at-desk-looking-at-data.jpg" class="d-block w-100" alt="...">
+                    </div>
+                    <div class="carousel-item">
+                        <img src="https://static.vecteezy.com/system/resources/previews/001/995/620/original/close-up-of-people-putting-coins-into-money-saving-bottles-and-calculators-in-money-saving-and-banking-ideas-free-photo.jpg" class="d-block w-100" alt="...">
+                    </div>
+                    <div class="carousel-item">
+                        <img src="https://g.foolcdn.com/editorial/images/684640/gettyimages-1182227785.jpg" class="d-block w-100" alt="...">
+                    </div>
+                </div>
+            </div>
+            <div class="max-width">
+                <div class="header-container">
+                    <h1>VirtueBank</h1>
+                    <header>
+                        You're <span>Money</span> online, all in <span>Security.</span>
+                    </header>
+                </div>
+            </div>
+        </div>
+        <div class="connexion-panel">
+            <div class="login-content">
+                <form action="index.html" class="form-login" data-form>
+                    <h2 class="title">WELCOME</h2>
+                    <div class="input-div one">
+                        <div class="i">
+                            <i class="fas fa-user"></i>
+                        </div>
+                        <div class="div">
+                            <h5>Username</h5>
+                            <input autocomplete="username" data-username type="text" class="input" required>
+                        </div>
+                    </div>
+                    <div class="input-div pass">
+                        <div class="i">
+                            <i class="fas fa-lock"></i>
+                        </div>
+                        <div class="div">
+                            <h5>Password</h5>
+                            <input autocomplete="new-password" data-password type="password" class="input" required>
+                        </div>
+                    </div>
+                    <a href="index.html">
+                        <input type="submit" class="btn" value="Login">
+                    </a>
+                    <a href="connexion.html">Forgot Password?</a>
+                </form>
+            </div>
+
+             <footer class="text-center">
+                <div class="social-icons">
+                    <a href="#"><i class="fab fa-facebook-f"></i></a>
+                    <a href="#"><i class="fab fa-twitter"></i></a>
+                    <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                    <a href="#"><i class="fab fa-instagram"></i></a>
+                </div>
+                    <p>&copy; 2023 VirtueBank. All rights reserved.</p>
+            </footer>
+        </div>
+    <script type="module" src="/script/data/user.js"></script>
+    <script type="module" src="/script/generateUser.js"></script>
+    <script>
+        const inputs = document.querySelectorAll(".input");
+        function addCl() {
+            let par = this.parentNode.parentNode;
+            par.classList.add("focus");
+        }
+        function remC1() {
+            let par = this.parentNode.parentNode;
+            if (this.value == "")
+                par.classList.remove("focus");
+        }
+        inputs.forEach(input => {
+            input.addEventListener("focus", addCl);
+            input.addEventListener("blur", remC1);
+        })
+    </script>
+</body>
+</html>

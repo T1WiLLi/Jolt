@@ -1,0 +1,314 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta name="theme-color" content="#333"/>
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.3.0/css/all.min.css"
+        integrity="sha512-SzlrxWUlpfuzQ+pcUCosxcglQRNAq/DZjVsC0lE40xsADsfeQoEypE+enwcOiGjk/bSuGGKHEyjSoQ1zVisanQ=="
+        crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-aFq/bzH65dt+w6FI2ooMVUpc+21e0SRygnTpmBvdBgSdnuTN7QbdgL+OapgHtvPp" crossorigin="anonymous">
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.2/dist/js/bootstrap.bundle.min.js"
+        integrity="sha384-kQtW33rZJAHjgefvhyyzcGF3C5TFyBQBA13V1RKPf4uH+bwyzQxZ6CmMZHmNBEfJ"
+        crossorigin="anonymous"></script>
+    <link href="https://unpkg.com/aos@2.3.1/dist/aos.css" rel="stylesheet">
+    <script src="https://unpkg.com/aos@2.3.1/dist/aos.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/typed.js/2.0.11/typed.min.js"></script>
+    <link rel="stylesheet" href="../style/quickstart.css">
+    <link rel="shortcut icon" href="/image/fav.png" type="image/x-icon"> 
+    <script defer src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <link rel="stylesheet" href="/style/quickstart.css">
+    <link rel="stylesheet" href="/style/index.css">
+    <script defer type="module" src="/script/app.js"></script>
+    <title>VirtueBank</title>
+</head>
+<body>
+    <!-- Navbar -->
+        <nav>
+            <div class="max-width-nav">
+                <div class="navbar-title">
+                    <a href="#">
+                        <img src="/image/fav.png" alt="">
+                        <h3>VirtueBank</h3>
+                    </a>
+                </div>
+                <div class="menu">
+                    <ul class="menu-list">
+                        <li class="menu-item"><a href="#" class="item is-active">Home</a></li>
+                        <li class="menu-item"><a href="account.html" class="item">Account</a></li>
+                        <li class="menu-item"><a href="cards.html" class="item">Cards</a></li>
+                        <li class="menu-item"><a href="#" class="item">About</a></li>
+                    </ul>
+                </div>
+                <div class="options-group">
+                    <div class="sign">
+                        <button data-sign_out type="submit">Sign out <i class="fa-regular fa-user"></i></button>
+                    </div>
+                    <div class="lang">
+                        <select name="language" id="select-language">
+                            <optgroup label="Language">
+                                <option value="en">English</option>
+                                <option value="fr">French</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+                <button class="hamburger">
+                    <span></span>
+                    <span></span>
+                    <span></span>
+                </button>
+            </div>
+        </nav>
+        <div class="mobile-menu" data-mobile>
+            <ul class="mobile-menu-list">
+                <li class="mobile-menu-item"><a href="#" class="mobile-item">Home</a></li>
+                <li class="mobile-menu-item"><a href="account.html" class="mobile-item">Account</a></li>
+                <li class="mobile-menu-item"><a href="cards.html" class="mobile-item">Cards</a></li>
+                <li class="mobile-menu-item"><a href="#" class="mobile-item">About</a></li>
+            </ul>
+                <div class="mobile-options-group">
+                    <div class="sign">
+                        <button data-sign_out type="submit">Sign out <i class="fa-regular fa-user"></i></button>
+                    </div>
+                    <div class="lang">
+                        <select name="language" id="select-language">
+                            <optgroup label="Language">
+                                <option value="en">English</option>
+                                <option value="fr">French</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Promo -->
+        <div class="promo-banner" data-promo>
+            <div class="promo-text">
+                <p>Open a new account with VirtueBank today and receive a $200 cash bonus when you set up direct deposit! Don't miss out on this limited time offer - sign up now.</p>
+                <p>Open a new account today and receive up to 200$ cash bonus - sign up now.</p>
+            </div>
+            <div class="promo-button">
+                <a href="">Open Now</a>
+            </div>
+            <div class="promo-close">
+                <a id="close-button-promo" href="">X</a>
+            </div>
+        </div>
+
+        <!-- Landing section -->
+        <div class="home">
+            <div class="bg-home">
+                <img src="/image/bg/pexels-kampus-production-8190805.jpg" alt="">
+            </div>
+            <div class="home-content">
+                <div class="max-width">
+                    <header>
+                        <h1 class="title">Trust Your Financial Health</h1>
+                        <h5 class="slogan">At <span>VirtueBank</span>, your financial health is our top priority.</h5>
+                    </header>
+                </div>
+            </div>
+        </div>
+
+        <!-- Services show-off ... -->
+        <section class="services">
+            <div class="max-width">
+                <header>
+                    <h1>Our services</h1>
+                    <div class="underline"></div>
+                </header>
+            </div>
+
+            <!-- Use for the AOS (not the API) -->
+            <script> 
+                const observer = new IntersectionObserver((entries) => {
+                    entries.forEach((entry) => {
+                        if (entry.isIntersecting) {
+                            entry.target.classList.add('animate');
+                        }
+                    });
+                });
+                const hiddenElement = document.querySelector('.underline');
+                observer.observe(hiddenElement);
+            </script>
+
+            <div class="services-container">
+                <div class="max-width">
+                    <div class="grid">
+                        <div class="grid-item" id="card">
+                            <div class="card-item">
+                                <img class="card-img" src="/image/pexels-julia-avamotive-1236678.jpg" alt="Happy women">
+                                <div class="card-content">
+                                    <h1 class="card-header">Life Without Worry</h1>
+                                    <p class="card-text">
+                                        Bank with peace of mind at <strong>VirtueBank</strong>. 
+                                        Our reliable and innovative financial solutions can help you achieve your goals 
+                                        and live life worry-free. Visit us today to learn more.
+                                    </p>
+                                </div>
+                            </div>
+                            <button class="read-more-btn card">
+                                Read more <span>&rarr;</span>
+                            </button>
+                        </div>
+                        <div class="grid-item" id="card">
+                            <div class="card-item">
+                                <img class="card-img" src="/image/pexels-karolina-grabowska-4968391.jpg" alt="Happy women">
+                                <div class="card-content">
+                                    <h1 class="card-header">Shop with style</h1>
+                                    <p class="card-text">
+                                        Shop in style with <strong>VirtueBank's</strong> debit and credit cards. 
+                                        Enjoy unmatched convenience, security, and rewards programs! 
+                                        Apply now and enjoy the ultimate shopping experience.
+                                    </p>
+                                </div>
+                            </div>
+                            <button class="read-more-btn card">
+                                Read more <span>&rarr;</span>
+                            </button>
+                        </div>
+                        <div class="grid-item" id="card">
+                            <div class="card-item">
+                                <img class="card-img" src="/image/pexels-pixabay-259165.jpg" alt="Happy women">
+                                <div class="card-content">
+                                    <h1 class="card-header">Plan you're futur</h1>
+                                    <p class="card-text">
+                                        Secure your financial future with <strong>VirtueBank</strong>. 
+                                        Let us help you plan for tomorrow, starting today. 
+                                        Apply now and take control of your future.
+                                    </p>
+                                </div>
+                            </div>
+                            <button class="read-more-btn card">
+                                Read more <span>&rarr;</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                <script>
+                    const cards = document.querySelectorAll('#card');
+                    const card_observer = new IntersectionObserver((entries) => {
+                        let count = 1;
+                        entries.forEach((entry) => {
+                            if (entry.isIntersecting) {
+                                entry.target.classList.add('slideIn');
+                                entry.target.setAttribute('data-delay', count);
+                        
+                                setTimeout(() => {
+                                    console.log(entry.target.getAttribute('data-delay'));
+                                    entry.target.removeAttribute('data-delay');
+                                }, 500);
+                            } else {
+                                entry.target.removeAttribute('data-delay');
+                            }
+                        count++;
+                        });
+                    });
+                    cards.forEach((el) => card_observer.observe(el));
+                </script>
+            </div>
+        </section>
+
+
+        <!-- Education -->
+
+        <section id="education" class="education">
+            <div class="container">
+                <div class="section-heading">
+                    <h2>Financial Education</h2>
+                    <p>Learn how to manage your money and improve your financial well-being with our educational resources.</p>
+                </div>
+                <div class="grid_ed">
+                    <div class="grid-item_ed" id="ed_item">
+                        <div class="education-item" >
+                            <div class="education-icon">
+                                <i class="fas fa-book"></i>
+                            </div>
+                            <h3>Personal Finance</h3>
+                            <p>Learn the basics of personal finance, including budgeting, saving, and investing.</p>
+                            <button class="read-more-btn">Read more &rarr;</button>
+                        </div>
+                    </div>
+                <div class="grid-item_ed" id="ed_item">
+                    <div class="education-item" >
+                        <div class="education-icon">
+                            <i class="fas fa-chart-line"></i>
+                        </div>
+                            <h3>Investing</h3>
+                            <p>Learn about the different types of investments and how to build a diversified portfolio.</p>
+                            <button class="read-more-btn"> Read more &rarr;</button>
+                        </div>
+                    </div>
+                <div class="grid-item_ed" id="ed_item">
+                    <div class="education-item">
+                        <div class="education-icon">
+                            <i class="fas fa-university"></i>
+                        </div>
+                            <h3>Financial Planning</h3>
+                            <p>Get tips on how to plan for major financial goals like buying a house, starting a business, or retiring.</p>
+                            <button class="read-more-btn">Read more &rarr;</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+                const education_items = document.querySelectorAll('#ed_item');
+                education_items.forEach((ei) => card_observer.observe(ei));
+            </script>
+        </section>
+
+        <!-- Footer -->
+        <footer>
+            <div class="content">
+                <div class="left box">
+                    <div class="upper">
+                        <div class="topic">About us</div>
+                        <p>Welcome to VirtueBank! We're an online bank dedicated to helping you achieve and maintain financial health. 
+                        With our innovative solutions and friendly customer service, we're here to support you on your financial journey. 
+                        Join us today and experience the VirtueBank difference!</p>
+                    </div>
+                    <div class="lower">
+                        <div class="topic">Contact us</div>
+                        <div class="phone">
+                            <a href="#"><i class="fas fa-phone-volume"></i>450 841 6569</a>
+                        </div>
+                        <div class="email">
+                            <a href="#"><i class="fas fa-envelope"></i>contact@virtuebank.ca</a>
+                        </div>
+                    </div>
+                </div>
+                <div class="middle box">
+                    <div class="topic">Our Services</div>
+                    <div><a href="#">High-Yield Savings Accounts</a></div>
+                    <div><a href="#">Personalized Financial Planning</a></div>
+                    <div><a href="#">Investement Products</a></div>
+                    <div><a href="#">Online Budgeting Tools</a></div>
+                    <div><a href="#">Mobile Banking</a></div>
+                    <div><a href="#">Financial Education Ressources</a></div>
+                </div>
+                <div class="right box">
+                    <div class="topic">Subscribe us</div>
+                    <form action="#">
+                        <input type="text" placeholder="Enter email adress" required>
+                        <input type="submit" name="" value="Send">
+                        <div class="media-icons">
+                            <a href="#"><i class="fab fa-facebook-f"></i></a>
+                            <a href="#"><i class="fab fa-twitter"></i></a>
+                            <a href="#"><i class="fab fa-linkedin-in"></i></a>
+                            <a href="#"><i class="fab fa-instagram"></i></a>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div class="bottom">
+                <p>Copyright &copy; 2023 <a href="#">VirtueBank</a> All rights reserved</p>
+            </div>
+        </footer> 
+    <script type="module" src="/script/nav.js"></script>
+    <script>
+        AOS.init();
+    </script>
+</body>
+</html>

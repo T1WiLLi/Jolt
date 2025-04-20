@@ -152,7 +152,7 @@ public class HeadersConfiguration {
     public HeadersConfiguration contentSecurityPolicy(String policy) {
         this.contentSecurityPolicyEnabled = true;
         this.contentSecurityPolicy = policy;
-        this.cspBuilder = null; // Reset builder if a custom string is provided
+        this.cspBuilder = null;
         return this;
     }
 

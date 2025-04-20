@@ -75,21 +75,21 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
                                 .withReferrerPolicy(ReferrerPolicy.STRICT_ORIGIN)
                                 .withCacheControl(CacheControlPolicy.NO_CACHE)
                                 .withCSP()
-                                .withFontSources(ContentSecurityPolicy.SELF)
-                                .withStyleSources(ContentSecurityPolicy.SELF)
-                                .withScriptSources(ContentSecurityPolicy.UNSAFE_EVAL,
-                                                ContentSecurityPolicy.UNSAFE_INLINE)
-                                .withChildSources(ContentSecurityPolicy.SELF)
-                                .withWorkerSources(ContentSecurityPolicy.SELF)
-                                .withConnectSources(ContentSecurityPolicy.SELF)
-                                .withImageSources(ContentSecurityPolicy.SELF)
+                                .withDefaultSources(ContentSecurityPolicy.SELF)
+                                .withStyleSources(ContentSecurityPolicy.SELF, ContentSecurityPolicy.UNSAFE_INLINE, "*")
+                                .withScriptSources(ContentSecurityPolicy.SELF, ContentSecurityPolicy.UNSAFE_INLINE,
+                                                ContentSecurityPolicy.UNSAFE_EVAL, "*")
+                                .withFontSources(ContentSecurityPolicy.SELF, "https://fonts.googleapis.com",
+                                                "https://fonts.gstatic.com", "https://cdnjs.cloudflare.com", "*")
+                                .withImageSources(ContentSecurityPolicy.SELF, "*")
+                                .withConnectSources(ContentSecurityPolicy.SELF, "*")
+                                .withFrameSources(ContentSecurityPolicy.SELF, "*")
+                                .withMediaSources(ContentSecurityPolicy.SELF, "*")
                                 .and()
                                 .httpsOnly(false);
 
                 withCSRF()
                                 .disable();
-                withNonce()
-                                .enable();
                 return this;
         }
 }
