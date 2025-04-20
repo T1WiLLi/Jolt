@@ -256,26 +256,40 @@ public final class JoltDispatcherServlet extends HttpServlet {
                 return false;
             }
 
-            String normalizedPath = path.startsWith("/") ? path.substring(1) : path;
-            String resourcePath = "static/" + normalizedPath;
+            String clean = path;
 
+            String resourcePath = "static/" + clean;
             log.info(() -> "Attempting to serve static file: " + resourcePath);
 
-            InputStream in = getClass().getClassLoader().getResourceAsStream(resourcePath);
-            if (in != null) {
-                byte[] data = in.readAllBytes();
-                String extension = resourcePath.substring(resourcePath.lastIndexOf('.'));
-                res.setContentType(MimeInterpreter.getMime(extension));
-                res.getOutputStream().write(data);
-                return true;
-            } else {
+            InputStream in = getClass()
+                    .getClassLoader()
+                    .getResourceAsStream(resourcePath);
+
+            if (in == null && !clean.contains(".")) {
+                String idx = resourcePath + (resourcePath.endsWith("/") ? "" : "/") + "index.html";
+                in = getClass().getClassLoader().getResourceAsStream(idx);
+                if (in != null) {
+                    final String fallbackResourcePath = idx;
+                    String finalResourcePath = fallbackResourcePath;
+                    log.info(() -> "Falling back to index at: " + finalResourcePath);
+                }
+            }
+
+            if (in == null) {
                 log.warning(() -> "Static resource not found: " + resourcePath);
                 return false;
             }
+
+            byte[] data = in.readAllBytes();
+            String ext = resourcePath.substring(resourcePath.lastIndexOf('.'));
+            res.setContentType(MimeInterpreter.getMime(ext));
+            res.getOutputStream().write(data);
+            return true;
+
         } catch (IOException e) {
-            log.warning(() -> "Error serving static resource: " + path + " - " + e.getMessage());
+            log.warning(() -> "Error serving static resource '" + path + "': " + e.getMessage());
+            return false;
         }
-        return false;
     }
 
     /**

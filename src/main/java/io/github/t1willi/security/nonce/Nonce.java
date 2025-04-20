@@ -40,7 +40,7 @@ public final class Nonce {
     public static String get() {
         String nonce = NONCE_HOLDER.get();
         if (nonce == null) {
-            logger.warning("No nonce available for the current request.");
+            logger.fine("No nonce available for the current request.");
         }
         return nonce;
     }

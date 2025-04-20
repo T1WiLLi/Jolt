@@ -32,15 +32,7 @@ public class ContentSecurityPolicy {
     @Getter
     private List<String> scriptSources = new ArrayList<>();
     @Getter
-    private List<String> scriptElementSources = new ArrayList<>();
-    @Getter
-    private List<String> scriptAttributeSources = new ArrayList<>();
-    @Getter
     private List<String> styleSources = new ArrayList<>();
-    @Getter
-    private List<String> styleElementSources = new ArrayList<>();
-    @Getter
-    private List<String> styleAttributeSources = new ArrayList<>();
     @Getter
     private List<String> childSources = new ArrayList<>();
     @Getter
@@ -75,28 +67,8 @@ public class ContentSecurityPolicy {
         return this;
     }
 
-    public ContentSecurityPolicy withStyleElementSources(String... sources) {
-        this.styleElementSources = new ArrayList<>(Arrays.asList(sources));
-        return this;
-    }
-
-    public ContentSecurityPolicy withStyleAttributeSources(String... sources) {
-        this.styleAttributeSources = new ArrayList<>(Arrays.asList(sources));
-        return this;
-    }
-
     public ContentSecurityPolicy withScriptSources(String... sources) {
         this.scriptSources = new ArrayList<>(Arrays.asList(sources));
-        return this;
-    }
-
-    public ContentSecurityPolicy withScriptElementSources(String... sources) {
-        this.scriptElementSources = new ArrayList<>(Arrays.asList(sources));
-        return this;
-    }
-
-    public ContentSecurityPolicy withScriptAttributeSources(String... sources) {
-        this.scriptAttributeSources = new ArrayList<>(Arrays.asList(sources));
         return this;
     }
 
@@ -142,24 +114,14 @@ public class ContentSecurityPolicy {
             if (!scriptSources.contains(NONCE_PLACEHOLDER)) {
                 scriptSources.add(NONCE_PLACEHOLDER);
             }
-            if (!scriptElementSources.contains(NONCE_PLACEHOLDER)) {
-                scriptElementSources.add(NONCE_PLACEHOLDER);
-            }
             if (!styleSources.contains(NONCE_PLACEHOLDER)) {
                 styleSources.add(NONCE_PLACEHOLDER);
-            }
-            if (!styleElementSources.contains(NONCE_PLACEHOLDER)) {
-                styleElementSources.add(NONCE_PLACEHOLDER);
             }
         }
 
         appendDirective(csp, "font-src", fontSources);
         appendDirective(csp, "style-src", styleSources);
-        appendDirective(csp, "style-src-elem", styleElementSources);
-        appendDirective(csp, "style-src-attr", styleAttributeSources);
         appendDirective(csp, "script-src", scriptSources);
-        appendDirective(csp, "script-src-elem", scriptElementSources);
-        appendDirective(csp, "script-src-attr", scriptAttributeSources);
         appendDirective(csp, "child-src", childSources);
         appendDirective(csp, "worker-src", workerSources);
         appendDirective(csp, "connect-src", connectSources);

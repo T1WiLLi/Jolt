@@ -10,6 +10,6 @@ public class Main extends JoltApplication {
 
     @Override
     protected void init() {
-        get("/", ctx -> ctx.serve("MyBank/src/connexion.html"));
+        get("/", ctx -> ctx.html("Hello, World!"));
     }
 }

@@ -61,7 +61,7 @@ public final class SecureHeadersFilter extends JoltFilter {
                 logger.fine("CSP header set with nonce: " + nonce);
             } else {
                 csp = csp.replace("'nonce-{{NONCE}}'", "");
-                logger.warning("CSP header set without nonce because no nonce was available");
+                logger.fine("CSP header set without nonce because no nonce was available");
             }
             res.setHeader("Content-Security-Policy", csp);
         }

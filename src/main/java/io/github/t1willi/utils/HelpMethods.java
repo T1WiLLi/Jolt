@@ -17,15 +17,20 @@ public class HelpMethods {
             return false;
         }
 
-        String clean = path.startsWith("/") ? path.substring(1) : path;
+        String normalized = path;
+        while (normalized.startsWith("./")) {
+            normalized = normalized.substring(2);
+        }
 
-        if (clean.contains("../") || clean.contains("..\\") ||
-                clean.startsWith("../") || clean.startsWith("..\\") ||
-                clean.contains("/..") || clean.contains("\\..")) {
+        if (normalized.startsWith("/")) {
+            normalized = normalized.substring(1);
+        }
+
+        if (normalized.contains("..")) {
             return false;
         }
 
-        return clean.matches("^[a-zA-Z0-9_\\-./]+$");
+        return normalized.matches("^[a-zA-Z0-9_\\-./]+$");
     }
 
     public static Object convert(String raw, Class<?> targetType) {
