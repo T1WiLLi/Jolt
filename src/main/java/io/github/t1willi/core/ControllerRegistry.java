@@ -48,7 +48,8 @@ public final class ControllerRegistry {
     private static void registerController(Object controller) {
         Class<?> cls = controller.getClass();
         Controller ann = cls.getAnnotation(Controller.class);
-        String basePath = normalize(ann.value().isBlank() ? "/" : ann.value());
+        String raw = ann.value();
+        String basePath = normalize(raw.isBlank() ? "/" : resolveBasePath(cls, raw));
 
         JoltContainer.getInstance().inject(controller);
         Router router = Optional.ofNullable(JoltContainer.getInstance().getBean(Router.class))
@@ -83,14 +84,26 @@ public final class ControllerRegistry {
         }
     }
 
-    private static void route(Router router, Object ctrl, Method m, HttpMethod verb, String path) {
-        router.route(verb, path, createHandler(ctrl, m));
+    private static String resolveBasePath(Class<?> cls, String rawValue) {
+        if (rawValue.contains("[controller]")) {
+            String simple = cls.getSimpleName();
+            String name = simple.endsWith("Controller")
+                    ? simple.substring(0, simple.length() - "Controller".length())
+                    : simple;
+            String segment = name.toLowerCase();
+            return rawValue.replace("[controller]", segment);
+        }
+        return rawValue;
+    }
+
+    private static void route(Router router, Object ctrl, Method method, HttpMethod verb, String path) {
+        router.route(verb, path, createHandler(ctrl, method));
     }
 
     private static void validateSignature(Method m) {
         int mods = m.getModifiers();
         if (!Modifier.isPublic(mods) || Modifier.isStatic(mods))
-            throw new JoltDIException(m.getName() + " must be public, non‑static");
+            throw new JoltDIException(m.getName() + " must be public, non-static");
     }
 
     private static RouteHandler createHandler(Object ctrl, Method m) {
