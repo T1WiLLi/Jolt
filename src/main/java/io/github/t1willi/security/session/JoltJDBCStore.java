@@ -9,9 +9,12 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.util.ArrayList;
 import java.util.logging.Logger;
 
 import io.github.t1willi.database.Database;
+import io.github.t1willi.server.config.ConfigurationManager;
+
 import org.apache.catalina.Manager;
 import org.apache.catalina.Session;
 import org.apache.catalina.session.StandardSession;
@@ -19,7 +22,8 @@ import org.apache.catalina.session.StoreBase;
 
 public class JoltJDBCStore extends StoreBase {
     private static final Logger logger = Logger.getLogger(JoltJDBCStore.class.getName());
-    private static final String SESSION_TABLE = "tomcat_sessions";
+    private static final String DEFAULT_SESSION_TABLE = "tomcat_sessions";
+    private static String sessionTable;
     private Database database;
 
     @Override
@@ -30,6 +34,7 @@ public class JoltJDBCStore extends StoreBase {
             logger.severe("Database not initialized; CustomJDBCStore cannot function.");
             throw new IllegalStateException("Database not initialized");
         }
+        sessionTable = ConfigurationManager.getInstance().getProperty("session.name=", DEFAULT_SESSION_TABLE);
         createTableIfNotExists();
     }
 
@@ -43,20 +48,20 @@ public class JoltJDBCStore extends StoreBase {
                     max_inactive INT NOT NULL,
                     expiry_time BIGINT NOT NULL
                 )
-                """.formatted(SESSION_TABLE);
+                """.formatted(sessionTable);
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(createTableSQL)) {
             stmt.executeUpdate();
-            logger.info("Database table '" + SESSION_TABLE + "' created or already exists.");
+            logger.info("Database table '" + sessionTable + "' created or already exists.");
         } catch (SQLException e) {
-            logger.severe("Failed to create " + SESSION_TABLE + " table: " + e.getMessage());
+            logger.severe("Failed to create " + sessionTable + " table: " + e.getMessage());
             throw new RuntimeException("Failed to initialize session persistence", e);
         }
     }
 
     @Override
     public int getSize() throws IOException {
-        String sql = "SELECT COUNT(*) FROM " + SESSION_TABLE;
+        String sql = "SELECT COUNT(*) FROM " + sessionTable;
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 ResultSet rs = stmt.executeQuery()) {
@@ -72,11 +77,11 @@ public class JoltJDBCStore extends StoreBase {
 
     @Override
     public String[] keys() throws IOException {
-        String sql = "SELECT id FROM " + SESSION_TABLE;
+        String sql = "SELECT id FROM " + sessionTable;
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 ResultSet rs = stmt.executeQuery()) {
-            java.util.ArrayList<String> keys = new java.util.ArrayList<>();
+            ArrayList<String> keys = new ArrayList<>();
             while (rs.next()) {
                 keys.add(rs.getString("id"));
             }
@@ -89,7 +94,7 @@ public class JoltJDBCStore extends StoreBase {
 
     @Override
     public Session load(String id) throws IOException {
-        String sql = "SELECT data, max_inactive, expiry_time FROM " + SESSION_TABLE + " WHERE id = ?";
+        String sql = "SELECT data, max_inactive, expiry_time FROM " + sessionTable + " WHERE id = ?";
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, id);
@@ -132,10 +137,10 @@ public class JoltJDBCStore extends StoreBase {
                     last_access = EXCLUDED.last_access,
                     max_inactive = EXCLUDED.max_inactive,
                     expiry_time = EXCLUDED.expiry_time
-                """.formatted(SESSION_TABLE);
+                """.formatted(sessionTable);
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 ObjectOutputStream oos = new ObjectOutputStream(baos)) {
-            ((org.apache.catalina.session.StandardSession) session).writeObjectData(oos);
+            ((StandardSession) session).writeObjectData(oos);
             oos.flush();
             byte[] data = baos.toByteArray();
 
@@ -157,7 +162,7 @@ public class JoltJDBCStore extends StoreBase {
 
     @Override
     public void remove(String id) throws IOException {
-        String sql = "DELETE FROM " + SESSION_TABLE + " WHERE id = ?";
+        String sql = "DELETE FROM " + sessionTable + " WHERE id = ?";
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, id);
@@ -170,7 +175,7 @@ public class JoltJDBCStore extends StoreBase {
 
     @Override
     public void clear() throws IOException {
-        String sql = "DELETE FROM " + SESSION_TABLE;
+        String sql = "DELETE FROM " + sessionTable;
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.executeUpdate();

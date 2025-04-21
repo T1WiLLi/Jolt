@@ -152,6 +152,7 @@ session.httponly=true // By default, this is true.
 session.secure=true // By default, this is true.
 session.path=/ // By default, this is "/".
 session.samesite=Strict // By default, this is "Strict".
+session.name=tomcat_session // By default, this is tomcat_session (represent the name of the table which will be created in the database to store the session data).
 
 session.rate.limit.max=10 // By default, this is 10 session per the given rate.limit.window=60 seconds.
 session.rate.limit.window=60 // By default, this is 60sec.

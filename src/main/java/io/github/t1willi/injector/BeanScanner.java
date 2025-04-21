@@ -116,6 +116,9 @@ final class BeanScanner {
             if (file.isDirectory()) {
                 classes.addAll(findClassesFromDirectory(file, packageName + "." + file.getName()));
             } else if (file.getName().endsWith(".class")) {
+                if (file.getName().contains("$")) {
+                    continue;
+                }
                 String className = packageName + "." + file.getName().substring(0, file.getName().length() - 6);
                 loadClass(classes, className);
             }
