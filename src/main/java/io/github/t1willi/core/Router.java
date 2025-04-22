@@ -269,6 +269,12 @@ public final class Router {
                 .collect(Collectors.toList());
     }
 
+    public List<Route> getRoutes() {
+        return routes.values().stream()
+                .flatMap(List::stream)
+                .collect(Collectors.toList());
+    }
+
     /**
      * Adds a route to the internal list, checking for duplicates by HTTP method
      * and path.

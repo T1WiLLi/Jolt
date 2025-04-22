@@ -83,6 +83,11 @@ public final class Route {
         this.paramNames = compiled.paramNames;
     }
 
+    public String getRouteID() {
+        return httpMethod.toLowerCase() + "_" + path.replaceAll("[/{}]", "_").replaceAll("_+", "_")
+                .replaceAll("^_|_$", "");
+    }
+
     /**
      * A private record-like class to group the compiled regex {@link Pattern}
      * and the extracted parameter names.
