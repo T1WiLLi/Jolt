@@ -65,10 +65,13 @@ Update freemarker default configuration to always enforce escaping variables to 
         .route("/threads/**")
             .methods(GET, PATCH)
             .authenticated(Auth.Session)
-            .roles(DefaultRoles.ADMIN, DefaultRoles.MODERATOR)
         .route("/admin/**")
             .authenticated(Auth.Session)
-            .roles(DefaultRoles.ADMIN)
+        .route("/users/**")
+            .authenticated(Auth.JWT)
+        .route("/jokes")
+            .methods(GET)
+            .authenticated(new CustomAuthStrategy())
         .anyRoute()
             .denyAll();
 ```
@@ -78,7 +81,6 @@ Update freemarker default configuration to always enforce escaping variables to 
 
 ```java
 @Controller("[controller]")
-@Authorize(DefaultRoles.USER)
 @Authenticated(Auth.Session)
 public class UserController implements BaseController {
 
@@ -86,7 +88,6 @@ public class UserController implements BaseController {
     private UserService userService;
 
     @Get()
-    @Authorize(DefaultRoles.ADMIN)
     public JoltContext getAll(JoltContext context) {
         return userService.getAll(context);
     }
