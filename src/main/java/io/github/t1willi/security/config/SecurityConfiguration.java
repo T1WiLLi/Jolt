@@ -1,5 +1,6 @@
 package io.github.t1willi.security.config;
 
+import io.github.t1willi.security.authentification.RouteConfiguration;
 import io.github.t1willi.security.utils.Constant;
 import lombok.Getter;
 
@@ -47,6 +48,13 @@ public abstract class SecurityConfiguration {
     private final CsrfConfiguration csrfConfig = new CsrfConfiguration(this);
 
     /**
+     * The route configuration for this security setup. Initialized with default
+     * values.
+     */
+    @Getter
+    private final RouteConfiguration routeConfig = new RouteConfiguration(this);
+
+    /**
      * The Nonce configuration for this security setup. Initialized with default
      * values.
      */
@@ -69,6 +77,13 @@ public abstract class SecurityConfiguration {
      */
     public HeadersConfiguration withHeaders() {
         return headersConfig;
+    }
+
+    /**
+     * Start route-based authentication configuration.
+     */
+    public RouteConfiguration withRoutes() {
+        return routeConfig;
     }
 
     /**

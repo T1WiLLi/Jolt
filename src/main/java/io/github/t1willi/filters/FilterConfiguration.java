@@ -1,5 +1,6 @@
 package io.github.t1willi.filters;
 
+import io.github.t1willi.filters.security.AuthenticationFilter;
 import io.github.t1willi.filters.security.CorsFilter;
 import io.github.t1willi.filters.security.CsrfFilter;
 import io.github.t1willi.filters.security.MaxRequestFilter;
@@ -66,7 +67,8 @@ public abstract class FilterConfiguration {
         filterOrders.put(CorsFilter.class, 2); // Runs second: handle CORS
         filterOrders.put(NonceFilter.class, 3); // Runs third: generate nonce for CSP
         filterOrders.put(CsrfFilter.class, 4); // Runs fourth: validate CSRF token
-        filterOrders.put(SecureHeadersFilter.class, 5); // Runs last: add security headers
+        filterOrders.put(AuthenticationFilter.class, 5); // Runs fifth: enforce route auth rules
+        filterOrders.put(SecureHeadersFilter.class, 6); // Runs last: add security headers
     }
 
     /**

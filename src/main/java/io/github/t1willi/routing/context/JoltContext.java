@@ -40,7 +40,7 @@ import jakarta.servlet.http.HttpServletResponse;
  * <strong>Usage Example :</strong>
  * 
  * <pre>{@code
- * get("/user/{id:int}", ctx -> ctx.html("Hi user #" + ctx.path("id").asInt()));
+ * get("/user/{id}", ctx -> ctx.html("Hi user #" + ctx.path("id")));
  * }</pre>
  *
  * @see Form

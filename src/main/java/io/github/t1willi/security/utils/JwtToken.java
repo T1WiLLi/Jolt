@@ -1,4 +1,4 @@
-package io.github.t1willi.security.jwt;
+package io.github.t1willi.security.utils;
 
 import com.nimbusds.jose.*;
 import com.nimbusds.jose.crypto.*;
