@@ -1,6 +1,5 @@
 package io.github.t1willi.security.config;
 
-import io.github.t1willi.http.HttpMethod;
 import io.github.t1willi.injector.annotation.JoltConfiguration;
 import io.github.t1willi.injector.type.ConfigurationType;
 import io.github.t1willi.security.policies.CacheControlPolicy;
@@ -91,8 +90,6 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
 
                 withCSRF()
                                 .enable();
-                withRoutes()
-                                .route("/dashboard").methods(HttpMethod.GET).authenticated();
                 return this;
         }
 }

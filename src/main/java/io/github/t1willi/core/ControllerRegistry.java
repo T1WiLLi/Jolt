@@ -15,6 +15,9 @@ import io.github.t1willi.http.HttpMethod;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.routing.context.JoltContext;
+import io.github.t1willi.security.authentification.AuthStrategy;
+import io.github.t1willi.security.authentification.Authorize;
+import io.github.t1willi.security.authentification.RouteRule;
 import io.github.t1willi.template.Template;
 import io.github.t1willi.utils.HelpMethods;
 
@@ -25,6 +28,8 @@ import java.util.logging.Logger;
 
 public final class ControllerRegistry {
     private static final Logger log = Logger.getLogger(ControllerRegistry.class.getName());
+
+    public static final List<RouteRule> AUTHORIZATION = new ArrayList<>();
 
     private ControllerRegistry() {
     }
@@ -50,35 +55,136 @@ public final class ControllerRegistry {
         String basePath = computeHierarchicalBasePath(cls);
 
         JoltContainer.getInstance().inject(controller);
+
         Router router = Optional.ofNullable(JoltContainer.getInstance().getBean(Router.class))
                 .orElseThrow(() -> new JoltDIException("Router bean not found"));
 
-        router.before(ctx -> ((BaseController) controller).before(ctx), basePath);
-        router.after(ctx -> ((BaseController) controller).after(ctx), basePath);
-        ((BaseController) controller).getSpecificBeforeHandlers()
-                .forEach(h -> router.before(h.handler(), h.paths().stream()
-                        .map(p -> normalize(basePath + p)).toArray(String[]::new)));
-        ((BaseController) controller).getSpecificAfterHandlers()
-                .forEach(h -> router.after(h.handler(), h.paths().stream()
-                        .map(p -> normalize(basePath + p)).toArray(String[]::new)));
+        registerBeforeAfterHandlers(controller, router, basePath);
+
+        Authorize classAuth = cls.getAnnotation(Authorize.class);
 
         for (Method method : cls.getDeclaredMethods()) {
             validateSignature(method);
-            for (var entry : List.of(
-                    Map.entry(Get.class, HttpMethod.GET),
-                    Map.entry(Post.class, HttpMethod.POST),
-                    Map.entry(Put.class, HttpMethod.PUT),
-                    Map.entry(Delete.class, HttpMethod.DELETE))) {
+            processHttpMethodAnnotations(controller, method, router, basePath, classAuth);
+            processMappingAnnotation(controller, method, router, basePath, classAuth);
+        }
+    }
 
-                if (method.isAnnotationPresent(entry.getKey())) {
-                    String p = invokeValue(method.getAnnotation(entry.getKey()));
-                    route(router, controller, method, entry.getValue(), normalize(basePath + p));
-                }
+    private static void registerBeforeAfterHandlers(Object controller, Router router, String basePath) {
+        BaseController baseController = (BaseController) controller;
+
+        router.before(ctx -> baseController.before(ctx), basePath);
+        router.after(ctx -> baseController.after(ctx), basePath);
+
+        baseController.getSpecificBeforeHandlers()
+                .forEach(h -> router.before(
+                        h.handler(),
+                        h.paths().stream()
+                                .map(p -> normalize(basePath + p))
+                                .toArray(String[]::new)));
+        baseController.getSpecificAfterHandlers()
+                .forEach(h -> router.after(
+                        h.handler(),
+                        h.paths().stream()
+                                .map(p -> normalize(basePath + p))
+                                .toArray(String[]::new)));
+    }
+
+    private static void processHttpMethodAnnotations(
+            Object controller,
+            Method method,
+            Router router,
+            String basePath,
+            Authorize classAuth) {
+
+        List<Map.Entry<Class<? extends Annotation>, HttpMethod>> httpMethodAnnotations = List.of(
+                Map.entry(Get.class, HttpMethod.GET),
+                Map.entry(Post.class, HttpMethod.POST),
+                Map.entry(Put.class, HttpMethod.PUT),
+                Map.entry(Delete.class, HttpMethod.DELETE));
+
+        for (var entry : httpMethodAnnotations) {
+            Class<? extends Annotation> annotationType = entry.getKey();
+
+            if (!method.isAnnotationPresent(annotationType)) {
+                continue;
             }
-            if (method.isAnnotationPresent(Mapping.class)) {
-                Mapping m = method.getAnnotation(Mapping.class);
-                route(router, controller, method, m.method(), normalize(basePath + m.value()));
+
+            String rawPath = invokeValue(method.getAnnotation(annotationType));
+            String fullPath = normalize(basePath + rawPath);
+            HttpMethod verb = entry.getValue();
+
+            RouteHandler handler = createHandler(controller, method);
+            router.route(verb, fullPath, handler);
+            processAuthorization(method, classAuth, fullPath, verb);
+        }
+    }
+
+    private static void processMappingAnnotation(
+            Object controller,
+            Method method,
+            Router router,
+            String basePath,
+            Authorize classAuth) {
+
+        if (!method.isAnnotationPresent(Mapping.class)) {
+            return;
+        }
+
+        Mapping mapping = method.getAnnotation(Mapping.class);
+        String fullPath = normalize(basePath + mapping.value());
+        HttpMethod verb = mapping.method();
+
+        RouteHandler handler = createHandler(controller, method);
+        router.route(verb, fullPath, handler);
+
+        processAuthorizationWithContainer(method, classAuth, fullPath, verb);
+    }
+
+    private static void processAuthorization(Method method, Authorize classAuth, String fullPath, HttpMethod verb) {
+        Authorize methodAuth = method.getAnnotation(Authorize.class);
+        Authorize effective = methodAuth != null ? methodAuth : classAuth;
+
+        if (effective == null) {
+            return;
+        }
+
+        try {
+            AuthStrategy strategy = effective.value().getDeclaredConstructor().newInstance();
+            AUTHORIZATION.add(new RouteRule(
+                    fullPath,
+                    false,
+                    Set.of(verb.name()),
+                    strategy,
+                    false,
+                    false));
+        } catch (Exception e) {
+            throw new JoltDIException("Failed to create AuthStrategy for method: " + method.getName(), e);
+        }
+    }
+
+    private static void processAuthorizationWithContainer(Method method, Authorize classAuth, String fullPath,
+            HttpMethod verb) {
+        Authorize methodAuth = method.getAnnotation(Authorize.class);
+        Authorize effective = methodAuth != null ? methodAuth : classAuth;
+
+        if (effective == null) {
+            return;
+        }
+
+        try {
+            AuthStrategy strategy = JoltContainer.getInstance().getBean(effective.value());
+            if (strategy != null) {
+                AUTHORIZATION.add(new RouteRule(
+                        fullPath,
+                        false,
+                        Set.of(verb.name()),
+                        strategy,
+                        false,
+                        false));
             }
+        } catch (Exception e) {
+            throw new JoltDIException("Failed to resolve AuthStrategy for method: " + method.getName(), e);
         }
     }
 
@@ -107,10 +213,6 @@ public final class ControllerRegistry {
             return rawValue.replace("[controller]", segment);
         }
         return rawValue;
-    }
-
-    private static void route(Router router, Object ctrl, Method method, HttpMethod verb, String path) {
-        router.route(verb, path, createHandler(ctrl, method));
     }
 
     private static void validateSignature(Method m) {

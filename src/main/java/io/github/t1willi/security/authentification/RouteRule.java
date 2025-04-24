@@ -3,8 +3,10 @@ package io.github.t1willi.security.authentification;
 import java.util.Set;
 
 import lombok.Getter;
+import lombok.ToString;
 
 @Getter
+@ToString
 public final class RouteRule {
     private final String pattern;
     private final boolean any;

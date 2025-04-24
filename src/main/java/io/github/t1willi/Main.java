@@ -36,12 +36,6 @@ public class Main extends JoltApplication {
             return ctx.redirect("/login");
         });
 
-        get("/dashboard", ctx -> {
-            String user = Session.get("user");
-            ctx.render("dashboard", JoltModel.of("user", user == null ? "Guest" : user));
-            return ctx;
-        });
-
         get("/debug-session", ctx -> {
             boolean isAuth = Session.isAuthenticated();
             String user = Session.get("user");

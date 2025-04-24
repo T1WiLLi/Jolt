@@ -3,6 +3,7 @@ package io.github.t1willi.filters.security;
 import java.io.IOException;
 import java.util.List;
 
+import io.github.t1willi.core.ControllerRegistry;
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.injector.annotation.JoltBean;
@@ -29,6 +30,8 @@ public class AuthenticationFilter extends JoltFilter {
 
         List<RouteRule> rules = JoltContainer.getInstance().getBean(SecurityConfiguration.class).getRouteConfig()
                 .getRules();
+
+        rules.addAll(ControllerRegistry.AUTHORIZATION);
 
         for (RouteRule r : rules) {
             if (matches(r, path, method)) {
