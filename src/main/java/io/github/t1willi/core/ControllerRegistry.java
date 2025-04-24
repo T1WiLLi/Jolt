@@ -47,9 +47,7 @@ public final class ControllerRegistry {
 
     private static void registerController(Object controller) {
         Class<?> cls = controller.getClass();
-        Controller ann = cls.getAnnotation(Controller.class);
-        String raw = ann.value();
-        String basePath = normalize(raw.isBlank() ? "/" : resolveBasePath(cls, raw));
+        String basePath = computeHierarchicalBasePath(cls);
 
         JoltContainer.getInstance().inject(controller);
         Router router = Optional.ofNullable(JoltContainer.getInstance().getBean(Router.class))
@@ -84,7 +82,22 @@ public final class ControllerRegistry {
         }
     }
 
-    private static String resolveBasePath(Class<?> cls, String rawValue) {
+    private static String computeHierarchicalBasePath(Class<?> cls) {
+        Class<?> parent = cls.getSuperclass();
+        String parentPath = "";
+        if (parent != null && parent.isAnnotationPresent(Controller.class)) {
+            parentPath = computeHierarchicalBasePath(parent);
+        }
+        Controller ann = cls.getAnnotation(Controller.class);
+        if (ann == null) {
+            return normalize(parentPath);
+        }
+        String raw = ann.value();
+        String segment = raw.isBlank() ? "" : resolveBasePathSegment(cls, raw);
+        return normalize(parentPath + "/" + segment);
+    }
+
+    private static String resolveBasePathSegment(Class<?> cls, String rawValue) {
         if (rawValue.contains("[controller]")) {
             String simple = cls.getSimpleName();
             String name = simple.endsWith("Controller")

@@ -2,6 +2,7 @@ package io.github.t1willi;
 
 import io.github.t1willi.core.JoltApplication;
 import io.github.t1willi.form.Form;
+import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.security.session.Session;
 import io.github.t1willi.template.JoltModel;
 
@@ -26,7 +27,7 @@ public class Main extends JoltApplication {
                 Session.set("user", username);
                 return ctx.redirect("/dashboard");
             } else {
-                return ctx.render("login", JoltModel.of("error", "Invalid credentials"));
+                return ctx.status(HttpStatus.BAD_REQUEST).render("login", JoltModel.of("error", "Invalid credentials"));
             }
         });
 
