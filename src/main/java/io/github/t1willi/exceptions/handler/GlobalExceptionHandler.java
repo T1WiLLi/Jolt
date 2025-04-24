@@ -7,6 +7,10 @@ import jakarta.servlet.http.HttpServletResponse;
 public abstract class GlobalExceptionHandler implements ExceptionHandler {
     private final ExceptionHandlerRegistry registry = new ExceptionHandlerRegistry();
 
+    public void init() {
+        registry.registerAnnotatedHandler(this);
+    }
+
     @Override
     public ExceptionHandlerRegistry getRegistry() {
         return this.registry;

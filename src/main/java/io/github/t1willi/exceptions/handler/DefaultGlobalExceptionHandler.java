@@ -1,5 +1,6 @@
 package io.github.t1willi.exceptions.handler;
 
+import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.injector.annotation.JoltConfiguration;
 import io.github.t1willi.injector.type.ConfigurationType;

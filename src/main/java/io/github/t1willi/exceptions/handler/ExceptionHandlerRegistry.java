@@ -1,11 +1,13 @@
 package io.github.t1willi.exceptions.handler;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.function.BiConsumer;
 
+import io.github.t1willi.exceptions.JoltException;
 import jakarta.servlet.http.HttpServletResponse;
 
 public final class ExceptionHandlerRegistry {
@@ -17,22 +19,41 @@ public final class ExceptionHandlerRegistry {
                 .add((t, res) -> handler.accept(castThrowable(exceptionType, t), res));
     }
 
-    public boolean handleSpecificException(Throwable t, HttpServletResponse response) {
-        Class<?> exceptionClass = t.getClass();
-        List<BiConsumer<Throwable, HttpServletResponse>> specificHandlers = null;
-
-        for (Class<?> registeredType : handlers.keySet()) {
-            if (registeredType.isAssignableFrom(exceptionClass)) {
-                specificHandlers = handlers.get(registeredType);
-                break;
+    public void registerAnnotatedHandler(Object handlerInstance) {
+        for (Method method : handlerInstance.getClass().getMethods()) {
+            if (!method.isAnnotationPresent(HandleException.class)) {
+                continue;
+            }
+            HandleException annotation = method.getAnnotation(HandleException.class);
+            for (Class<? extends Throwable> exceptionType : annotation.value()) {
+                registerHandler(exceptionType, (t, res) -> {
+                    try {
+                        if (method.getParameterCount() == 2
+                                && method.getParameterTypes()[0].isAssignableFrom(t.getClass())
+                                && method.getParameterTypes()[1].isAssignableFrom(HttpServletResponse.class)) {
+                            method.invoke(handlerInstance, t, res);
+                        } else {
+                            throw new IllegalArgumentException(
+                                    "Method " + method + " does not match expected signature.");
+                        }
+                    } catch (Exception e) {
+                        throw new JoltException("Failed to invoke exception handler method " + method, e);
+                    }
+                });
             }
         }
+    }
 
-        if (specificHandlers != null) {
-            for (BiConsumer<Throwable, HttpServletResponse> handler : specificHandlers) {
-                handler.accept(t, response);
+    public boolean handleSpecificException(Throwable t, HttpServletResponse response) {
+        Class<?> exceptionClass = t.getClass();
+        for (Map.Entry<Class<? extends Throwable>, List<BiConsumer<Throwable, HttpServletResponse>>> entry : handlers
+                .entrySet()) {
+            if (entry.getKey().isAssignableFrom(exceptionClass)) {
+                for (BiConsumer<Throwable, HttpServletResponse> h : entry.getValue()) {
+                    h.accept(t, response);
+                }
+                return true;
             }
-            return true;
         }
         return false;
     }
