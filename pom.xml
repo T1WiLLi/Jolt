@@ -6,11 +6,11 @@
 
     <groupId>io.github.t1willi</groupId>
     <artifactId>jolt</artifactId>
-    <version>2.6.3</version>
+    <version>2.6.4</version>
     <packaging>jar</packaging>
 
     <name>Jolt</name>
-    <description>A Java web framework for rapid development</description>
+    <description>Jolt is a simplistic and minimalistic Java web framework that combines simplicity with the power of entreprise-grade architecture. Built on SOLID principles and a pluggable core, it offers multiples features.</description>
     <url>https://github.com/T1WiLLi/Jolt</url>
 
     <licenses>
