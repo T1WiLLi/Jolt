@@ -13,7 +13,7 @@ public final class RouteRule {
     private final boolean permitAll;
     private final boolean denyAll;
 
-    RouteRule(String pattern,
+    public RouteRule(String pattern,
             boolean any,
             Set<String> methods,
             AuthStrategy strategy,

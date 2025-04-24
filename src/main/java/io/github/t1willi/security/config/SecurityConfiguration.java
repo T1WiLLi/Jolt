@@ -1,6 +1,5 @@
 package io.github.t1willi.security.config;
 
-import io.github.t1willi.security.authentification.RouteConfiguration;
 import io.github.t1willi.security.utils.Constant;
 import lombok.Getter;
 

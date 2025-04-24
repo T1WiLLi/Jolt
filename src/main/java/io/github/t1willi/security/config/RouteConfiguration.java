@@ -1,4 +1,4 @@
-package io.github.t1willi.security.authentification;
+package io.github.t1willi.security.config;
 
 import java.util.ArrayList;
 import java.util.HashSet;
@@ -6,7 +6,9 @@ import java.util.List;
 import java.util.Set;
 
 import io.github.t1willi.http.HttpMethod;
-import io.github.t1willi.security.config.SecurityConfiguration;
+import io.github.t1willi.security.authentification.AuthStrategy;
+import io.github.t1willi.security.authentification.RouteRule;
+import io.github.t1willi.security.authentification.SessionAuthStrategy;
 import lombok.Getter;
 
 /**

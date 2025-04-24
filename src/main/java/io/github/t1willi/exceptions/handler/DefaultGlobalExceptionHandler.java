@@ -11,7 +11,7 @@ import java.util.logging.Logger;
  * Provides a default mechanism for handling exceptions in a Jolt-based
  * application.
  * <p>
- * Extends {@link AbstractGlobalExceptionHandler} to ensure standard
+ * Extends {@link GlobalExceptionHandler} to ensure standard
  * {@link JoltHttpException} processing is applied before this handler's logic.
  */
 @JoltConfiguration(value = ConfigurationType.EXCEPTION_HANDLER, isDefault = true)
