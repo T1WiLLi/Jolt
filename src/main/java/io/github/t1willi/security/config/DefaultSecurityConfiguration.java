@@ -90,6 +90,7 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
 
                 withCSRF()
                                 .enable();
+                withMaxRequest(9999);
                 return this;
         }
 }

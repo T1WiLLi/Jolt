@@ -31,8 +31,6 @@ import lombok.ToString;
  * <li>Store raw field values in a map.</li>
  * <li>Maintain a map of field names to {@link FieldValidator} instances.</li>
  * <li>Perform synchronous validation via {@link #verify(String[])}.</li>
- * <li>Perform asynchronous validation (supporting {@link AsyncRule}) via
- * {@link #verifyAsync(String[])}.</li>
  * <li>Track validation errors in a dedicated map.</li>
  * <li>Check for field existence and values.</li>
  * </ul>
