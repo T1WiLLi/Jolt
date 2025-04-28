@@ -332,7 +332,7 @@ public final class Form {
      * @return The string value, or {@code null} if not set
      */
     public String getValue(String fieldName) {
-        return fieldValues.get(fieldName);
+        return fieldValues.getOrDefault(fieldName, "");
     }
 
     /**

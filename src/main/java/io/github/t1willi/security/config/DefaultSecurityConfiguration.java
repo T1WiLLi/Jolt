@@ -89,7 +89,7 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
                                 .httpsOnly(false);
 
                 withCSRF()
-                                .enable();
+                                .disable();
                 withMaxRequest(9999);
                 return this;
         }

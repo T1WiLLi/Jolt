@@ -21,7 +21,7 @@ public class LanguageService {
     public LanguageService() {
         lang = ConfigurationManager.getInstance().getProperty("server.defaultLanguage", null);
         if (lang == null) {
-            logger.warning("No default language defined. If you want to use localization, add a language file " +
+            logger.fine("No default language defined. If you want to use localization, add a language file " +
                     "to the /lang directory in the /resources directory (e.g., /lang/en.json) and set " +
                     "'server.defaultLanguage' in your configuration.");
         }
