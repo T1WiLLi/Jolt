@@ -22,6 +22,7 @@ import io.github.t1willi.pipeline.ResponseStep;
 import io.github.t1willi.pipeline.RoutePipeline;
 import io.github.t1willi.pipeline.RoutingStep;
 import io.github.t1willi.pipeline.StaticResourceStep;
+import io.github.t1willi.utils.HelpMethods;
 
 /**
  * The main servlet responsible for dispatching HTTP requests to the appropriate
@@ -77,13 +78,30 @@ public final class JoltDispatcherServlet extends HttpServlet {
         long start = System.currentTimeMillis();
         ProcessingContext ctx = new ProcessingContext(req, res, start);
         CURRENT.set(ctx.getContext());
+        boolean errorHandled = false;
         try {
             pipeline.execute(ctx);
         } catch (Exception e) {
-            log.warning("Pipeline error: " + e.getMessage());
+            log.warning("Error during request: " + e.getMessage());
+            log.fine(() -> "Stack Trace: " + HelpMethods.stackTraceElementToString(e.getStackTrace()));
             exceptionHandler.handleException(e, res);
+            errorHandled = true;
         } finally {
+            if (!errorHandled) {
+                if (!res.isCommitted()) {
+                    ctx.getContext().commit();
+                }
+                new AfterStep().execute(ctx);
+            }
             CURRENT.remove();
+            logIncoming(req, System.currentTimeMillis() - start);
         }
+    }
+
+    private void logIncoming(HttpServletRequest req, long duration) {
+        String method = req.getMethod();
+        String path = req.getPathInfo() != null ? req.getPathInfo() : req.getServletPath();
+        String remote = req.getRemoteAddr();
+        log.info(() -> String.format("Incoming %s %s from %s - Handled in %dms", method, path, remote, duration));
     }
 }

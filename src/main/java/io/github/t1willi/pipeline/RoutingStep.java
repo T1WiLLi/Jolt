@@ -26,14 +26,15 @@ public class RoutingStep implements PipelineStep {
             return false;
         }
 
+        if (router.pathExistsWithDifferentMethod(context.getMethod(), context.getPath())) {
+            context.getResponse().setHeader("Allow", router.getAllowedMethods(context.getPath()));
+            throw new JoltHttpException(HttpStatus.METHOD_NOT_ALLOWED,
+                    "Method not allowed for " + context.getPath());
+        }
+
         if (!HttpMethod.GET.name().equals(context.getMethod())) {
-            if (router.pathExistsWithDifferentMethod(context.getMethod(), context.getPath())) {
-                context.getResponse().setHeader("Allow", router.getAllowedMethods(context.getPath()));
-                throw new JoltHttpException(HttpStatus.METHOD_NOT_ALLOWED,
-                        "Method not allowed for " + context.getPath());
-            }
             throw new JoltHttpException(HttpStatus.NOT_FOUND,
-                    "No route or static resource found for " + context.getPath());
+                    "No route found for " + context.getPath());
         }
         return false;
     }

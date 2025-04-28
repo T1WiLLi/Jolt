@@ -19,6 +19,9 @@ public class Main extends JoltApplication {
     public void init() {
         get("", ctx -> ctx.html("Hello World!"));
         get("/pokemon", this::getPokemons);
+        get("/exception", ctx -> {
+            throw new RuntimeException("WTF BITCH");
+        });
         post("/form", ctx -> {
             Form form = ctx.buildForm();
             String name = form.getValue("name");

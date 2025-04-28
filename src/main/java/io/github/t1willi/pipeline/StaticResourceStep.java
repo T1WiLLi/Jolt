@@ -3,7 +3,9 @@ package io.github.t1willi.pipeline;
 import java.io.IOException;
 import java.io.InputStream;
 
+import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.http.HttpMethod;
+import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.utils.DirectoryListingHtmlTemplateBuilder;
 import io.github.t1willi.utils.HelpMethods;
 import io.github.t1willi.utils.MimeInterpreter;
@@ -13,13 +15,14 @@ public class StaticResourceStep implements PipelineStep {
 
     @Override
     public boolean execute(ProcessingContext context) throws IOException, ServletException {
-        if (!HttpMethod.GET.name().equals(context.getMethod())) {
+        if (!HttpMethod.GET.name().equals(context.getMethod()) || context.getMatch() != null) {
             return false;
         }
 
         String path = context.getPath();
         if (!HelpMethods.isValidStaticResourcePath(path)) {
-            return false;
+            throw new JoltHttpException(HttpStatus.NOT_FOUND,
+                    "No route or static resource found for " + context.getPath());
         }
 
         String clean = path;
@@ -32,6 +35,7 @@ public class StaticResourceStep implements PipelineStep {
                 resourcePath = idx;
             }
         }
+
         if (in != null) {
             byte[] data = in.readAllBytes();
             String ext = resourcePath.substring(resourcePath.lastIndexOf('.'));
@@ -39,9 +43,12 @@ public class StaticResourceStep implements PipelineStep {
             context.getResponse().getOutputStream().write(data);
             return true;
         }
+
         if (DirectoryListingHtmlTemplateBuilder.tryServeDirectoryListing(path, context.getResponse())) {
             return true;
         }
-        return false;
+
+        throw new JoltHttpException(HttpStatus.NOT_FOUND,
+                "No route or static resource found for " + context.getPath());
     }
 }
