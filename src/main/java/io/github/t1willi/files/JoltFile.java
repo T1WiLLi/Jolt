@@ -12,7 +12,7 @@ import java.util.UUID;
 import io.github.t1willi.exceptions.JoltException;
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.http.HttpStatus;
-import io.github.t1willi.routing.MimeInterpreter;
+import io.github.t1willi.utils.MimeInterpreter;
 import lombok.Getter;
 import lombok.Setter;
 

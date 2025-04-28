@@ -1,10 +1,10 @@
 package io.github.t1willi.security.session;
 
+import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.core.JoltDispatcherServlet;
 import io.github.t1willi.exceptions.SessionExpiredException;
 import io.github.t1willi.exceptions.SessionIpMismatchException;
 import io.github.t1willi.exceptions.SessionUserAgentMismatchException;
-import io.github.t1willi.routing.context.JoltContext;
 import io.github.t1willi.server.config.ConfigurationManager;
 
 import jakarta.servlet.http.HttpServletRequest;

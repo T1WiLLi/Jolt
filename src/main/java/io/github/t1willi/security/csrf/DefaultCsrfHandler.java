@@ -2,9 +2,9 @@ package io.github.t1willi.security.csrf;
 
 import java.util.logging.Logger;
 
+import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.http.HttpStatus;
-import io.github.t1willi.routing.context.JoltContext;
 import io.github.t1willi.security.config.CsrfConfiguration;
 
 /**

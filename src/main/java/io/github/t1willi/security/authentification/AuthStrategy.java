@@ -1,6 +1,6 @@
 package io.github.t1willi.security.authentification;
 
-import io.github.t1willi.routing.context.JoltContext;
+import io.github.t1willi.context.JoltContext;
 
 /**
  * Authentification strategy interface for defining how a user should be

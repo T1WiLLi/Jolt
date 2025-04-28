@@ -11,7 +11,7 @@ import jakarta.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.util.Collections;
 
-import io.github.t1willi.routing.context.JoltContext;
+import io.github.t1willi.context.JoltContext;
 
 /**
  * Serves as a base class for Jolt filters, implementing the standard Jakarta

@@ -1,4 +1,4 @@
-package io.github.t1willi.routing.context;
+package io.github.t1willi.context;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,8 +9,8 @@ import io.github.t1willi.cookie.CookieBuilder;
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.files.JoltFile;
 import io.github.t1willi.http.HttpStatus;
-import io.github.t1willi.routing.MimeInterpreter;
 import io.github.t1willi.utils.JacksonUtil;
+import io.github.t1willi.utils.MimeInterpreter;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;

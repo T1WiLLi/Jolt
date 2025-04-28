@@ -13,14 +13,14 @@ import java.util.function.Supplier;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
+import io.github.t1willi.context.JoltContext;
+import io.github.t1willi.context.LifecycleEntry;
 import io.github.t1willi.exceptions.DuplicateRouteException;
 import io.github.t1willi.http.HttpMethod;
 import io.github.t1willi.injector.annotation.JoltBean;
-import io.github.t1willi.routing.LifecycleEntry;
 import io.github.t1willi.routing.Route;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.routing.RouteMatch;
-import io.github.t1willi.routing.context.JoltContext;
 
 import java.util.logging.Logger;
 

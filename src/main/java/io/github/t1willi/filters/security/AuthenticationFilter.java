@@ -3,11 +3,11 @@ package io.github.t1willi.filters.security;
 import java.io.IOException;
 import java.util.List;
 
+import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.core.ControllerRegistry;
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.injector.annotation.JoltBean;
-import io.github.t1willi.routing.context.JoltContext;
 import io.github.t1willi.security.authentification.RouteRule;
 import io.github.t1willi.security.config.SecurityConfiguration;
 import jakarta.servlet.FilterChain;

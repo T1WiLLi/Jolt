@@ -2,8 +2,8 @@ package io.github.t1willi.routing;
 
 import java.util.function.Supplier;
 
+import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.exceptions.JoltRoutingException;
-import io.github.t1willi.routing.context.JoltContext;
 
 /**
  * A functional interface representing a handler for a matched route.

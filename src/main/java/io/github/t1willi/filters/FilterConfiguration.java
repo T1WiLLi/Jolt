@@ -1,12 +1,12 @@
 package io.github.t1willi.filters;
 
+import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.filters.security.AuthenticationFilter;
 import io.github.t1willi.filters.security.CorsFilter;
 import io.github.t1willi.filters.security.CsrfFilter;
 import io.github.t1willi.filters.security.MaxRequestFilter;
 import io.github.t1willi.filters.security.NonceFilter;
 import io.github.t1willi.filters.security.SecureHeadersFilter;
-import io.github.t1willi.routing.context.JoltContext;
 import lombok.Getter;
 
 import java.util.ArrayList;

@@ -12,6 +12,8 @@ import java.util.List;
 import java.util.logging.Logger;
 import java.util.stream.Stream;
 
+import io.github.t1willi.context.JoltContext;
+import io.github.t1willi.context.LifecycleEntry;
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.exceptions.JoltRoutingException;
 import io.github.t1willi.exceptions.handler.GlobalExceptionHandler;
@@ -19,14 +21,12 @@ import io.github.t1willi.filters.FilterConfiguration;
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.injector.JoltContainer;
-import io.github.t1willi.routing.LifecycleEntry;
-import io.github.t1willi.routing.MimeInterpreter;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.routing.RouteMatch;
-import io.github.t1willi.routing.context.JoltContext;
 import io.github.t1willi.security.nonce.Nonce;
 import io.github.t1willi.utils.DirectoryListingHtmlTemplateBuilder;
 import io.github.t1willi.utils.HelpMethods;
+import io.github.t1willi.utils.MimeInterpreter;
 
 /**
  * The main servlet responsible for dispatching HTTP requests to the appropriate

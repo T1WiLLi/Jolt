@@ -1,12 +1,12 @@
 package io.github.t1willi.filters.security;
 
+import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.exceptions.CsrfTokenException;
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.injector.annotation.JoltBean;
-import io.github.t1willi.routing.context.JoltContext;
 import io.github.t1willi.security.config.CsrfConfiguration;
 import io.github.t1willi.security.config.SecurityConfiguration;
 import io.github.t1willi.security.csrf.CsrfHandler;

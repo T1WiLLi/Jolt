@@ -52,7 +52,7 @@ public final class RequestBuilder {
 
     private Object body;
     private Duration timeout = Duration.ofSeconds(10);
-    private boolean secure = false; // if true, use https:// instead of http://
+    private boolean secure = true; // if true, use https:// instead of http://
     private ObjectMapper mapper = Http.defaultMapper();
 
     /**

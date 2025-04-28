@@ -2,8 +2,8 @@ package io.github.t1willi.exceptions.handler;
 
 import java.util.function.BiConsumer;
 
+import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.exceptions.JoltHttpException;
-import io.github.t1willi.routing.context.JoltContext;
 import jakarta.servlet.http.HttpServletResponse;
 
 /**

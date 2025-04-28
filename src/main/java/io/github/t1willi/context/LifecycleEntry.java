@@ -1,10 +1,8 @@
-package io.github.t1willi.routing;
+package io.github.t1willi.context;
 
 import java.util.List;
 import java.util.Objects;
 import java.util.function.Consumer;
-
-import io.github.t1willi.routing.context.JoltContext;
 
 /**
  * Represents an entry in the HTTP request/response lifecycle.

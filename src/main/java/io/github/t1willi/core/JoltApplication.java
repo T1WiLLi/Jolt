@@ -3,6 +3,7 @@ package io.github.t1willi.core;
 import java.util.function.Consumer;
 import java.util.logging.Logger;
 
+import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.database.Database;
 import io.github.t1willi.exceptions.ServerException;
 import io.github.t1willi.http.HttpMethod;
@@ -10,7 +11,6 @@ import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.logging.LogConfigurator;
 import io.github.t1willi.logging.StartupLog;
 import io.github.t1willi.routing.RouteHandler;
-import io.github.t1willi.routing.context.JoltContext;
 import io.github.t1willi.server.TomcatServer;
 import io.github.t1willi.server.config.ConfigurationManager;
 import io.github.t1willi.server.config.ServerConfig;
