@@ -28,4 +28,11 @@ Documentation : https://jolt-framework.org
 Maven Central Repository : https://central.sonatype.com/artifact/io.github.t1willi/jolt/overview
 
 
+### Acknowledgement of inspiration : 
+
+- <sub><sup>David Tucker - Zephyrus : For the Form system, security integrations and best practices.</sup></sub> 
+- <sub><sup>Javalin: For the DSL approach and extensive configuration.</sup></sub>
+- <sub><sup>Jakarta EE : For the entreprise grade components which Jolt is composed of.</sup></sub>
+
+
 
