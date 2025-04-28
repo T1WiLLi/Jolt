@@ -42,6 +42,11 @@ public final class Route {
     private final String path;
 
     /**
+     * The version of the current accessed route.
+     */
+    private int version;
+
+    /**
      * A compiled regular expression matching the route path.
      * Parameter placeholders are replaced with appropriate capturing groups.
      */
@@ -77,6 +82,7 @@ public final class Route {
         this.httpMethod = httpMethod;
         this.path = normalizePath(path);
         this.handler = handler;
+        this.version = 0;
 
         RoutePattern compiled = compile(path);
         this.pattern = compiled.pattern;
@@ -86,6 +92,18 @@ public final class Route {
     public String getRouteID() {
         return httpMethod.toLowerCase() + "_" + path.replaceAll("[/{}]", "_").replaceAll("_+", "_")
                 .replaceAll("^_|_$", "");
+    }
+
+    /**
+     * Define the version under this route.
+     * 
+     * @param version The acknowledge version of this route.
+     */
+    public void version(int version) {
+        if (version < 0) {
+            throw new IllegalArgumentException("The version for which a route is defined cannot be negative.");
+        }
+        this.version = version;
     }
 
     /**

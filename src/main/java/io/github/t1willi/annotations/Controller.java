@@ -19,4 +19,11 @@ public @interface Controller {
      * @return The root path of the controller
      */
     String value() default "";
+
+    /**
+     * The version for the controller.
+     * 
+     * @return The version of the controller.
+     */
+    int version() default 0;
 }

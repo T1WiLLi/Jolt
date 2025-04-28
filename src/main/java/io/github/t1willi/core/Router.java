@@ -109,8 +109,8 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public void get(String path, RouteHandler handler) {
-        addRoute(new Route("GET", fullPath(path), handler));
+    public Route get(String path, RouteHandler handler) {
+        return addRoute(new Route("GET", fullPath(path), handler));
     }
 
     /**
@@ -124,8 +124,8 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public void post(String path, RouteHandler handler) {
-        addRoute(new Route("POST", fullPath(path), handler));
+    public Route post(String path, RouteHandler handler) {
+        return addRoute(new Route("POST", fullPath(path), handler));
     }
 
     /**
@@ -139,8 +139,8 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public void put(String path, RouteHandler handler) {
-        addRoute(new Route("PUT", fullPath(path), handler));
+    public Route put(String path, RouteHandler handler) {
+        return addRoute(new Route("PUT", fullPath(path), handler));
     }
 
     /**
@@ -154,8 +154,8 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public void delete(String path, RouteHandler handler) {
-        addRoute(new Route("DELETE", fullPath(path), handler));
+    public Route delete(String path, RouteHandler handler) {
+        return addRoute(new Route("DELETE", fullPath(path), handler));
     }
 
     /**
@@ -168,8 +168,8 @@ public final class Router {
      * @param path    The path pattern to match
      * @param handler A {@link RouteHandler} to process the request
      */
-    public void route(HttpMethod method, String path, RouteHandler handler) {
-        addRoute(new Route(method.toString(), fullPath(path), handler));
+    public Route route(HttpMethod method, String path, RouteHandler handler) {
+        return addRoute(new Route(method.toString(), fullPath(path), handler));
     }
 
     /**
@@ -282,7 +282,7 @@ public final class Router {
      * @param route The route to add
      * @throws DuplicateRouteException If a route with the same method/path exists
      */
-    private void addRoute(Route route) {
+    private Route addRoute(Route route) {
         String method = route.getHttpMethod();
         List<Route> methodRoutes = routes.computeIfAbsent(method, k -> new ArrayList<>());
         for (Route r : methodRoutes) {
@@ -293,6 +293,7 @@ public final class Router {
         }
         methodRoutes.add(route);
         logger.info(() -> "Registered route: " + method + " " + route.getPath());
+        return route;
     }
 
     /**

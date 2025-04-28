@@ -28,4 +28,11 @@ public @interface Mapping {
      * @return The path of the mapping.
      */
     String value() default "/";
+
+    /**
+     * The version of this mapping (defaullt 0 = "unversioned")
+     * 
+     * @return The version.
+     */
+    int version() default 0;
 }

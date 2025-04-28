@@ -10,6 +10,7 @@ import io.github.t1willi.http.HttpMethod;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.logging.LogConfigurator;
 import io.github.t1willi.logging.StartupLog;
+import io.github.t1willi.routing.Route;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.server.TomcatServer;
 import io.github.t1willi.server.config.ConfigurationManager;
@@ -189,8 +190,8 @@ public abstract class JoltApplication {
      * @param path    The path pattern, for example "/user/{id:int}"
      * @param handler A {@link RouteHandler} that processes the request
      */
-    protected static void get(String path, RouteHandler handler) {
-        router.get(path, handler);
+    protected static Route get(String path, RouteHandler handler) {
+        return router.get(path, handler);
     }
 
     /**
@@ -199,8 +200,8 @@ public abstract class JoltApplication {
      * @param path    The path pattern to match
      * @param handler A {@link RouteHandler} that processes the request
      */
-    protected static void post(String path, RouteHandler handler) {
-        router.post(path, handler);
+    protected static Route post(String path, RouteHandler handler) {
+        return router.post(path, handler);
     }
 
     /**
@@ -209,8 +210,8 @@ public abstract class JoltApplication {
      * @param path    The path pattern to match
      * @param handler A {@link RouteHandler} that processes the request
      */
-    protected static void put(String path, RouteHandler handler) {
-        router.put(path, handler);
+    protected static Route put(String path, RouteHandler handler) {
+        return router.put(path, handler);
     }
 
     /**
@@ -219,8 +220,8 @@ public abstract class JoltApplication {
      * @param path    The path pattern to match
      * @param handler A {@link RouteHandler} that processes the request
      */
-    protected static void delete(String path, RouteHandler handler) {
-        router.delete(path, handler);
+    protected static Route delete(String path, RouteHandler handler) {
+        return router.delete(path, handler);
     }
 
     /**
@@ -230,8 +231,8 @@ public abstract class JoltApplication {
      * @param path    The path pattern to match
      * @param handler A {@link RouteHandler} that processes the request
      */
-    protected static void route(HttpMethod method, String path, RouteHandler handler) {
-        router.route(method, path, handler);
+    protected static Route route(HttpMethod method, String path, RouteHandler handler) {
+        return router.route(method, path, handler);
     }
 
     /**
