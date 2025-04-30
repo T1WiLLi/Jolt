@@ -91,6 +91,13 @@ public enum HttpStatus {
     METHOD_NOT_ALLOWED(405, "Method Not Allowed"),
 
     /**
+     * {@code 406 Not Acceptable} - The server cannot produce a response matching
+     * the list of acceptable values defined in the request's proactive content
+     * negotiation headers.
+     */
+    NOT_ACCEPTABLE(406, "Not Acceptable"),
+
+    /**
      * {@code 409 Conflict} - The request could not be completed due to a conflict
      * with the current state of the resource.
      */

@@ -143,6 +143,24 @@ public class ScheduledTask { // To schedule element, you must be within a @JoltB
     public Order fetchPremium(@Path int id) { … }
 ```
 
+# Versionning
+
+```java
+@Controller("[controller]", version = 2) // V1 or no version (so either 1 or 0) won't add anything to the URL
+public class UserController { // 'http://localhost/v2/user'
+
+    @Get(version = 3) // 'http://localhost/v3/user
+    public List<User> getUsers() {
+        return new UserService().getAll();
+    }
+
+    @Get("{id}") // 'http://localhost/v2/user/{id}'
+    public User getUser(@Path("id") int userID) {
+        return new UserService().getById(userID);
+    }
+}
+```
+
 New server properties : 
 
 server.logging.level=SEVERE, WARNING, INFO, FINE, FINER, FINEST, ALL, OFF
