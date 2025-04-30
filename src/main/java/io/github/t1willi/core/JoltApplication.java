@@ -36,8 +36,8 @@ import io.github.t1willi.server.config.ServerConfig;
  *
  *     @Override
  *     protected void init() {
- *         get("/", () -> "Hello, World!");
- *         get("/user/{id:int}", ctx -> "Hello, User #" + ctx.path("id"));
+ *         get("/", ctx -> ctx.text("Hello, World!"));
+ *         get("/user/{id}", ctx -> ctx.html("Hello, User #" + ctx.path("id")));
  *     }
  * }
  * }</pre>
@@ -187,7 +187,7 @@ public abstract class JoltApplication {
     /**
      * Defines an HTTP GET route with a specified handler.
      *
-     * @param path    The path pattern, for example "/user/{id:int}"
+     * @param path    The path pattern, for example "/user/{id}"
      * @param handler A {@link RouteHandler} that processes the request
      */
     protected static Route get(String path, RouteHandler handler) {

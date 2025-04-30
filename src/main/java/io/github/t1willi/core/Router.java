@@ -110,7 +110,7 @@ public final class Router {
      *                                 exists
      */
     public Route get(String path, RouteHandler handler) {
-        return addRoute(new Route("GET", fullPath(path), handler));
+        return route(HttpMethod.GET, fullPath(path), handler);
     }
 
     /**
@@ -125,7 +125,7 @@ public final class Router {
      *                                 exists
      */
     public Route post(String path, RouteHandler handler) {
-        return addRoute(new Route("POST", fullPath(path), handler));
+        return route(HttpMethod.POST, fullPath(path), handler);
     }
 
     /**
@@ -140,7 +140,7 @@ public final class Router {
      *                                 exists
      */
     public Route put(String path, RouteHandler handler) {
-        return addRoute(new Route("PUT", fullPath(path), handler));
+        return route(HttpMethod.PUT, fullPath(path), handler);
     }
 
     /**
@@ -155,7 +155,7 @@ public final class Router {
      *                                 exists
      */
     public Route delete(String path, RouteHandler handler) {
-        return addRoute(new Route("DELETE", fullPath(path), handler));
+        return route(HttpMethod.DELETE, fullPath(path), handler);
     }
 
     /**

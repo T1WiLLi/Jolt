@@ -146,7 +146,7 @@ public class ScheduledTask { // To schedule element, you must be within a @JoltB
 # Versionning
 
 ```java
-@Controller("[controller]", version = 2) // V1 or no version (so either 1 or 0) won't add anything to the URL
+@Controller("[controller]", version = 2) // 0 won't add anything to the URL but you could have '/v1'
 public class UserController { // 'http://localhost/v2/user'
 
     @Get(version = 3) // 'http://localhost/v3/user
@@ -158,6 +158,15 @@ public class UserController { // 'http://localhost/v2/user'
     public User getUser(@Path("id") int userID) {
         return new UserService().getById(userID);
     }
+
+    // ... DSL
+
+    get("/api/form", ctx -> ...).version(2); // '/v2/api/form'
+    group("api", 2, ctx -> {
+        get("/form", ctx -> ...); // '/api/v2/form'
+        get("/allo", ctx -> ...).version(3); // Wont be added, since we are in a group, thus group has priority -> '/api/v2/allo'
+        // ...
+    });
 }
 ```
 
