@@ -29,6 +29,14 @@ public class Main extends JoltApplication {
             String message = form.getValue("message");
             return ctx.json(Map.of("name", name, "email", email, "message", message));
         });
+
+        group("/api", 1, () -> {
+            group("/product", () -> {
+                get("", ctx -> ctx.text("Des produits"));
+            });
+            get("/user", ctx -> ctx
+                    .json(Map.of("User", Map.of("name", "Wlliam Beaudin", "age", 20, "profession", "Developer"))));
+        });
     }
 
     private JoltContext getPokemons(JoltContext ctx) {

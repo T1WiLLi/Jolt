@@ -16,6 +16,7 @@ import java.util.stream.Collectors;
 import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.context.LifecycleEntry;
 import io.github.t1willi.exceptions.DuplicateRouteException;
+import io.github.t1willi.exceptions.NestedVersionedGroupException;
 import io.github.t1willi.http.HttpMethod;
 import io.github.t1willi.injector.annotation.JoltBean;
 import io.github.t1willi.routing.Route;
@@ -69,10 +70,16 @@ public final class Router {
      * faster lookup.
      */
     private final Map<String, List<Route>> routes = new HashMap<>();
+
     /**
      * Maintains prefixes for grouped routes.
      */
     private final Deque<String> prefixes = new ArrayDeque<>();
+
+    /**
+     * Tracks whether each group is versioned (true) or non-versioned (false).
+     */
+    private final Deque<Boolean> versionedGroups = new ArrayDeque<>();
 
     /**
      * Registers a "before" handler that applies only to the specified routes.
@@ -109,8 +116,8 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public Route get(String path, RouteHandler handler) {
-        return route(HttpMethod.GET, fullPath(path), handler);
+    public void get(String path, RouteHandler handler) {
+        addRoute(new Route(HttpMethod.GET.toString(), fullPath(path), handler));
     }
 
     /**
@@ -124,8 +131,8 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public Route post(String path, RouteHandler handler) {
-        return route(HttpMethod.POST, fullPath(path), handler);
+    public void post(String path, RouteHandler handler) {
+        addRoute(new Route(HttpMethod.POST.toString(), fullPath(path), handler));
     }
 
     /**
@@ -139,8 +146,8 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public Route put(String path, RouteHandler handler) {
-        return route(HttpMethod.PUT, fullPath(path), handler);
+    public void put(String path, RouteHandler handler) {
+        addRoute(new Route(HttpMethod.PUT.toString(), fullPath(path), handler));
     }
 
     /**
@@ -154,8 +161,8 @@ public final class Router {
      * @throws DuplicateRouteException If a route with the same method and path
      *                                 exists
      */
-    public Route delete(String path, RouteHandler handler) {
-        return route(HttpMethod.DELETE, fullPath(path), handler);
+    public void delete(String path, RouteHandler handler) {
+        addRoute(new Route(HttpMethod.DELETE.toString(), fullPath(path), handler));
     }
 
     /**
@@ -168,8 +175,8 @@ public final class Router {
      * @param path    The path pattern to match
      * @param handler A {@link RouteHandler} to process the request
      */
-    public Route route(HttpMethod method, String path, RouteHandler handler) {
-        return addRoute(new Route(method.toString(), fullPath(path), handler));
+    public void route(HttpMethod method, String path, RouteHandler handler) {
+        addRoute(new Route(method.toString(), fullPath(path), handler));
     }
 
     /**
@@ -196,10 +203,42 @@ public final class Router {
     public void group(String prefix, Runnable group) {
         String normalizedPrefix = normalizePath(prefix);
         prefixes.push(normalizePath(getCurrentPrefix() + normalizedPrefix));
+        versionedGroups.push(false);
         try {
             group.run();
         } finally {
             prefixes.pop();
+            versionedGroups.pop();
+        }
+    }
+
+    /**
+     * Groups multiples routes under a common path prefix and version.
+     * The version is added to the path as such : '/v{version}/' before the prefix.
+     * <p>
+     * For more usage information see {@link #group(String, Runnable)}
+     * 
+     * @param prefix  The path prefix for the grouped routes
+     * @param version The version for the group of routes.
+     * @param group   A {@link Runnable} containing route definitions.
+     */
+    public void group(String prefix, int version, Runnable group) {
+        if (version < 1) {
+            throw new IllegalArgumentException("Version must be greater than 0");
+        }
+        if (versionedGroups.contains(true)) {
+            throw new NestedVersionedGroupException(
+                    "Nested versioned groups are not allowed: attempted to declare version " + version
+                            + " inside another versioned group");
+        }
+        versionedGroups.push(true);
+        String versionedPrefix = "/v" + version + "/" + prefix;
+        prefixes.push(normalizePath(getCurrentPrefix() + versionedPrefix));
+        try {
+            group.run();
+        } finally {
+            prefixes.pop();
+            versionedGroups.pop();
         }
     }
 
@@ -282,7 +321,7 @@ public final class Router {
      * @param route The route to add
      * @throws DuplicateRouteException If a route with the same method/path exists
      */
-    private Route addRoute(Route route) {
+    private void addRoute(Route route) {
         String method = route.getHttpMethod();
         List<Route> methodRoutes = routes.computeIfAbsent(method, k -> new ArrayList<>());
         for (Route r : methodRoutes) {
@@ -293,7 +332,6 @@ public final class Router {
         }
         methodRoutes.add(route);
         logger.info(() -> "Registered route: " + method + " " + route.getPath());
-        return route;
     }
 
     /**
@@ -312,7 +350,7 @@ public final class Router {
             return currentPrefix.isEmpty() ? "/" : currentPrefix;
         }
 
-        return currentPrefix + path;
+        return normalizePath(currentPrefix + path);
     }
 
     /**
