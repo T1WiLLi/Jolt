@@ -6,6 +6,7 @@ import com.nimbusds.jwt.*;
 
 import io.github.t1willi.security.cryptography.CryptographyUtils;
 import io.github.t1willi.server.config.ConfigurationManager;
+import io.github.t1willi.utils.Constant;
 
 import java.text.ParseException;
 import java.util.*;
@@ -31,7 +32,7 @@ public final class JwtToken {
     private static final String ENCRYPTION_KEY;
 
     /** Default token expiration time: 30 minutes in milliseconds */
-    private static final long DEFAULT_EXPIRATION_MS = 1_800_000;
+    private static final long DEFAULT_EXPIRATION_MS = Constant.Security.DEFAULT_JWT_TOKEN_EXPIRATION_IN_MS;
 
     /**
      * Static initializer to load security keys from configuration.

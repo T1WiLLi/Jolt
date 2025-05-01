@@ -14,6 +14,7 @@ import java.util.logging.Logger;
 
 import io.github.t1willi.database.Database;
 import io.github.t1willi.server.config.ConfigurationManager;
+import io.github.t1willi.utils.Constant;
 
 import org.apache.catalina.Manager;
 import org.apache.catalina.Session;
@@ -22,7 +23,7 @@ import org.apache.catalina.session.StoreBase;
 
 public class JoltJDBCStore extends StoreBase {
     private static final Logger logger = Logger.getLogger(JoltJDBCStore.class.getName());
-    private static final String DEFAULT_SESSION_TABLE = "tomcat_sessions";
+    private static final String DEFAULT_SESSION_TABLE = Constant.Security.DEFAULT_SESSION_TABLE_NAME;
     private static String sessionTable;
     private Database database;
 

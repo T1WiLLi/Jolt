@@ -6,7 +6,7 @@ import io.github.t1willi.exceptions.SessionExpiredException;
 import io.github.t1willi.exceptions.SessionIpMismatchException;
 import io.github.t1willi.exceptions.SessionUserAgentMismatchException;
 import io.github.t1willi.server.config.ConfigurationManager;
-
+import io.github.t1willi.utils.Constant;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 import java.time.Duration;
@@ -55,16 +55,16 @@ public final class Session {
     private static volatile int lifetimeSeconds;
 
     /** Initialization flag in the session to avoid re‑init. */
-    public static final String KEY_INITIALIZED = "jolt_session_initialized";
-    public static final String KEY_IP_ADDRESS = "ip_address";
-    public static final String KEY_USER_AGENT = "user_agent";
-    public static final String KEY_ACCESS_TIME = "access_time";
-    public static final String KEY_EXPIRE_TIME = "expire_time";
-    public static final String KEY_IS_AUTHENTICATED = "is_authenticated";
+    public static final String KEY_INITIALIZED = Constant.SessionKeys.INITIALIZED;
+    public static final String KEY_IP_ADDRESS = Constant.SessionKeys.IP_ADDRESS;
+    public static final String KEY_USER_AGENT = Constant.SessionKeys.USER_AGENT;
+    public static final String KEY_ACCESS_TIME = Constant.SessionKeys.ACCESS_TIME;
+    public static final String KEY_EXPIRE_TIME = Constant.SessionKeys.EXPIRE_TIME;
+    public static final String KEY_IS_AUTHENTICATED = Constant.SessionKeys.IS_AUTHENTICATED;
 
     /** Formatter for human‑readable timestamps. */
     private static final DateTimeFormatter TS_FMT = DateTimeFormatter
-            .ofPattern("yyyy‑MM‑dd HH:mm:ss")
+            .ofPattern("yyyy-MM-dd HH:mm:ss")
             .withZone(ZoneId.systemDefault());
 
     static {

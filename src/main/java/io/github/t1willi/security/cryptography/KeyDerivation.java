@@ -11,6 +11,7 @@ import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
 import io.github.t1willi.exceptions.JoltSecurityException;
+import io.github.t1willi.utils.Constant;
 
 /**
  * Utility class for deriving encryption keys from passwords.
@@ -21,7 +22,7 @@ class KeyDerivation {
     /**
      * PBKDF2 with HMAC-SHA512 constant.
      */
-    public static final String PBKDF2_SHA512 = "PBKDF2WithHmacSHA512";
+    public static final String PBKDF2_SHA512 = Constant.Security.PBKDF2_SHA512;
 
     /**
      * The number of iterations to use in the key derivation function.

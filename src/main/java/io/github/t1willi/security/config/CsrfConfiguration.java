@@ -7,6 +7,7 @@ import java.util.Set;
 
 import io.github.t1willi.security.csrf.CsrfHandler;
 import io.github.t1willi.security.csrf.DefaultCsrfHandler;
+import io.github.t1willi.utils.Constant;
 
 /**
  * Configuration class for CSRF protection settings.
@@ -29,7 +30,7 @@ import io.github.t1willi.security.csrf.DefaultCsrfHandler;
 public class CsrfConfiguration {
     private boolean enabled = true;
     private boolean httpOnly = true;
-    private String tokenName = "_csrf";
+    private String tokenName = Constant.Security.CSRF_TOKEN_NAME;
     private Set<String> ignoreUrlPatterns = new HashSet<>();
     private CsrfHandler handler = new DefaultCsrfHandler();
     private SecurityConfiguration securityConfig;

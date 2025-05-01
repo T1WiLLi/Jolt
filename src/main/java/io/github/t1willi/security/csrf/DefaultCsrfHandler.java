@@ -6,6 +6,7 @@ import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.security.config.CsrfConfiguration;
+import io.github.t1willi.utils.Constant;
 
 /**
  * Default implementation of {@link CsrfHandler} that uses secure cookies for
@@ -26,7 +27,7 @@ import io.github.t1willi.security.config.CsrfConfiguration;
  */
 public final class DefaultCsrfHandler implements CsrfHandler {
     private static final Logger logger = Logger.getLogger(DefaultCsrfHandler.class.getName());
-    private static final String CSRF_HEADER = "X-CSRF-TOKEN";
+    private static final String CSRF_HEADER = Constant.Security.CSRF_HEADER_NAME;
 
     /**
      * Validates the CSRF token for the given request.

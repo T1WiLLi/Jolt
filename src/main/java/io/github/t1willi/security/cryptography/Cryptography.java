@@ -16,6 +16,7 @@ import javax.crypto.spec.SecretKeySpec;
 
 import io.github.t1willi.exceptions.JoltSecurityException;
 import io.github.t1willi.server.config.ConfigurationManager;
+import io.github.t1willi.utils.Constant;
 
 /**
  * Utility class for text hashing, verification, encryption, and decryption.
@@ -40,7 +41,7 @@ public final class Cryptography {
     /**
      * PBKDF2 with HMAC-SHA512 hashing algorithm constant (default).
      */
-    private static final String PBKDF2_SHA512 = "PBKDF2WithHmacSHA512";
+    private static final String PBKDF2_SHA512 = Constant.Security.PBKDF2_SHA512;
     /**
      * Number of iterations for PBKDF2 hashing (high for security).
      */
@@ -58,23 +59,23 @@ public final class Cryptography {
     /**
      * AES CBC mode with PKCS#5 padding.
      */
-    public static final String AES_CBC_PKCS5 = "AES/CBC/PKCS5Padding";
+    public static final String AES_CBC_PKCS5 = Constant.Security.AES_CBC_PKCS5;
     /**
      * AES CBC mode with no padding (caller must handle block alignment).
      */
-    public static final String AES_CBC_NOPADDING = "AES/CBC/NoPadding";
+    public static final String AES_CBC_NOPADDING = Constant.Security.AES_CBC_NOPADDING;
     /**
      * AES CTR mode with no padding for streaming encryption.
      */
-    public static final String AES_CTR_NOPADDING = "AES/CTR/NoPadding";
+    public static final String AES_CTR_NOPADDING = Constant.Security.AES_CTR_NOPADDING;
     /**
      * AES ECB mode with PKCS#5 padding (not recommended for data patterns).
      */
-    public static final String AES_ECB_PKCS5 = "AES/ECB/PKCS5Padding";
+    public static final String AES_ECB_PKCS5 = Constant.Security.AES_ECB_PKCS5;
     /**
      * AES GCM mode with NoPadding for AEAD (default).
      */
-    public static final String AES_GCM_NOPADDING = "AES/GCM/NoPadding";
+    public static final String AES_GCM_NOPADDING = Constant.Security.AES_GCM_NOPADDING;
     /**
      * Default encryption algorithm if none specified.
      */

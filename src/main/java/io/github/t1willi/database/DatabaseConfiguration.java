@@ -2,6 +2,8 @@ package io.github.t1willi.database;
 
 import java.util.Properties;
 
+import io.github.t1willi.utils.Constant;
+
 /**
  * Represents the configuration settings for a database connection.
  * <p>
@@ -15,7 +17,7 @@ public final class DatabaseConfiguration {
     /**
      * Default database max connections used when not specified in properties.
      */
-    private static final int DEFAULT_MAX_CONNECTIONS = 10;
+    private static final int DEFAULT_MAX_CONNECTIONS = Constant.Database.DATABASE_DEFAULT_MAX_CONNECTIONS;
 
     /**
      * The database connection URL.

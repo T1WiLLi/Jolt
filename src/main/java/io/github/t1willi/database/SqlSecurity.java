@@ -4,16 +4,15 @@ import java.util.HashSet;
 import java.util.Set;
 import java.util.regex.Pattern;
 
+import io.github.t1willi.utils.Constant;
+
 final class SqlSecurity {
     // Commonly used SQL keywords for validation
     private static final Set<String> SQL_KEYWORDS = new HashSet<>();
-    private static final Pattern VALID_IDENTIFIER_PATTERN = Pattern.compile("^[a-zA-Z0-9_]+$");
-    private static final Pattern VALID_COLUMN_PATTERN = Pattern.compile("^[a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)?$");
-    private static final Pattern SQL_INJECTION_PATTERN = Pattern.compile(
-            "(?i)(\\b)(union|select|insert|update|delete|drop|alter|exec|execute|create|where|having|or|and)(\\b)");
-    private static final Pattern SAFE_WHERE_CLAUSE_PATTERN = Pattern.compile(
-            "^(WHERE\\s+)?(([a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)?)\\s*(=|!=|<>|>|<|>=|<=|LIKE|IN|IS NULL|IS NOT NULL|BETWEEN)\\s*((\\?)|('[^']*')|([0-9]+)))"
-                    + "(\\s+(AND|OR)\\s+\\2)*$");
+    private static final Pattern VALID_IDENTIFIER_PATTERN = Constant.Database.VALID_IDENTIFIER_PATTERN;
+    private static final Pattern VALID_COLUMN_PATTERN = Constant.Database.VALID_COLUMN_PATTERN;
+    private static final Pattern SQL_INJECTION_PATTERN = Constant.Database.SQL_INJECTION_PATTERN;
+    private static final Pattern SAFE_WHERE_CLAUSE_PATTERN = Constant.Database.SAFE_WHERE_CLAUSE_PATTERN;
 
     static {
         String[] keywords = {

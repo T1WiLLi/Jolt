@@ -1,6 +1,6 @@
 package io.github.t1willi.security.config;
 
-import io.github.t1willi.security.utils.Constant;
+import io.github.t1willi.utils.Constant;
 import lombok.Getter;
 
 /**
@@ -15,7 +15,7 @@ public abstract class SecurityConfiguration {
      * This is used to prevent brute force attacks.
      */
     @Getter
-    private int maxRequest = Constant.DEFAULT_MAX_REQUEST_PER_USER_PER_SECOND;
+    private int maxRequest = Constant.Security.DEFAULT_MAX_REQUEST_PER_USER_PER_SECOND;
 
     /**
      * Configures the security settings.

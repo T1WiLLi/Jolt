@@ -7,6 +7,7 @@ import io.github.t1willi.filters.security.CsrfFilter;
 import io.github.t1willi.filters.security.MaxRequestFilter;
 import io.github.t1willi.filters.security.NonceFilter;
 import io.github.t1willi.filters.security.SecureHeadersFilter;
+import io.github.t1willi.utils.Constant;
 import lombok.Getter;
 
 import java.util.ArrayList;
@@ -34,7 +35,7 @@ public abstract class FilterConfiguration {
      * Internal filters use orders from 1 to INTERNAL_FILTER_OFFSET.
      * User-defined filters start at INTERNAL_FILTER_OFFSET + 1.
      */
-    private static final int INTERNAL_FILTER_OFFSET = 100;
+    private static final int INTERNAL_FILTER_OFFSET = Constant.Filter.INTERNAL_FILTER_OFFSET;
 
     /**
      * A list of routes to be excluded from filtering.
