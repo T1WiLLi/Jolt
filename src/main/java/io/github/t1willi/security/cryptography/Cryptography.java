@@ -10,6 +10,7 @@ import javax.crypto.Cipher;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.IvParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 
@@ -22,62 +23,84 @@ import io.github.t1willi.server.config.ConfigurationManager;
  * This class provides a comprehensive set of cryptographic operations for
  * secure
  * password handling, data encryption, and key derivation.
+ * Provides overloads that let users select algorithms and parameters
+ * directly:
+ * <ul>
+ * <li>{@link #hash(String)}</li>
+ * <li>{@link #hash(String, String)}</li>
+ * <li>{@link #encrypt(String)}</li>
+ * <li>{@link #encrypt(String, String, String)}</li>
+ * <li>{@link #decrypt(String)}</li>
+ * <li>{@link #decrypt(String, String, String)}</li>
+ * </ul>
  */
 public final class Cryptography {
 
+    // ------------------- Hashing Constants -------------------
     /**
-     * The algorithm used for password hashing.
+     * PBKDF2 with HMAC-SHA512 hashing algorithm constant (default).
      */
-    private static final String HASH_ALGORITHM = "PBKDF2WithHmacSHA512";
-
+    private static final String PBKDF2_SHA512 = "PBKDF2WithHmacSHA512";
     /**
-     * The number of iterations used in the password hashing algorithm.
-     * Higher values increase security but also computational cost.
+     * Number of iterations for PBKDF2 hashing (high for security).
      */
     private static final int HASH_ITERATIONS = 210000;
-
     /**
-     * The length of the hash key in bits.
+     * Length of the derived hash key in bits (512 bits = 64 bytes).
      */
     private static final int HASH_KEY_LENGTH = 512;
-
     /**
-     * The length of the salt in bytes used for password hashing.
+     * Salt length in bytes for hashing randomization.
      */
     private static final int SALT_LENGTH = 16;
 
+    // ---------------- Encryption Constants -------------------
     /**
-     * The algorithm used for data encryption/decryption.
-     * AES/GCM/NoPadding provides authenticated encryption with associated data
-     * (AEAD).
+     * AES CBC mode with PKCS#5 padding.
      */
-    private static final String ENCRYPTION_ALGORITHM = "AES/GCM/NoPadding";
-
+    public static final String AES_CBC_PKCS5 = "AES/CBC/PKCS5Padding";
     /**
-     * The authentication tag length in bits for GCM mode.
+     * AES CBC mode with no padding (caller must handle block alignment).
      */
-    private static final int GCM_TAG_LENGTH = 128; // 16 bytes
-
+    public static final String AES_CBC_NOPADDING = "AES/CBC/NoPadding";
     /**
-     * The initialization vector length in bytes for GCM mode.
+     * AES CTR mode with no padding for streaming encryption.
+     */
+    public static final String AES_CTR_NOPADDING = "AES/CTR/NoPadding";
+    /**
+     * AES ECB mode with PKCS#5 padding (not recommended for data patterns).
+     */
+    public static final String AES_ECB_PKCS5 = "AES/ECB/PKCS5Padding";
+    /**
+     * AES GCM mode with NoPadding for AEAD (default).
+     */
+    public static final String AES_GCM_NOPADDING = "AES/GCM/NoPadding";
+    /**
+     * Default encryption algorithm if none specified.
+     */
+    private static final String DEFAULT_ENCRYPTION_ALGORITHM = AES_GCM_NOPADDING;
+    /**
+     * Authentication tag length in bits for GCM mode (128 bits = 16 bytes).
+     */
+    private static final int GCM_TAG_LENGTH = 128;
+    /**
+     * Initialization Vector (IV) length in bytes for GCM mode (12 bytes).
      */
     private static final int GCM_IV_LENGTH = 12;
 
+    // ------------- Project Key & Pepper ------------------
     /**
-     * The project-wide secret key used for encryption/decryption operations.
-     * This key is loaded from configuration or generated randomly if not found.
+     * Global project-wide encryption key (Base64). Loaded from
+     * configuration or generated once if absent. Must be securely stored.
      */
-    private static final String PROJECT_SECRET_KEY = ConfigurationManager.getInstance().getProperty(
-            "server.security.secret_key",
-            CryptographyUtils.randomBase64(32));
-
+    private static final String PROJECT_SECRET_KEY = ConfigurationManager.getInstance()
+            .getProperty("server.security.secret_key", CryptographyUtils.randomBase64(32));
     /**
-     * A secret value added to passwords before hashing for additional security.
-     * This pepper is loaded from configuration or generated randomly if not found.
+     * Global pepper appended to all passwords before hashing to
+     * mitigate precomputed attacks. Loaded or generated if absent.
      */
-    private static final String PEPPER = ConfigurationManager.getInstance().getProperty(
-            "server.security.pepper",
-            CryptographyUtils.randomBase64(32));
+    private static final String PEPPER = ConfigurationManager.getInstance()
+            .getProperty("server.security.pepper", CryptographyUtils.randomBase64(32));
 
     /**
      * Hashes a text using PBKDF2 with a salt and a pepper.
@@ -100,7 +123,7 @@ public final class Cryptography {
                     HASH_ITERATIONS,
                     HASH_KEY_LENGTH);
 
-            SecretKeyFactory skf = SecretKeyFactory.getInstance(HASH_ALGORITHM);
+            SecretKeyFactory skf = SecretKeyFactory.getInstance(PBKDF2_SHA512);
             byte[] hash = skf.generateSecret(spec).getEncoded();
 
             spec.clearPassword();
@@ -150,7 +173,7 @@ public final class Cryptography {
                     iterations,
                     originalHash.length * 8);
 
-            SecretKeyFactory skf = SecretKeyFactory.getInstance(HASH_ALGORITHM);
+            SecretKeyFactory skf = SecretKeyFactory.getInstance(PBKDF2_SHA512);
             byte[] hash = skf.generateSecret(spec).getEncoded();
 
             spec.clearPassword();
@@ -162,105 +185,112 @@ public final class Cryptography {
     }
 
     /**
-     * Encrypts the provided text using AES-GCM with the specified key.
-     * This method generates a random initialization vector (IV) and
-     * uses the GCM mode for authenticated encryption.
+     * Encrypt plaintext using default algorithm (AES/GCM/NoPadding)
+     * and global project key. Produces authenticated ciphertext.
      *
-     * @param text the text to encrypt
-     * @param key  the Base64-encoded encryption key
-     * @return a Base64-encoded string containing the IV and encrypted data
-     * @throws JoltSecurityException if encryption fails
+     * @param plaintext UTF-8 text to encrypt
+     * @return Base64-encoded [IV|ciphertext|tag]
      */
-    public static String encrypt(String text, String key) {
+    public static String encrypt(String plaintext) {
+        return encrypt(plaintext, DEFAULT_ENCRYPTION_ALGORITHM, PROJECT_SECRET_KEY);
+    }
+
+    /**
+     * Encrypt plaintext using a specific AES mode with global key.
+     * Supports AES_CBC_PKCS5, AES_CTR_NOPADDING, etc.
+     *
+     * @param plaintext text to encrypt
+     * @param algorithm AES mode constant
+     * @return Base64-encoded [IV|ciphertext] or [IV|ciphertext|tag]
+     */
+    public static String encrypt(String plaintext, String algorithm) {
+        return encrypt(plaintext, algorithm, PROJECT_SECRET_KEY);
+    }
+
+    /**
+     * Encrypt plaintext using specified algorithm and Base64 key.
+     * Automatically handles IV size and AEAD if GCM is selected.
+     *
+     * @param plaintext text to encrypt
+     * @param algorithm full cipher transformation string
+     * @param base64Key AES key in Base64 format
+     * @return Base64-encoded payload [IV|ciphertext|tag]
+     */
+    public static String encrypt(String plaintext, String algorithm, String base64Key) {
         try {
-            byte[] iv = SecureRandomGenerator.generateRandomBytes(GCM_IV_LENGTH);
-
-            SecretKey secretKey = new SecretKeySpec(
-                    Base64.getDecoder().decode(key),
-                    "AES");
-
-            Cipher cipher = Cipher.getInstance(ENCRYPTION_ALGORITHM);
-            GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameterSpec);
-
-            byte[] passwordBytes = text.getBytes(StandardCharsets.UTF_8);
-            byte[] encryptedBytes = cipher.doFinal(passwordBytes);
-
-            ByteBuffer byteBuffer = ByteBuffer.allocate(iv.length + encryptedBytes.length);
-            byteBuffer.put(iv);
-            byteBuffer.put(encryptedBytes);
-
-            return Base64.getEncoder().encodeToString(byteBuffer.array());
+            int ivLen = algorithm.contains("GCM") ? GCM_IV_LENGTH : 16;
+            byte[] iv = SecureRandomGenerator.generateRandomBytes(ivLen);
+            SecretKey key = new SecretKeySpec(Base64.getDecoder().decode(base64Key), "AES");
+            Cipher cipher = Cipher.getInstance(algorithm);
+            if (algorithm.contains("GCM")) {
+                cipher.init(Cipher.ENCRYPT_MODE, key,
+                        new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+            } else {
+                cipher.init(Cipher.ENCRYPT_MODE, key,
+                        new IvParameterSpec(iv));
+            }
+            byte[] ct = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
+            ByteBuffer buf = ByteBuffer.allocate(iv.length + ct.length);
+            buf.put(iv).put(ct);
+            return Base64.getEncoder().encodeToString(buf.array());
         } catch (Exception e) {
-            throw new JoltSecurityException("Error encrypting password", e);
+            throw new JoltSecurityException("Error encrypting data", e);
         }
     }
 
     /**
-     * Encrypts the provided text using AES-GCM with the project's secret key.
-     * This is a convenience method that uses the project-wide secret key for
-     * encryption.
+     * Decrypt ciphertext using default algorithm and global key.
      *
-     * @param text the text to encrypt
-     * @return a Base64-encoded string containing the IV and encrypted data
-     * @throws JoltSecurityException if encryption fails
-     * @see #encrypt(String, String)
+     * @param base64Data Base64-encoded [IV|ciphertext|tag]
+     * @return decrypted UTF-8 plaintext
      */
-    public static String encrypt(String text) {
-        return encrypt(text, PROJECT_SECRET_KEY);
+    public static String decrypt(String base64Data) {
+        return decrypt(base64Data, DEFAULT_ENCRYPTION_ALGORITHM, PROJECT_SECRET_KEY);
     }
 
     /**
-     * Decrypts the provided encrypted text using AES-GCM with the specified key.
-     * This method extracts the IV from the encrypted data and uses it along with
-     * the key to decrypt the data.
+     * Decrypt using specified algorithm and global key.
      *
-     * @param encryptedText the Base64-encoded encrypted text
-     * @param key           the Base64-encoded decryption key
-     * @return the decrypted text as a string
-     * @throws JoltSecurityException if decryption fails
+     * @param base64Data encoded payload
+     * @param algorithm  AES mode to use
+     * @return plaintext
      */
-    public static String decrypt(String encryptedText, String key) {
+    public static String decrypt(String base64Data, String algorithm) {
+        return decrypt(base64Data, algorithm, PROJECT_SECRET_KEY);
+    }
+
+    /**
+     * Decrypt using specified algorithm and Base64 key.
+     * Handles IV extraction and AEAD if GCM.
+     *
+     * @param base64Data encoded [IV|ciphertext|tag]
+     * @param algorithm  transformation string
+     * @param base64Key  AES key
+     * @return decrypted text
+     */
+    public static String decrypt(String base64Data, String algorithm, String base64Key) {
         try {
-            byte[] encryptedBytes = Base64.getDecoder().decode(encryptedText);
-
-            ByteBuffer byteBuffer = ByteBuffer.wrap(encryptedBytes);
-            byte[] iv = new byte[GCM_IV_LENGTH];
-            byteBuffer.get(iv);
-
-            byte[] ciphertext = new byte[byteBuffer.remaining()];
-            byteBuffer.get(ciphertext);
-
-            SecretKey secretKey = new SecretKeySpec(
-                    Base64.getDecoder().decode(key),
-                    "AES");
-
-            Cipher cipher = Cipher.getInstance(ENCRYPTION_ALGORITHM);
-            GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, parameterSpec);
-
-            byte[] decryptedBytes = cipher.doFinal(ciphertext);
-
-            return new String(decryptedBytes, StandardCharsets.UTF_8);
-
+            byte[] blob = Base64.getDecoder().decode(base64Data);
+            ByteBuffer buf = ByteBuffer.wrap(blob);
+            int ivLen = algorithm.contains("GCM") ? GCM_IV_LENGTH : 16;
+            byte[] iv = new byte[ivLen];
+            buf.get(iv);
+            byte[] ct = new byte[buf.remaining()];
+            buf.get(ct);
+            SecretKey key = new SecretKeySpec(Base64.getDecoder().decode(base64Key), "AES");
+            Cipher cipher = Cipher.getInstance(algorithm);
+            if (algorithm.contains("GCM")) {
+                cipher.init(Cipher.DECRYPT_MODE, key,
+                        new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+            } else {
+                cipher.init(Cipher.DECRYPT_MODE, key,
+                        new IvParameterSpec(iv));
+            }
+            byte[] pt = cipher.doFinal(ct);
+            return new String(pt, StandardCharsets.UTF_8);
         } catch (Exception e) {
-            throw new JoltSecurityException("Error decrypting password", e);
+            throw new JoltSecurityException("Error decrypting data", e);
         }
-    }
-
-    /**
-     * Decrypts the provided encrypted text using AES-GCM with the project's secret
-     * key.
-     * This is a convenience method that uses the project-wide secret key for
-     * decryption.
-     *
-     * @param encryptedText the Base64-encoded encrypted text
-     * @return the decrypted text as a string
-     * @throws JoltSecurityException if decryption fails
-     * @see #decrypt(String, String)
-     */
-    public static String decrypt(String encryptedText) {
-        return decrypt(encryptedText, PROJECT_SECRET_KEY);
     }
 
     /**

@@ -1,5 +1,6 @@
 package io.github.t1willi.security.cryptography;
 
+import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
@@ -17,71 +18,69 @@ import io.github.t1willi.exceptions.JoltSecurityException;
  * from passwords with optional salt for improved security.
  */
 class KeyDerivation {
-
     /**
-     * The algorithm used for key derivation.
+     * PBKDF2 with HMAC-SHA512 constant.
      */
-    private static final String KEY_DERIVATION_ALGORITHM = "PBKDF2WithHmacSHA256";
+    public static final String PBKDF2_SHA512 = "PBKDF2WithHmacSHA512";
 
     /**
      * The number of iterations to use in the key derivation function.
      * Higher values increase security but also computational cost.
      */
-    private static final int ITERATION_COUNT = 100000;
+    private static final int DEFAULT_ITERATIONS = 100000;
 
     /**
      * The length of the derived key in bits (256 for AES-256).
      */
-    private static final int KEY_LENGTH = 256;
+    private static final int DEFAULT_KEY_LENGTH = 256;
 
     /**
-     * Derives an AES-256 encryption key from a password without salt.
-     * This method uses an empty string as the salt.
-     * Note: For better security, use the overloaded method with a salt parameter.
+     * Derive a 256-bit AES key from password with no salt.
      * 
-     * @param password The password to derive the key from.
-     * @return A Base64-encoded string representing the derived AES-256 key.
-     * @throws JoltSecurityException If the key derivation process fails.
+     * @param password input password
+     * @return Base64-encoded AES key
      */
     public static String deriveKey(String password) {
-        return deriveKey(password, "");
+        return deriveKey(password, "", PBKDF2_SHA512,
+                DEFAULT_ITERATIONS, DEFAULT_KEY_LENGTH);
     }
 
     /**
-     * Derives an AES-256 encryption key from a password and salt.
-     * This method uses PBKDF2 with HMAC-SHA256 to derive a cryptographically
-     * strong key from the provided password and salt.
+     * Derive a 256-bit AES key from password with provided salt.
      * 
-     * @param password The password to derive the key from.
-     * @param salt     The salt to use in the key derivation process. Using a unique
-     *                 salt
-     *                 for each password greatly enhances security against rainbow
-     *                 table attacks.
-     * @return A Base64-encoded string representing the derived AES-256 key.
-     * @throws JoltSecurityException If the key derivation process fails due to
-     *                               algorithm unavailability or invalid key
-     *                               specification.
+     * @param password input password
+     * @param salt     salt string for entropy
+     * @return Base64-encoded AES key
      */
     public static String deriveKey(String password, String salt) {
+        return deriveKey(password, salt, PBKDF2_SHA512,
+                DEFAULT_ITERATIONS, DEFAULT_KEY_LENGTH);
+    }
+
+    /**
+     * Derive key with full parameters control.
+     * 
+     * @param password   input password
+     * @param salt       salt string
+     * @param algorithm  PBKDF2 algorithm constant
+     * @param iterations number of rounds
+     * @param keyLength  output key length in bits
+     * @return Base64-encoded key bytes suitable for AES
+     */
+    public static String deriveKey(
+            String password, String salt,
+            String algorithm, int iterations, int keyLength) {
         try {
-            byte[] saltBytes = salt.getBytes();
-
+            byte[] saltBytes = salt.getBytes(StandardCharsets.UTF_8);
             PBEKeySpec spec = new PBEKeySpec(
-                    password.toCharArray(),
-                    saltBytes,
-                    ITERATION_COUNT,
-                    KEY_LENGTH);
-
-            SecretKeyFactory factory = SecretKeyFactory.getInstance(KEY_DERIVATION_ALGORITHM);
-            byte[] keyBytes = factory.generateSecret(spec).getEncoded();
-
-            // Clear sensitive data from memory
+                    password.toCharArray(), saltBytes, iterations, keyLength);
+            SecretKeyFactory skf = SecretKeyFactory.getInstance(algorithm);
+            byte[] keyBytes = skf.generateSecret(spec).getEncoded();
             spec.clearPassword();
-
             SecretKey key = new SecretKeySpec(keyBytes, "AES");
             return Base64.getEncoder().encodeToString(key.getEncoded());
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-            throw new JoltSecurityException("Error deriving key from password", e);
+            throw new JoltSecurityException("Key derivation failed", e);
         }
     }
 }
