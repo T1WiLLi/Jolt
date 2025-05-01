@@ -1,14 +1,15 @@
 package io.github.t1willi;
 
 import java.io.IOException;
+import java.time.Duration;
 import java.util.List;
 import java.util.Map;
 
 import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.core.JoltApplication;
 import io.github.t1willi.form.Form;
-import io.github.t1willi.http.Http;
-import io.github.t1willi.http.Response;
+import io.github.t1willi.http.api.HttpClient;
+import io.github.t1willi.http.api.HttpClientFactory;
 
 public class Main extends JoltApplication {
     public static void main(String[] args) {
@@ -40,10 +41,8 @@ public class Main extends JoltApplication {
     }
 
     private JoltContext getPokemons(JoltContext ctx) {
-        try {
-            Response response = Http.get("https://pokeapi.co/api/v2/pokemon?limit=1000").execute();
-            Pokedex pokedex = response.json(Pokedex.class);
-            return ctx.json(pokedex);
+        try (HttpClient client = HttpClientFactory.create(Duration.ofSeconds(5), false)) {
+            return ctx.json(client.async("https://pokeapi.co/api/v2/pokemon?limit=1000").as(Pokedex.class));
         } catch (IOException | InterruptedException e) {
             e.printStackTrace();
         }

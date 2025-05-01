@@ -170,6 +170,26 @@ public class UserController { // 'http://localhost/v2/user'
 }
 ```
 
+# Http Client factory
+
+```java
+HttpClient client = new HttpClientFactory.create(Duration.of(5), true);
+...
+
+// This is the simplest approach
+public static void test() {
+    HttpResponse response = client.async("https://example.com/api/users"); // client.sync();
+    String responseBody = response.body();
+    client.dispose();
+}
+
+public static void test2() {
+    HttpResponse response = client.async("https://example.com/api/users");
+    List<Users> users = response.asList(User.class); // .as(TypeReference T)
+    client.dispose();
+}
+```
+
 New server properties : 
 
 server.logging.level=SEVERE, WARNING, INFO, FINE, FINER, FINEST, ALL, OFF
