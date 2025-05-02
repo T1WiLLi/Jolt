@@ -190,6 +190,44 @@ public static void test2() {
 }
 ```
 
+# Form Update
+
+```java
+public void validate(Form form) {
+    form.field("name")
+        .required()
+        .minLength(3, "Minimum length is 3.");
+    form.field("email")
+        .required()
+        .email("Must be a valid email");
+    
+    if (!form.verify()) {
+        return ctx.json(form.getAllErrors());
+    }
+    String name = form.getValue("name");
+    String email = form.getValue("email");
+    return ctx.html("Hello " + name + ". Email: " + email);
+    ... 
+}
+
+public void validateNew(Form form) {
+    form.field("name")
+        .stringLength(3, "Minimum length is 3."); // We infer required() which is obvious and a better naming convention
+    form.field("email")
+        .email("Must be a valid email for this domain", "@cegepst.qc.ca"); // Should likely be a regex, as a string and behind we use a Pattern object, we should still be able to nromal 'email();'
+    form.field("age")
+        .min(18, "You must be at least 18 years old");
+    
+    if (!form.validate()) { // Return true if no error, false otherwise.
+        return ctx.json(form.errors()) // Build a json object with the form errors, we return the first error we encounter when validating the form, otherwise the user can do : form.allErrors(); Which return the same FormError object but with a list of failed rule for each field. 
+    }
+
+    String name = form.field("name").get();
+    String email = form.field("email").get();
+    int age = form.field("age").asInt();
+}
+```
+
 New server properties : 
 
 server.logging.level=SEVERE, WARNING, INFO, FINE, FINER, FINEST, ALL, OFF
