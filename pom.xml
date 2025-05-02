@@ -307,8 +307,6 @@
                   </goals>
                   <configuration>
                     <formats>
-                      <!-- By default, JaCoCo generates XML, HTML, and CSV.
-                          Sonar (or other tools) read the XML report, so we ensure it's enabled. -->
                       <format>XML</format>
                     </formats>
                   </configuration>
