@@ -227,8 +227,9 @@ public final class Cryptography {
                 cipher.init(Cipher.ENCRYPT_MODE, key,
                         new GCMParameterSpec(GCM_TAG_LENGTH, iv));
             } else {
+                byte[] dynamicIv = SecureRandomGenerator.generateRandomBytes(ivLen);
                 cipher.init(Cipher.ENCRYPT_MODE, key,
-                        new IvParameterSpec(iv));
+                        new IvParameterSpec(dynamicIv));
             }
             byte[] ct = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
             ByteBuffer buf = ByteBuffer.allocate(iv.length + ct.length);
