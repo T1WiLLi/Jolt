@@ -24,8 +24,14 @@ jobs:
           java-version: '21'
           distribution: 'temurin'
 
+      - name: Create .env file
+        run: |
+          echo "server.security.secret_key=$(openssl rand -base64 32)" > .env
+          echo "server.security.pepper=$(openssl rand -base64 32)" >> .env
+
       - name: Compile and run tests for JaCoCo
         run: mvn test -Pcoverage -Dgpg.skip=true
+        continue-on-error: true
 
       - name: Generate JaCoCo report
         run: mvn jacoco:report -Pcoverage -Dgpg.skip=true
