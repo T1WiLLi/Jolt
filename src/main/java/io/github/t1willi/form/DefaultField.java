@@ -171,14 +171,38 @@ class DefaultField implements Field {
     }
 
     boolean verifyOne() {
-        String v = get();
+        String value = get();
         boolean isValid = true;
-        for (Rule r : rules) {
-            if (!r.validate(v)) {
-                form.addError(name, r.getErrorMessage());
-                isValid = false;
+        boolean hasRequiredRule = false;
+        String requiredErrorMessage = null;
+        List<String> otherErrors = new ArrayList<>();
+
+        for (Rule rule : rules) {
+            boolean isRequiredRule = rule.getErrorMessage().contains("required");
+            if (isRequiredRule) {
+                hasRequiredRule = true;
+                requiredErrorMessage = rule.getErrorMessage();
+            }
+            if (!rule.validate(value)) {
+                if (isRequiredRule) {
+                    form.addError(name, rule.getErrorMessage());
+                    return false;
+                } else {
+                    otherErrors.add(rule.getErrorMessage());
+                    isValid = false;
+                }
             }
         }
+
+        if (!isValid && hasRequiredRule) {
+            form.addError(name, requiredErrorMessage);
+            return false;
+        }
+
+        for (String error : otherErrors) {
+            form.addError(name, error);
+        }
+
         return isValid;
     }
 }

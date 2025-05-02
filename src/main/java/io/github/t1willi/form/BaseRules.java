@@ -10,15 +10,7 @@ final class BaseRules {
     }
 
     static Rule required(String msg) {
-        return Rule.custom(data -> {
-            if (data == null) {
-                return false;
-            }
-            if (isNumeric(data)) {
-                return true;
-            }
-            return !data.trim().isEmpty();
-        }, msg);
+        return Rule.custom(data -> data != null && !data.trim().isEmpty(), msg);
     }
 
     static Rule minLength(int min, String msg) {
@@ -183,9 +175,5 @@ final class BaseRules {
             int f = mods.contains("i") ? Pattern.CASE_INSENSITIVE : 0;
             return Pattern.compile(pat, f).matcher(data).matches();
         }, msg);
-    }
-
-    private static boolean isNumeric(String d) {
-        return d != null && d.matches("-?\\d+(\\.\\d+)?");
     }
 }

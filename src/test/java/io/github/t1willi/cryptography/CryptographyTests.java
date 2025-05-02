@@ -1,12 +1,17 @@
 package io.github.t1willi.cryptography;
 
 import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.Mockito.*;
 
+import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.mockito.MockedStatic;
 
 import io.github.t1willi.exceptions.JoltSecurityException;
 import io.github.t1willi.security.cryptography.Cryptography;
+import io.github.t1willi.security.cryptography.CryptographyUtils;
+import io.github.t1willi.server.config.ConfigurationManager;
 
 /**
  * Comprehensive test suite for the Cryptography utility class.
@@ -19,6 +24,20 @@ public class CryptographyTests {
         private static final String TEST_PASSWORD = "TestPassword123!";
         private static final String TEST_TEXT = "This is some sensitive data that needs to be encrypted securely!";
         private static final String TEST_SALT = "TestSalt12345";
+        private static final String VALID_BASE64_KEY = CryptographyUtils.randomBase64(32);
+
+        @BeforeAll
+        public static void setup() {
+                // Mock ConfigurationManager to return valid Base64 strings
+                try (MockedStatic<ConfigurationManager> mockedConfig = mockStatic(ConfigurationManager.class)) {
+                        ConfigurationManager configInstance = mock(ConfigurationManager.class);
+                        when(configInstance.getProperty(eq("server.security.secret_key"), anyString()))
+                                        .thenReturn(VALID_BASE64_KEY);
+                        when(configInstance.getProperty(eq("server.security.pepper"), anyString()))
+                                        .thenReturn(VALID_BASE64_KEY);
+                        mockedConfig.when(ConfigurationManager::getInstance).thenReturn(configInstance);
+                }
+        }
 
         @Test
         @DisplayName("Test password hashing and verification")
@@ -98,7 +117,7 @@ public class CryptographyTests {
 
         @Test
         @DisplayName("Test password strength validation")
-        public void SchumTest() {
+        public void testPasswordStrengthValidation() {
                 assertTrue(Cryptography.isStrongPassword("Abcd1234!"),
                                 "Password with uppercase, lowercase, digit, and special char should be strong");
                 assertTrue(Cryptography.isStrongPassword("P@ssw0rd"),
