@@ -1,6 +1,8 @@
 package io.github.t1willi.server.config;
 
 import java.util.Properties;
+import java.util.Base64;
+import java.util.logging.Logger;
 
 import io.github.t1willi.database.DatabaseConfiguration;
 
@@ -8,15 +10,18 @@ import io.github.t1willi.database.DatabaseConfiguration;
  * A singleton class that manages application configuration.
  * <p>
  * Loads configuration properties from {@code META-INF/application.properties}
- * using
- * {@link ConfigLoader} and provides access to typed configuration objects such
- * as
- * {@link ServerConfig} and {@link DatabaseConfig}. It also allows retrieval of
- * raw
- * property values.
+ * using {@link ConfigLoader} and provides access to typed configuration objects
+ * such as {@link ServerConfig} and {@link DatabaseConfig}. It also allows
+ * retrieval
+ * of raw property values.
  * </p>
  */
 public final class ConfigurationManager {
+
+    /**
+     * Logger instance for logging configuration events and errors.
+     */
+    private static final Logger logger = Logger.getLogger(ConfigurationManager.class.getName());
 
     /**
      * The single instance of ConfigurationManager.
@@ -112,13 +117,44 @@ public final class ConfigurationManager {
 
     /**
      * Retrieves a property value by key with a default fallback.
+     * <p>
+     * For security keys (server.security.secret_key, server.security.pepper),
+     * validates that the value is a valid Base64 string. If invalid, returns the
+     * default value.
      *
      * @param key          The key of the property to retrieve.
-     * @param defaultValue The default value to return if the key is not found.
+     * @param defaultValue The default value to return if the key is not found or
+     *                     invalid.
      * @return The value of the property, or {@code defaultValue} if the key is not
-     *         found.
+     *         found or invalid.
      */
     public String getProperty(String key, String defaultValue) {
-        return properties.getProperty(key, defaultValue);
+        String value = properties.getProperty(key, defaultValue);
+        if (key.equals("server.security.secret_key") || key.equals("server.security.pepper")) {
+            if (!isValidBase64(value)) {
+                logger.warning(() -> "Invalid Base64 value for " + key + ": " + value + ". Using default.");
+                return defaultValue;
+            }
+        }
+        return value;
+    }
+
+    /**
+     * Validates if a string is a valid Base64 string.
+     *
+     * @param value The string to validate.
+     * @return {@code true} if the string is a valid Base64 string; {@code false}
+     *         otherwise.
+     */
+    private boolean isValidBase64(String value) {
+        if (value == null) {
+            return false;
+        }
+        try {
+            Base64.getDecoder().decode(value);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 }
