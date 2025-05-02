@@ -25,9 +25,21 @@ public class Main extends JoltApplication {
         });
         post("/form", ctx -> {
             Form form = ctx.buildForm();
-            String name = form.getValue("name");
-            String email = form.getValue("email");
-            String message = form.getValue("message");
+
+            form.field("message")
+                    .required("The message is required.");
+            form.field("name")
+                    .required("The name is required.");
+            form.field("email")
+                    .email();
+
+            if (!form.validate()) {
+                return ctx.json(form.errors());
+            }
+
+            String name = form.field("name").get();
+            String email = form.field("email").get();
+            String message = form.field("message").get();
             return ctx.json(Map.of("name", name, "email", email, "message", message));
         });
 

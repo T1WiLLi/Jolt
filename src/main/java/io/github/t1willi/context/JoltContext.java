@@ -13,6 +13,7 @@ import io.github.t1willi.cookie.CookieBuilder;
 import io.github.t1willi.exceptions.JoltBadRequestException;
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.files.JoltFile;
+import io.github.t1willi.form.DefaultForm;
 import io.github.t1willi.form.Form;
 import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.routing.RouteMatch;
@@ -749,7 +750,7 @@ public final class JoltContext {
         addQueryParameters(formData, excludes);
         addJsonBodyParameters(formData, excludes);
         formData.putAll(pathParams);
-        return new Form(formData);
+        return new DefaultForm(formData);
     }
 
     /**
