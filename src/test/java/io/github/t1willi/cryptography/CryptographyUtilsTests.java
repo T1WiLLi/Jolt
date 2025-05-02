@@ -16,7 +16,7 @@ import java.util.regex.Pattern;
  * values,
  * ensuring correct length, character sets, and exception handling.
  */
-public class CryptographyUtilsTests {
+class CryptographyUtilsTests {
 
         private static final String HEX_PATTERN = "^[0-9A-F]+$";
         private static final String ALPHANUMERIC_PATTERN = "^[0-9A-Za-z]+$";
@@ -25,7 +25,7 @@ public class CryptographyUtilsTests {
 
         @Test
         @DisplayName("Test randomHex generates correct length and hexadecimal characters")
-        public void testRandomHex() {
+        void testRandomHex() {
                 String hex = CryptographyUtils.randomHex(16);
                 assertEquals(16, hex.length(), "Hex string should have specified length");
                 assertTrue(Pattern.matches(HEX_PATTERN, hex), "Hex string should contain only 0-9, A-F");
@@ -37,7 +37,7 @@ public class CryptographyUtilsTests {
 
         @Test
         @DisplayName("Test randomHex throws exception for invalid length")
-        public void testRandomHexInvalidLength() {
+        void testRandomHexInvalidLength() {
                 assertThrows(IllegalArgumentException.class, () -> CryptographyUtils.randomHex(0),
                                 "Should throw IllegalArgumentException for zero length");
                 assertThrows(IllegalArgumentException.class, () -> CryptographyUtils.randomHex(-1),
@@ -46,7 +46,7 @@ public class CryptographyUtilsTests {
 
         @Test
         @DisplayName("Test randomString generates correct length and uses provided character set")
-        public void testRandomString() {
+        void testRandomString() {
                 String chars = "ABC";
                 String result = CryptographyUtils.randomString(10, chars);
                 assertEquals(10, result.length(), "Random string should have specified length");
@@ -62,7 +62,7 @@ public class CryptographyUtilsTests {
 
         @Test
         @DisplayName("Test randomString throws exception for invalid inputs")
-        public void testRandomStringInvalidInputs() {
+        void testRandomStringInvalidInputs() {
                 assertThrows(IllegalArgumentException.class, () -> CryptographyUtils.randomString(0, "ABC"),
                                 "Should throw IllegalArgumentException for zero length");
                 assertThrows(IllegalArgumentException.class, () -> CryptographyUtils.randomString(-1, "ABC"),
@@ -75,7 +75,7 @@ public class CryptographyUtilsTests {
 
         @Test
         @DisplayName("Test randomAlphanumeric generates correct length and alphanumeric characters")
-        public void testRandomAlphanumeric() {
+        void testRandomAlphanumeric() {
                 String alphanumeric = CryptographyUtils.randomAlphanumeric(20);
                 assertEquals(20, alphanumeric.length(), "Alphanumeric string should have specified length");
                 assertTrue(Pattern.matches(ALPHANUMERIC_PATTERN, alphanumeric),
@@ -89,7 +89,7 @@ public class CryptographyUtilsTests {
 
         @Test
         @DisplayName("Test randomAlphanumeric throws exception for invalid length")
-        public void testRandomAlphanumericInvalidLength() {
+        void testRandomAlphanumericInvalidLength() {
                 assertThrows(IllegalArgumentException.class, () -> CryptographyUtils.randomAlphanumeric(0),
                                 "Should throw IllegalArgumentException for zero length");
                 assertThrows(IllegalArgumentException.class, () -> CryptographyUtils.randomAlphanumeric(-1),
@@ -98,7 +98,7 @@ public class CryptographyUtilsTests {
 
         @Test
         @DisplayName("Test randomBytes generates correct length")
-        public void testRandomBytes() {
+        void testRandomBytes() {
                 byte[] bytes = CryptographyUtils.randomBytes(16);
                 assertEquals(16, bytes.length, "Byte array should have specified length");
                 assertNotNull(bytes, "Byte array should not be null");
@@ -110,7 +110,7 @@ public class CryptographyUtilsTests {
 
         @Test
         @DisplayName("Test randomBase64 generates valid Base64 string")
-        public void testRandomBase64() {
+        void testRandomBase64() {
                 String base64 = CryptographyUtils.randomBase64(16);
                 assertTrue(Pattern.matches(BASE64_PATTERN, base64),
                                 "Base64 string should contain valid Base64 characters");
@@ -126,7 +126,7 @@ public class CryptographyUtilsTests {
 
         @Test
         @DisplayName("Test randomUrlSafeBase64 generates valid URL-safe Base64 string")
-        public void testRandomUrlSafeBase64() {
+        void testRandomUrlSafeBase64() {
                 String urlSafeBase64 = CryptographyUtils.randomUrlSafeBase64(16);
                 assertTrue(Pattern.matches(URL_SAFE_BASE64_PATTERN, urlSafeBase64),
                                 "URL-safe Base64 string should contain only A-Z, a-z, 0-9, _, -");

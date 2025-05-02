@@ -16,11 +16,11 @@ import java.util.Map;
  * error handling,
  * type conversion, and rule application.
  */
-public class FormTests {
+class FormTests {
 
     @Test
     @DisplayName("Test DefaultForm value setting and retrieval")
-    public void testFormSetAndGetValues() {
+    void testFormSetAndGetValues() {
         DefaultForm form = new DefaultForm();
         form.setValue("name", "John Doe").setValue("email", "john@example.com");
 
@@ -31,7 +31,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test DefaultForm with initial data")
-    public void testFormWithInitialData() {
+    void testFormWithInitialData() {
         Map<String, String> initial = Map.of("name", "Jane Doe", "age", "30");
         DefaultForm form = new DefaultForm(initial);
 
@@ -41,7 +41,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test empty form validation")
-    public void testEmptyFormValidation() {
+    void testEmptyFormValidation() {
         DefaultForm form = new DefaultForm();
         assertTrue(form.validate(), "Empty form should validate successfully");
         assertTrue(form.errors().isEmpty(), "Empty form should have no errors");
@@ -50,7 +50,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test required field validation")
-    public void testRequiredField() {
+    void testRequiredField() {
         DefaultForm form = new DefaultForm();
         form.field("name").required("Name is required");
 
@@ -72,7 +72,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test minLength and maxLength validation")
-    public void testLengthValidation() {
+    void testLengthValidation() {
         DefaultForm form = new DefaultForm();
         form.field("username").minLength(5, "Username must be at least 5 characters")
                 .maxLength(10, "Username must be at most 10 characters");
@@ -97,7 +97,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test email validation")
-    public void testEmailValidation() {
+    void testEmailValidation() {
         DefaultForm form = new DefaultForm();
         form.field("email").email("Invalid email address");
 
@@ -114,7 +114,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test alphanumeric validation")
-    public void testAlphanumericValidation() {
+    void testAlphanumericValidation() {
         DefaultForm form = new DefaultForm();
         form.field("code").alphanumeric("Only letters and digits allowed");
 
@@ -131,7 +131,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test phone number validation")
-    public void testPhoneNumberValidation() {
+    void testPhoneNumberValidation() {
         DefaultForm form = new DefaultForm();
         form.field("phone").phoneNumber("Invalid phone number");
 
@@ -148,7 +148,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test zip code validation")
-    public void testZipCodeValidation() {
+    void testZipCodeValidation() {
         DefaultForm form = new DefaultForm();
         form.field("zip").zipCode("Invalid ZIP code");
 
@@ -169,7 +169,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test URL validation")
-    public void testUrlValidation() {
+    void testUrlValidation() {
         DefaultForm form = new DefaultForm();
         form.field("website").url("Invalid URL");
 
@@ -186,7 +186,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test date validation")
-    public void testDateValidation() {
+    void testDateValidation() {
         DefaultForm form = new DefaultForm();
         form.field("dob").date("Invalid date");
 
@@ -203,7 +203,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test custom date pattern validation")
-    public void testCustomDateValidation() {
+    void testCustomDateValidation() {
         DefaultForm form = new DefaultForm();
         form.field("event").date("MM/dd/yyyy", "Invalid date format");
 
@@ -220,7 +220,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test credit card validation")
-    public void testCreditCardValidation() {
+    void testCreditCardValidation() {
         DefaultForm form = new DefaultForm();
         form.field("card").creditCard("Invalid credit card");
 
@@ -237,7 +237,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test strong password validation")
-    public void testStrongPasswordValidation() {
+    void testStrongPasswordValidation() {
         DefaultForm form = new DefaultForm();
         form.field("password").strongPassword("Password too weak");
 
@@ -254,7 +254,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test IP address validation")
-    public void testIpAddressValidation() {
+    void testIpAddressValidation() {
         DefaultForm form = new DefaultForm();
         form.field("ip").ipAddress("Invalid IP address");
 
@@ -271,7 +271,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test numeric comparison validation")
-    public void testNumericValidation() {
+    void testNumericValidation() {
         DefaultForm form = new DefaultForm();
         form.field("age").greaterThan(18, "Must be over 18")
                 .lowerEqualsThan(100, "Must be 100 or less");
@@ -294,7 +294,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test clamp validation")
-    public void testClampValidation() {
+    void testClampValidation() {
         DefaultForm form = new DefaultForm();
         form.field("score").clamp(0, 100, "Score must be between 0 and 100");
 
@@ -316,7 +316,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test regex validation")
-    public void testRegexValidation() {
+    void testRegexValidation() {
         DefaultForm form = new DefaultForm();
         form.field("code").regex("^[A-Z]{3}$", "Must be three uppercase letters");
 
@@ -333,7 +333,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test custom rule validation")
-    public void testCustomRuleValidation() {
+    void testCustomRuleValidation() {
         DefaultForm form = new DefaultForm();
         form.field("input").rule(s -> s != null && s.startsWith("x"), "Must start with 'x'");
 
@@ -350,7 +350,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test multiple errors on single field")
-    public void testMultipleErrors() {
+    void testMultipleErrors() {
         DefaultForm form = new DefaultForm();
         form.field("username").required("Username is required")
                 .minLength(5, "Minimum 5 characters")
@@ -365,7 +365,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test multiple fields with errors")
-    public void testMultipleFields() {
+    void testMultipleFields() {
         DefaultForm form = new DefaultForm();
         form.field("email").required("Email is required").email("Invalid email");
         form.field("age").greaterThan(18, "Must be over 18");
@@ -386,7 +386,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test type conversion methods")
-    public void testTypeConversion() {
+    void testTypeConversion() {
         DefaultForm form = new DefaultForm();
         form.setValue("age", "42")
                 .setValue("price", "19.99")
@@ -413,7 +413,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test type conversion with invalid inputs")
-    public void testInvalidTypeConversion() {
+    void testInvalidTypeConversion() {
         DefaultForm form = new DefaultForm();
         form.setValue("age", "not-a-number")
                 .setValue("price", "invalid")
@@ -433,7 +433,7 @@ public class FormTests {
 
     @Test
     @DisplayName("Test error map immutability")
-    public void testErrorMapImmutability() {
+    void testErrorMapImmutability() {
         DefaultForm form = new DefaultForm();
         form.field("name").required("Name is required");
         form.validate();

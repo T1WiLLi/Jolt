@@ -17,7 +17,7 @@ import io.github.t1willi.security.cryptography.Cryptography;
  * Note: Tests for encrypt(String) and decrypt(String) require proper
  * ConfigurationManager initialization with valid Base64 strings.
  */
-public class CryptographyTests {
+class CryptographyTests {
 
         private static final String TEST_PASSWORD = "TestPassword123!";
         private static final String TEST_TEXT = "This is some sensitive data that needs to be encrypted securely!";
@@ -25,7 +25,7 @@ public class CryptographyTests {
 
         @Test
         @DisplayName("Test password hashing and verification")
-        public void testHashAndVerify() {
+        void testHashAndVerify() {
                 String hashedPassword = Cryptography.hash(TEST_PASSWORD);
 
                 assertTrue(Cryptography.verify(hashedPassword, TEST_PASSWORD),
@@ -40,7 +40,7 @@ public class CryptographyTests {
 
         @Test
         @DisplayName("Test encryption and decryption with default project key")
-        public void testDefaultEncryptionDecryption() {
+        void testDefaultEncryptionDecryption() {
                 assumeTrue(isConfigurationValid(),
                                 "Skipping test: ConfigurationManager must be initialized with valid server.security.secret_key and server.security.pepper");
 
@@ -54,7 +54,7 @@ public class CryptographyTests {
 
         @Test
         @DisplayName("Test encryption and decryption with custom key")
-        public void testCustomKeyEncryptionDecryption() {
+        void testCustomKeyEncryptionDecryption() {
                 String derivedKey = Cryptography.deriveKey(TEST_PASSWORD, TEST_SALT);
 
                 String encrypted = Cryptography.encrypt(TEST_TEXT, derivedKey);
@@ -72,7 +72,7 @@ public class CryptographyTests {
 
         @Test
         @DisplayName("Test key derivation")
-        public void testKeyDerivation() {
+        void testKeyDerivation() {
                 String key1 = Cryptography.deriveKey(TEST_PASSWORD, TEST_SALT);
                 assertNotNull(key1, "Derived key should not be null");
 
@@ -88,7 +88,7 @@ public class CryptographyTests {
 
         @Test
         @DisplayName("Test random password generation")
-        public void testRandomPasswordGeneration() {
+        void testRandomPasswordGeneration() {
                 String password1 = Cryptography.generateRandomPassword(8);
                 assertEquals(8, password1.length(), "Generated password should have specified length");
                 assertTrue(Cryptography.isStrongPassword(password1), "Generated password should be strong");
@@ -104,7 +104,7 @@ public class CryptographyTests {
 
         @Test
         @DisplayName("Test password strength validation")
-        public void testPasswordStrengthValidation() {
+        void testPasswordStrengthValidation() {
                 assertTrue(Cryptography.isStrongPassword("Abcd1234!"),
                                 "Password with uppercase, lowercase, digit, and special char should be strong");
                 assertTrue(Cryptography.isStrongPassword("P@ssw0rd"),
@@ -127,7 +127,7 @@ public class CryptographyTests {
 
         @Test
         @DisplayName("Test multiple encryptions of same plaintext produce different ciphertexts")
-        public void testEncryptionRandomness() {
+        void testEncryptionRandomness() {
                 String derivedKey = Cryptography.deriveKey(TEST_PASSWORD, TEST_SALT);
 
                 String encrypted1 = Cryptography.encrypt(TEST_TEXT, derivedKey);
