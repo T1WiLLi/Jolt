@@ -228,10 +228,10 @@ public final class Cryptography {
                 cipher.init(Cipher.ENCRYPT_MODE, key,
                         new GCMParameterSpec(GCM_TAG_LENGTH, iv));
             } else {
-                SecureRandom secureRandom = new SecureRandom();
-                byte[] dynamicIv = new byte[128];
-                secureRandom.nextBytes(iv);
-                cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(dynamicIv));
+                SecureRandom random = new SecureRandom();
+                byte[] randomBytes = new byte[128];
+                random.nextBytes(randomBytes);
+                cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(randomBytes));
             }
             byte[] ct = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
             ByteBuffer buf = ByteBuffer.allocate(iv.length + ct.length);
