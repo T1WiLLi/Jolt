@@ -2,10 +2,13 @@ package io.github.t1willi.http.json;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+
+import io.github.t1willi.utils.JacksonUtil;
+
 import java.io.IOException;
 
 public final class DefaultJsonSerializer implements JsonSerializer {
-    private final ObjectMapper mapper = new ObjectMapper();
+    private final ObjectMapper mapper = JacksonUtil.getObjectMapper();
 
     @Override
     public <T> T fromJson(byte[] data, Class<T> cls) throws IOException {

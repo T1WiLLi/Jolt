@@ -6,7 +6,7 @@ import java.time.Duration;
 import io.github.t1willi.http.impl.DefaultHttpClient;
 import io.github.t1willi.http.json.DefaultJsonSerializer;
 
-public final class HttpClientFactory {
+final class HttpClientFactory {
     private HttpClientFactory() {
         // No-Op
     }
