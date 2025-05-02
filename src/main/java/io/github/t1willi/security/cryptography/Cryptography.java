@@ -3,6 +3,7 @@ package io.github.t1willi.security.cryptography;
 import java.nio.ByteBuffer;
 import java.nio.charset.StandardCharsets;
 import java.security.NoSuchAlgorithmException;
+import java.security.SecureRandom;
 import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 
@@ -227,9 +228,10 @@ public final class Cryptography {
                 cipher.init(Cipher.ENCRYPT_MODE, key,
                         new GCMParameterSpec(GCM_TAG_LENGTH, iv));
             } else {
-                byte[] dynamicIv = SecureRandomGenerator.generateRandomBytes(ivLen);
-                cipher.init(Cipher.ENCRYPT_MODE, key,
-                        new IvParameterSpec(dynamicIv));
+                SecureRandom secureRandom = new SecureRandom();
+                byte[] dynamicIv = new byte[16];
+                secureRandom.nextBytes(iv);
+                cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(dynamicIv));
             }
             byte[] ct = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
             ByteBuffer buf = ByteBuffer.allocate(iv.length + ct.length);
