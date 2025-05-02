@@ -229,7 +229,7 @@ public final class Cryptography {
                         new GCMParameterSpec(GCM_TAG_LENGTH, iv));
             } else {
                 SecureRandom secureRandom = new SecureRandom();
-                byte[] dynamicIv = new byte[16];
+                byte[] dynamicIv = new byte[128];
                 secureRandom.nextBytes(iv);
                 cipher.init(Cipher.ENCRYPT_MODE, key, new IvParameterSpec(dynamicIv));
             }
