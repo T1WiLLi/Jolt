@@ -20,9 +20,10 @@ import io.github.t1willi.utils.Constant;
  */
 class KeyDerivation {
     /**
-     * PBKDF2 with HMAC-SHA512 constant.
+     * PBKDF2 with HMAC-SHA256 constant - using SHA256 instead of SHA512 for wider
+     * compatibility.
      */
-    public static final String PBKDF2_SHA512 = Constant.Security.PBKDF2_SHA512;
+    public static final String PBKDF2_SHA256 = Constant.Security.PBKDF2_SHA256;
 
     /**
      * The number of iterations to use in the key derivation function.
@@ -36,17 +37,6 @@ class KeyDerivation {
     private static final int DEFAULT_KEY_LENGTH = 256;
 
     /**
-     * Derive a 256-bit AES key from password with no salt.
-     * 
-     * @param password input password
-     * @return Base64-encoded AES key
-     */
-    public static String deriveKey(String password) {
-        return deriveKey(password, "", PBKDF2_SHA512,
-                DEFAULT_ITERATIONS, DEFAULT_KEY_LENGTH);
-    }
-
-    /**
      * Derive a 256-bit AES key from password with provided salt.
      * 
      * @param password input password
@@ -54,7 +44,7 @@ class KeyDerivation {
      * @return Base64-encoded AES key
      */
     public static String deriveKey(String password, String salt) {
-        return deriveKey(password, salt, PBKDF2_SHA512,
+        return deriveKey(password, salt, PBKDF2_SHA256,
                 DEFAULT_ITERATIONS, DEFAULT_KEY_LENGTH);
     }
 
@@ -72,16 +62,23 @@ class KeyDerivation {
             String password, String salt,
             String algorithm, int iterations, int keyLength) {
         try {
+            if (salt.trim().isEmpty() || salt.isBlank() || salt == null) {
+                throw new IllegalArgumentException("Salt for key derivation can't be empty !");
+            }
+
             byte[] saltBytes = salt.getBytes(StandardCharsets.UTF_8);
+
             PBEKeySpec spec = new PBEKeySpec(
                     password.toCharArray(), saltBytes, iterations, keyLength);
+
             SecretKeyFactory skf = SecretKeyFactory.getInstance(algorithm);
             byte[] keyBytes = skf.generateSecret(spec).getEncoded();
             spec.clearPassword();
+
             SecretKey key = new SecretKeySpec(keyBytes, "AES");
             return Base64.getEncoder().encodeToString(key.getEncoded());
         } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-            throw new JoltSecurityException("Key derivation failed", e);
+            throw new JoltSecurityException("Key derivation failed: " + e.getMessage(), e);
         }
     }
 }

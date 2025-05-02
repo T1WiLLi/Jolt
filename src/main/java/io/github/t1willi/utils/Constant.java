@@ -6,6 +6,7 @@ public final class Constant {
     public static final class Security {
         // Algorithm for encryption and security
         public static final String PBKDF2_SHA512 = "PBKDF2WithHmacSHA512";
+        public static final String PBKDF2_SHA256 = "PBKDF2WithHmacSHA256";
         public static final String AES_CBC_PKCS5 = "AES/CBC/PKCS5Padding";
         public static final String AES_CBC_NOPADDING = "AES/CBC/NoPadding";
         public static final String AES_CTR_NOPADDING = "AES/CTR/NoPadding";
