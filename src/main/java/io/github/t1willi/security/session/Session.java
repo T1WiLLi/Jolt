@@ -327,7 +327,9 @@ public final class Session {
         validate(js, ctx);
         expire(js);
 
-        js.setAttribute(KEY_ACCESS_TIME, Instant.now().toEpochMilli());
+        if (js != null) {
+            js.setAttribute(KEY_ACCESS_TIME, Instant.now().toEpochMilli());
+        }
         return js;
     }
 
