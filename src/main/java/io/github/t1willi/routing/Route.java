@@ -83,8 +83,8 @@ public final class Route {
     }
 
     public String getRouteID() {
-        return httpMethod.toLowerCase() + "_" + path.replaceAll("[/{}]", "_").replaceAll("_+", "_")
-                .replaceAll("^_|_$", "");
+        return httpMethod.toLowerCase() + "_" + path.replaceAll("([/{}])", "_")
+                .replaceAll("(_+)", "_").replaceAll("(^_|_$)", "");
     }
 
     /**
