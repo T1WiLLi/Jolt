@@ -2,7 +2,7 @@ package io.github.t1willi.filters.security;
 
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.injector.JoltContainer;
-import io.github.t1willi.injector.annotation.JoltBean;
+import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.security.config.SecurityConfiguration;
 import io.github.t1willi.security.nonce.Nonce;
 import jakarta.servlet.FilterChain;
@@ -23,7 +23,7 @@ import java.util.logging.Logger;
  * JoltDispatcherServlet.
  * </p>
  */
-@JoltBean
+@Bean
 public class NonceFilter extends JoltFilter {
     private static final Logger logger = Logger.getLogger(NonceFilter.class.getName());
 

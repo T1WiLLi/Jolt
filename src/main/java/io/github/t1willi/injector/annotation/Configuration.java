@@ -14,7 +14,7 @@ import io.github.t1willi.injector.type.ConfigurationType;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface JoltConfiguration {
+public @interface Configuration {
     /**
      * The type of configuration. For example, EXCEPTION_HANDLER, SECURITY, SERVER,
      * etc.

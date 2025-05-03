@@ -9,8 +9,8 @@ import io.github.t1willi.exceptions.BeanCreationException;
 import io.github.t1willi.exceptions.BeanNotFoundException;
 import io.github.t1willi.exceptions.CircularDependencyException;
 import io.github.t1willi.exceptions.JoltDIException;
-import io.github.t1willi.injector.annotation.JoltBean;
-import io.github.t1willi.injector.annotation.JoltBeanInjection;
+import io.github.t1willi.injector.annotation.Bean;
+import io.github.t1willi.injector.annotation.Autowire;
 import lombok.Getter;
 
 /**
@@ -24,18 +24,18 @@ import lombok.Getter;
  * <p>
  * <strong>Bean Discovery and Registration:</strong><br>
  * The container scans a given base package for classes annotated with
- * {@link JoltBean}. Once discovered,
+ * {@link Bean}. Once discovered,
  * these classes are validated (ensuring they are concrete and have a public
  * no-argument constructor)
  * and then registered. Each bean is identified by a unique name derived either
  * from the {@code value}
- * attribute of the {@code JoltBean} annotation or, if empty, by a convention
+ * attribute of the {@code Bean} annotation or, if empty, by a convention
  * that lowercases the first
  * letter of the class's simple name.
  *
  * <p>
  * <strong>Dependency Injection and Lifecycle Management:</strong><br>
- * When a bean is created, its fields annotated with {@link JoltBeanInjection}
+ * When a bean is created, its fields annotated with {@link Autowire}
  * are automatically populated.
  * The container also ensures that lifecycle methods annotated with
  * {@link jakarta.annotation.PostConstruct} and
@@ -107,14 +107,14 @@ public final class JoltContainer {
 
     /**
      * Scans the specified base package to discover and register all classes
-     * annotated with {@link JoltBean}.
+     * annotated with {@link Bean}.
      *
      * <p>
      * This method converts the package name to a path, retrieves all resources for
      * that path,
      * and then recursively searches directories for class files. For each class
      * file found,
-     * the class is loaded and, if it carries the {@code JoltBean} annotation, it is
+     * the class is loaded and, if it carries the {@code Bean} annotation, it is
      * validated and registered.
      *
      * @param directory the base package to scan for bean classes; must not be
@@ -137,7 +137,8 @@ public final class JoltContainer {
      * and, for each bean
      * that is marked as non-lazy and scoped as a singleton, it triggers bean
      * creation. This ensures that
-     * these beans are ready for use and that their {@code PostConstruct} lifecycle
+     * these beans are ready for use and that their
+     * {@link jakarta.annotation.PostConstruct} lifecycle
      * methods are invoked.
      *
      * <p>
@@ -309,7 +310,7 @@ public final class JoltContainer {
     }
 
     /**
-     * Injects dependencies into fields annotated with {@link JoltBeanInjection} in
+     * Injects dependencies into fields annotated with {@link Autowire} in
      * the given object.
      * The object does not need to be a managed bean.
      *

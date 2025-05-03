@@ -5,7 +5,7 @@ import java.util.logging.Logger;
 
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.injector.JoltContainer;
-import io.github.t1willi.injector.annotation.JoltBean;
+import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.security.config.HeadersConfiguration;
 import io.github.t1willi.security.config.SecurityConfiguration;
 import io.github.t1willi.security.nonce.Nonce;
@@ -26,7 +26,7 @@ import jakarta.servlet.http.HttpServletResponse;
  * and others. If {@code httpsOnly} is enabled and the request is not secure,
  * the filter redirects to an HTTPS URL.
  */
-@JoltBean
+@Bean
 public final class SecureHeadersFilter extends JoltFilter {
     private static final Logger logger = Logger.getLogger(SecureHeadersFilter.class.getName());
 

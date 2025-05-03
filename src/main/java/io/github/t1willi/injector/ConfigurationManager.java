@@ -10,7 +10,7 @@ import java.util.logging.Logger;
 import io.github.t1willi.exceptions.JoltDIException;
 import io.github.t1willi.exceptions.handler.GlobalExceptionHandler;
 import io.github.t1willi.filters.FilterConfiguration;
-import io.github.t1willi.injector.annotation.JoltConfiguration;
+import io.github.t1willi.injector.annotation.Configuration;
 import io.github.t1willi.injector.type.ConfigurationType;
 import io.github.t1willi.security.config.SecurityConfiguration;
 import jakarta.annotation.PostConstruct;
@@ -18,7 +18,7 @@ import jakarta.annotation.PostConstruct;
 /**
  * The ConfigurationManager is responsible for registering and validating
  * configuration beans
- * annotated with {@link JoltConfiguration}. It enforces rules based on the
+ * annotated with {@link Configuration}. It enforces rules based on the
  * configuration type and
  * applies automatic validation and registering of the configurations in the
  * correct emplacement for the injector.
@@ -29,7 +29,7 @@ final class ConfigurationManager {
     private final Map<ConfigurationType, Object> configurations = new EnumMap<>(ConfigurationType.class);
 
     /**
-     * Registers a configuration class annotated with {@link JoltConfiguration}.
+     * Registers a configuration class annotated with {@link Configuration}.
      * <p>
      * If a configuration for a given type already exists:
      * <ul>
@@ -45,13 +45,13 @@ final class ConfigurationManager {
      *
      * @param configClass the configuration class to register.
      * @throws JoltDIException if the class is not annotated with
-     *                         {@code @JoltConfiguration} or if it doesn't meet the
+     *                         {@code @Configuration} or if it doesn't meet the
      *                         required rules.
      */
     public void registerConfiguration(Class<?> configClass) {
         Objects.requireNonNull(configClass, "Configuration class cannot be null");
         validateConfigurationClass(configClass);
-        ConfigurationType type = configClass.getAnnotation(JoltConfiguration.class).value();
+        ConfigurationType type = configClass.getAnnotation(Configuration.class).value();
         validateConfigurationType(configClass, type);
         Object configInstance = createConfigurationInstance(configClass);
         handleConfigurationRegistration(configClass, type, configInstance);
@@ -78,9 +78,9 @@ final class ConfigurationManager {
     }
 
     private void validateConfigurationClass(Class<?> configClass) {
-        if (!configClass.isAnnotationPresent(JoltConfiguration.class)) {
+        if (!configClass.isAnnotationPresent(Configuration.class)) {
             throw new JoltDIException("Configuration class " + configClass.getName() +
-                    " is not annotated with @JoltConfiguration");
+                    " is not annotated with @Configuration");
         }
     }
 
@@ -102,7 +102,7 @@ final class ConfigurationManager {
      */
     private void validateConfigurationType(Class<?> configClass, ConfigurationType type) {
         if (type == null) {
-            throw new JoltDIException("Configuration type must be provided in @JoltConfiguration for " +
+            throw new JoltDIException("Configuration type must be provided in @Configuration for " +
                     configClass.getName());
         }
         validateRequiredInterface(configClass, type);
@@ -194,8 +194,8 @@ final class ConfigurationManager {
     private void handleConfigurationRegistration(Class<?> configClass, ConfigurationType type, Object configInstance) {
         if (configurations.containsKey(type)) {
             Object current = configurations.get(type);
-            boolean currentIsDefault = current.getClass().getAnnotation(JoltConfiguration.class).isDefault();
-            boolean newIsDefault = configClass.getAnnotation(JoltConfiguration.class).isDefault();
+            boolean currentIsDefault = current.getClass().getAnnotation(Configuration.class).isDefault();
+            boolean newIsDefault = configClass.getAnnotation(Configuration.class).isDefault();
             handleExistingConfiguration(configClass, type, configInstance, current, currentIsDefault, newIsDefault);
         } else {
             configurations.put(type, configInstance);
@@ -233,7 +233,7 @@ final class ConfigurationManager {
         T defaultConfig = null;
         for (Object config : configurations.values()) {
             if (expectedType.isAssignableFrom(config.getClass())) {
-                boolean isDefault = config.getClass().getAnnotation(JoltConfiguration.class).isDefault();
+                boolean isDefault = config.getClass().getAnnotation(Configuration.class).isDefault();
                 if (!isDefault) {
                     return expectedType.cast(config);
                 } else {

@@ -7,7 +7,7 @@ import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.core.ControllerRegistry;
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.injector.JoltContainer;
-import io.github.t1willi.injector.annotation.JoltBean;
+import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.security.authentification.RouteRule;
 import io.github.t1willi.security.config.SecurityConfiguration;
 import jakarta.servlet.FilterChain;
@@ -17,7 +17,7 @@ import jakarta.servlet.ServletResponse;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 
-@JoltBean
+@Bean
 public class AuthenticationFilter extends JoltFilter {
     public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
             throws IOException, ServletException {

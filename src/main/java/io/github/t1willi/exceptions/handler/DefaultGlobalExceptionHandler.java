@@ -2,7 +2,7 @@ package io.github.t1willi.exceptions.handler;
 
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.http.HttpStatus;
-import io.github.t1willi.injector.annotation.JoltConfiguration;
+import io.github.t1willi.injector.annotation.Configuration;
 import io.github.t1willi.injector.type.ConfigurationType;
 import jakarta.servlet.http.HttpServletResponse;
 
@@ -15,7 +15,7 @@ import java.util.logging.Logger;
  * Extends {@link GlobalExceptionHandler} to ensure standard
  * {@link JoltHttpException} processing is applied before this handler's logic.
  */
-@JoltConfiguration(value = ConfigurationType.EXCEPTION_HANDLER, isDefault = true)
+@Configuration(value = ConfigurationType.EXCEPTION_HANDLER, isDefault = true)
 public final class DefaultGlobalExceptionHandler extends GlobalExceptionHandler {
 
     private static final Logger log = Logger.getLogger(DefaultGlobalExceptionHandler.class.getName());

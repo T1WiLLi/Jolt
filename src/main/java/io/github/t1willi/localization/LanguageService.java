@@ -2,13 +2,14 @@ package io.github.t1willi.localization;
 
 import java.util.Map;
 import java.util.logging.Logger;
-import io.github.t1willi.injector.annotation.JoltBean;
+
+import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.server.config.ConfigurationManager;
 import io.github.t1willi.template.JoltModel;
 import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 
-@JoltBean
+@Bean
 public class LanguageService {
     private static final Logger logger = Logger.getLogger(LanguageService.class.getName());
 

@@ -12,7 +12,7 @@ import java.lang.annotation.Target;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
-public @interface JoltBeanInjection {
+public @interface Autowire {
     /**
      * Specifies the name of the bean to inject. If empty, the bean is resolved by
      * type.

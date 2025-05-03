@@ -15,7 +15,7 @@ import io.github.t1willi.injector.type.InitializationMode;
  */
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
-public @interface JoltBean {
+public @interface Bean {
     /**
      * Optional bean name. If empty, the name is derived from the class name.
      * 

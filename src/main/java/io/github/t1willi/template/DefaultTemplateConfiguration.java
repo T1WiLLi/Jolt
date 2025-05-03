@@ -1,6 +1,6 @@
 package io.github.t1willi.template;
 
-import io.github.t1willi.injector.annotation.JoltConfiguration;
+import io.github.t1willi.injector.annotation.Configuration;
 import io.github.t1willi.injector.type.ConfigurationType;
 import jakarta.annotation.PostConstruct;
 
@@ -18,7 +18,7 @@ import jakarta.annotation.PostConstruct;
  * @author William Beaudin.
  * @since 2.0
  */
-@JoltConfiguration(value = ConfigurationType.TEMPLATE, isDefault = true)
+@Configuration(value = ConfigurationType.TEMPLATE, isDefault = true)
 public final class DefaultTemplateConfiguration extends TemplateConfiguration {
 
     @PostConstruct

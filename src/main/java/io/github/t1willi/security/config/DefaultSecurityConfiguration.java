@@ -1,6 +1,6 @@
 package io.github.t1willi.security.config;
 
-import io.github.t1willi.injector.annotation.JoltConfiguration;
+import io.github.t1willi.injector.annotation.Configuration;
 import io.github.t1willi.injector.type.ConfigurationType;
 import io.github.t1willi.security.policies.CacheControlPolicy;
 import io.github.t1willi.security.policies.ContentSecurityPolicy;
@@ -16,7 +16,7 @@ import jakarta.annotation.PostConstruct;
  * defaults.
  * This configuration includes CORS settings and security headers configuration.
  */
-@JoltConfiguration(value = ConfigurationType.SECURITY, isDefault = true)
+@Configuration(value = ConfigurationType.SECURITY, isDefault = true)
 public final class DefaultSecurityConfiguration extends SecurityConfiguration {
 
         /**

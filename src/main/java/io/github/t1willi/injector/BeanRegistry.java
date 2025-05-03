@@ -5,8 +5,8 @@ import io.github.t1willi.exceptions.BeanCreationException;
 import io.github.t1willi.exceptions.BeanNotFoundException;
 import io.github.t1willi.exceptions.CircularDependencyException;
 import io.github.t1willi.exceptions.JoltDIException;
-import io.github.t1willi.injector.annotation.JoltBean;
-import io.github.t1willi.injector.annotation.JoltBeanInjection;
+import io.github.t1willi.injector.annotation.Autowire;
+import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.injector.type.BeanScope;
 import io.github.t1willi.injector.type.InitializationMode;
 import jakarta.annotation.PostConstruct;
@@ -57,7 +57,7 @@ final class BeanRegistry {
      */
     public void registerBean(Class<?> beanClass) {
         Objects.requireNonNull(beanClass, "Bean class cannot be null");
-        JoltBean joltBeanAnnotation = beanClass.getAnnotation(JoltBean.class);
+        Bean joltBeanAnnotation = beanClass.getAnnotation(Bean.class);
         Controller controllerAnnotation = beanClass.getAnnotation(Controller.class);
         if (joltBeanAnnotation == null && controllerAnnotation == null) {
             throw new JoltDIException(
@@ -78,7 +78,7 @@ final class BeanRegistry {
     public void initializeEagerBeans() {
         for (Map.Entry<String, Class<?>> entry : beanDefinitions.entrySet()) {
             Class<?> beanClass = entry.getValue();
-            JoltBean annotation = beanClass.getAnnotation(JoltBean.class);
+            Bean annotation = beanClass.getAnnotation(Bean.class);
             if (annotation != null && annotation.initialization() == InitializationMode.EAGER &&
                     annotation.scope() == BeanScope.SINGLETON) {
                 logger.info("Eagerly initializing bean: " + entry.getKey());
@@ -229,10 +229,10 @@ final class BeanRegistry {
         Class<?> clazz = instance.getClass();
 
         for (Field field : clazz.getDeclaredFields()) {
-            if (field.isAnnotationPresent(JoltBeanInjection.class)) {
+            if (field.isAnnotationPresent(Autowire.class)) {
                 try {
                     field.setAccessible(true);
-                    JoltBeanInjection injection = field.getAnnotation(JoltBeanInjection.class);
+                    Autowire injection = field.getAnnotation(Autowire.class);
                     Object dependency = !injection.value().isEmpty() ? getBean(injection.value())
                             : getBean(field.getType());
 
@@ -276,7 +276,7 @@ final class BeanRegistry {
         try {
             checkForConstructor(beanClass);
             Object instance = beanClass.getDeclaredConstructor().newInstance();
-            JoltBean annotation = beanClass.getAnnotation(JoltBean.class);
+            Bean annotation = beanClass.getAnnotation(Bean.class);
             if (annotation != null && annotation.scope() == BeanScope.SINGLETON) {
                 singletonInstances.put(beanName, instance);
                 typeToInstance.put(beanClass, instance);
@@ -304,10 +304,10 @@ final class BeanRegistry {
     private void injectDependencies(Object instance) {
         Class<?> clazz = instance.getClass();
         for (Field field : clazz.getDeclaredFields()) {
-            if (field.isAnnotationPresent(JoltBeanInjection.class)) {
+            if (field.isAnnotationPresent(Autowire.class)) {
                 try {
                     field.setAccessible(true);
-                    var injection = field.getAnnotation(JoltBeanInjection.class);
+                    var injection = field.getAnnotation(Autowire.class);
                     Object dependency = !injection.value().isEmpty() ? getBean(injection.value())
                             : getBean(field.getType());
                     if (dependency == null && injection.required()) {
@@ -337,7 +337,7 @@ final class BeanRegistry {
         }
     }
 
-    private String getBeanName(Class<?> beanClass, JoltBean annotation) {
+    private String getBeanName(Class<?> beanClass, Bean annotation) {
         if (annotation != null && !annotation.value().isEmpty()) {
             return annotation.value();
         }

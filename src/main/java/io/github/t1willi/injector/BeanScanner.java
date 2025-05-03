@@ -15,8 +15,8 @@ import java.util.logging.Logger;
 import io.github.t1willi.annotations.Controller;
 import io.github.t1willi.core.BaseController;
 import io.github.t1willi.exceptions.JoltDIException;
-import io.github.t1willi.injector.annotation.JoltBean;
-import io.github.t1willi.injector.annotation.JoltConfiguration;
+import io.github.t1willi.injector.annotation.Bean;
+import io.github.t1willi.injector.annotation.Configuration;
 
 /**
  * The BeanScanner is responsible for scanning a given package for classes
@@ -68,10 +68,10 @@ final class BeanScanner {
 
     private void registerClasses(List<Class<?>> classes) {
         for (Class<?> clazz : classes) {
-            if (clazz.isAnnotationPresent(JoltConfiguration.class)) {
+            if (clazz.isAnnotationPresent(Configuration.class)) {
                 configurationManager.registerConfiguration(clazz);
             }
-            if (clazz.isAnnotationPresent(JoltBean.class) || clazz.isAnnotationPresent(Controller.class)) {
+            if (clazz.isAnnotationPresent(Bean.class) || clazz.isAnnotationPresent(Controller.class)) {
                 if (clazz.isAnnotationPresent(Controller.class)) {
                     if (!BaseController.class.isAssignableFrom(clazz)) {
                         throw new JoltDIException("Controller must implement BaseController: " + clazz.getName());

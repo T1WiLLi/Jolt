@@ -17,21 +17,21 @@ import com.cronutils.model.time.ExecutionTime;
 import com.cronutils.parser.CronParser;
 
 import io.github.t1willi.injector.JoltContainer;
-import io.github.t1willi.injector.annotation.JoltBean;
-import io.github.t1willi.injector.annotation.JoltBeanInjection;
+import io.github.t1willi.injector.annotation.Autowire;
+import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.injector.type.BeanScope;
 import io.github.t1willi.injector.type.InitializationMode;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.PreDestroy;
 
-@JoltBean(initialization = InitializationMode.EAGER, scope = BeanScope.SINGLETON)
+@Bean(initialization = InitializationMode.EAGER, scope = BeanScope.SINGLETON)
 public final class TaskScheduler {
     private static final Logger logger = Logger.getLogger(TaskScheduler.class.getName());
 
     private ScheduledExecutorService scheduler;
     private CronParser parser = new CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX));
 
-    @JoltBeanInjection
+    @Autowire
     private SchedulingConfiguration configuration;
 
     @PostConstruct

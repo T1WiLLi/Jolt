@@ -18,7 +18,7 @@ import io.github.t1willi.context.LifecycleEntry;
 import io.github.t1willi.exceptions.DuplicateRouteException;
 import io.github.t1willi.exceptions.NestedVersionedGroupException;
 import io.github.t1willi.http.HttpMethod;
-import io.github.t1willi.injector.annotation.JoltBean;
+import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.routing.Route;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.routing.RouteMatch;
@@ -45,7 +45,7 @@ import lombok.Getter;
  * @author William
  * @since 1.0
  */
-@JoltBean()
+@Bean
 public final class Router {
 
     /**

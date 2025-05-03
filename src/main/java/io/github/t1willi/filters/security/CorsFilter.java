@@ -16,7 +16,7 @@ import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.injector.JoltContainer;
-import io.github.t1willi.injector.annotation.JoltBean;
+import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.security.config.CorsConfiguration;
 import io.github.t1willi.security.config.SecurityConfiguration;
 
@@ -30,7 +30,7 @@ import io.github.t1willi.security.config.SecurityConfiguration;
  * an HTTP 405 status is thrown.
  * </p>
  */
-@JoltBean
+@Bean
 public final class CorsFilter extends JoltFilter {
 
         /**

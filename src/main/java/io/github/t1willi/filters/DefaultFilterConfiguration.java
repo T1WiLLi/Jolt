@@ -1,6 +1,6 @@
 package io.github.t1willi.filters;
 
-import io.github.t1willi.injector.annotation.JoltConfiguration;
+import io.github.t1willi.injector.annotation.Configuration;
 import io.github.t1willi.injector.type.ConfigurationType;
 import jakarta.annotation.PostConstruct;
 
@@ -17,7 +17,7 @@ import jakarta.annotation.PostConstruct;
  *
  * @since 1.0
  */
-@JoltConfiguration(value = ConfigurationType.FILTER, isDefault = true)
+@Configuration(value = ConfigurationType.FILTER, isDefault = true)
 public final class DefaultFilterConfiguration extends FilterConfiguration {
 
     @PostConstruct

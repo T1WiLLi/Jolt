@@ -6,7 +6,7 @@ import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.filters.JoltFilter;
 import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.injector.JoltContainer;
-import io.github.t1willi.injector.annotation.JoltBean;
+import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.security.config.CsrfConfiguration;
 import io.github.t1willi.security.config.SecurityConfiguration;
 import io.github.t1willi.security.csrf.CsrfHandler;
@@ -25,7 +25,7 @@ import java.util.logging.Logger;
  * A filter that enforces CSRF protection for modifying HTTP methods.
  * Skips all logic if CSRF protection is disabled in the configuration.
  */
-@JoltBean
+@Bean
 public final class CsrfFilter extends JoltFilter {
     private static final Logger logger = Logger.getLogger(CsrfFilter.class.getName());
 
