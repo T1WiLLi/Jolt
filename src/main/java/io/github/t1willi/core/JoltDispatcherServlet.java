@@ -66,8 +66,7 @@ public final class JoltDispatcherServlet extends HttpServlet {
                 new StaticResourceStep(),
                 new ParamBindingStep(),
                 new InvocationStep(),
-                new ResponseStep(),
-                new AfterStep()));
+                new ResponseStep()));
         this.exceptionHandler = JoltContainer.getInstance().getBean(GlobalExceptionHandler.class);
         this.exceptionHandler.init();
     }
