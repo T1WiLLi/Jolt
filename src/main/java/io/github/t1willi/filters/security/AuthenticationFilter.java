@@ -58,10 +58,29 @@ public class AuthenticationFilter extends JoltFilter {
     }
 
     private boolean matches(RouteRule r, String path, String method) {
-        boolean pathMatch = r.isAny() || (r.getPattern().endsWith("/**")
-                ? path.startsWith(r.getPattern().substring(0, r.getPattern().length() - 3))
-                : path.equals(r.getPattern()));
-        boolean methodMatch = r.getMethods() == null || r.getMethods().contains(method);
-        return pathMatch && methodMatch;
+        if (r.getMethods() != null && !r.getMethods().contains(method)) {
+            return false;
+        }
+        if (r.isAny()) {
+            return true;
+        }
+        String dsl = r.getPattern();
+        StringBuilder sb = new StringBuilder();
+        for (int i = 0; i < dsl.length();) {
+            if (i + 1 < dsl.length() && dsl.charAt(i) == '*' && dsl.charAt(i + 1) == '*') {
+                sb.append(".*");
+                i += 2;
+            } else if (dsl.charAt(i) == '*') {
+                sb.append("[^/]+");
+                i++;
+            } else {
+                char c = dsl.charAt(i++);
+                if ("\\.[]{}()+-^$|".indexOf(c) >= 0)
+                    sb.append('\\');
+                sb.append(c);
+            }
+        }
+        String regex = "^" + sb + "$";
+        return path.matches(regex);
     }
 }

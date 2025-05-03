@@ -2,7 +2,6 @@ package io.github.t1willi.routing;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import lombok.Getter;
@@ -104,17 +103,35 @@ public final class Route {
 
     private RoutePattern compile(String path) {
         List<String> names = new ArrayList<>();
-        Matcher matcher = Pattern.compile("\\{([a-zA-Z_][\\w]*)\\}").matcher(path);
-        StringBuffer sb = new StringBuffer();
+        StringBuilder sb = new StringBuilder();
+        int i = 0;
 
-        while (matcher.find()) {
-            String paramName = matcher.group(1);
-            names.add(paramName);
-            matcher.appendReplacement(sb, "([^/]+)");
+        while (i < path.length()) {
+            if (i + 1 < path.length() && path.charAt(i) == '*' && path.charAt(i + 1) == '*') {
+                sb.append("(.*)");
+                i += 2;
+
+            } else if (path.charAt(i) == '*') {
+                sb.append("([^/]*)");
+                i++;
+
+            } else if (path.charAt(i) == '{') {
+                int end = path.indexOf('}', i);
+                String paramName = path.substring(i + 1, end);
+                names.add(paramName);
+                sb.append("([^/]+)");
+                i = end + 1;
+
+            } else {
+                char c = path.charAt(i++);
+                if ("\\.[]{}()+-^$|".indexOf(c) != -1)
+                    sb.append('\\');
+                sb.append(c);
+            }
         }
 
-        matcher.appendTail(sb);
-        return new RoutePattern(Pattern.compile("^" + sb.toString() + "$"), names);
+        Pattern pattern = Pattern.compile("^" + sb + "$");
+        return new RoutePattern(pattern, names);
     }
 
     private String normalizePath(String path) {
