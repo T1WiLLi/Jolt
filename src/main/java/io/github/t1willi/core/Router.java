@@ -3,6 +3,7 @@ package io.github.t1willi.core;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.Deque;
 import java.util.HashMap;
 import java.util.List;
@@ -275,21 +276,47 @@ public final class Router {
     }
 
     /**
-     * Matches the HTTP method and path against registered routes
-     * using a {@link java.util.regex.Pattern}. Returns a
-     * {@link RouteMatch} if successful or {@code null} if no match is found.
+     * Matches an incoming HTTP method + path.
      *
-     * @param method      The HTTP method (e.g., {@code "GET"})
-     * @param requestPath The request path (e.g., {@code "/user/123"})
-     * @return A {@link RouteMatch} if a route is matched, otherwise {@code null}
+     * <p>
+     * It will first try exact literals, then parameterized
+     * patterns (with {@code {…}}), then wildcard fallbacks
+     * (those registered as {@code "/something/*"}).
+     *
+     * @param method      e.g. "GET"
+     * @param requestPath e.g. "/pokemon"
+     * @return a RouteMatch if one of your routes applies, or {@code null}
      */
     public RouteMatch match(String method, String requestPath) {
-        String upperMethod = method.toUpperCase(Locale.ROOT);
-        List<Route> rawRoutes = routes.getOrDefault(upperMethod, List.of());
-        for (Route route : rawRoutes) {
-            Matcher m = route.getPattern().matcher(requestPath);
-            if (m.matches()) {
-                return new RouteMatch(route, m);
+        String m = method.toUpperCase(Locale.ROOT);
+        List<Route> list = routes.getOrDefault(m, Collections.emptyList());
+
+        for (Route r : list) {
+            String p = r.getPath();
+            if (!p.contains("{") && !p.endsWith("/*") && p.equals(requestPath)) {
+                return new RouteMatch(r, null);
+            }
+        }
+
+        for (Route r : list) {
+            String p = r.getPath();
+            if (p.contains("{")) {
+                Matcher matcher = r.getPattern().matcher(requestPath);
+                if (matcher.matches()) {
+                    return new RouteMatch(r, matcher);
+                }
+            }
+        }
+
+        for (Route r : list) {
+            String p = r.getPath();
+            if (p.endsWith("/*")) {
+                String prefix = p.substring(0, p.length() - 2);
+                if (prefix.isEmpty()
+                        || requestPath.equals(prefix)
+                        || requestPath.startsWith(prefix + "/")) {
+                    return new RouteMatch(r, null);
+                }
             }
         }
         return null;
