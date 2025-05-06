@@ -5,7 +5,7 @@ import io.github.t1willi.annotations.Get;
 import io.github.t1willi.annotations.Version;
 import io.github.t1willi.core.BaseController;
 
-@Controller("api/home")
+@Controller("api/[controller]")
 @Version(2)
 public class HomeController extends BaseController {
 
