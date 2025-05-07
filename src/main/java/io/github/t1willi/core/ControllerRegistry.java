@@ -233,11 +233,15 @@ public final class ControllerRegistry {
 
     private static Object resolveParam(Parameter p, JoltContext ctx, Method m) {
         if (p.isAnnotationPresent(Path.class)) {
-            String raw = ctx.path(p.getAnnotation(Path.class).value());
+            Path pathAnn = p.getAnnotation(Path.class);
+            String paramName = pathAnn.value().isEmpty() ? p.getName() : pathAnn.value();
+            String raw = ctx.path(paramName);
             return HelpMethods.convert(raw, p.getType());
         }
         if (p.isAnnotationPresent(Query.class)) {
-            String raw = ctx.query(p.getAnnotation(Query.class).value());
+            Query queryAnn = p.getAnnotation(Query.class);
+            String paramName = queryAnn.value().isEmpty() ? p.getName() : queryAnn.value();
+            String raw = ctx.query(paramName);
             return HelpMethods.convert(raw, p.getType());
         }
         if (JoltContext.class.isAssignableFrom(p.getType())) {
@@ -260,17 +264,21 @@ public final class ControllerRegistry {
     }
 
     private static JoltContext dispatchReturn(JoltContext ctx, Object result) {
-        if (result == null)
-            return ctx;
-        if (result instanceof JoltContext jc)
+        if (result == null) {
+            return JoltDispatcherServlet.getCurrentContext();
+        }
+        if (result instanceof JoltContext jc) {
             return jc;
+        }
         if (result instanceof String s) {
-            if (s.matches(".+\\.[a-z]{2,4}"))
+            if (s.matches(".+\\.[a-z]{2,4}")) {
                 return ctx.serve(s);
+            }
             return ctx.html(s);
         }
-        if (result instanceof Template t)
+        if (result instanceof Template t) {
             return ctx.render(t.getView(), t.getModel());
+        }
         return ctx.json(result);
     }
 
