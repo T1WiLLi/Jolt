@@ -149,7 +149,7 @@ public final class ControllerRegistry {
     }
 
     private static String buildPath(String base, String raw, int version, String prefix) {
-        String path = normalize(base + raw);
+        String path = normalize(base + normalizePath(raw));
         return version > 0 ? "/" + prefix + version + path : path;
     }
 
@@ -310,4 +310,12 @@ public final class ControllerRegistry {
             r = r.substring(0, r.length() - 1);
         return r;
     }
+
+    private static String normalizePath(String path) {
+        if (!path.startsWith("/")) {
+            return "/" + path;
+        }
+        return path;
+    }
+
 }

@@ -27,7 +27,7 @@ public class HomeController extends BaseController {
         return "Hello " + name;
     }
 
-    @Get("/user/{name}")
+    @Get("user/{name}")
     public String userPath(@Path String name) {
         return "Hello " + name;
     }
