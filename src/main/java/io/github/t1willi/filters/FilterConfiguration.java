@@ -134,9 +134,9 @@ public abstract class FilterConfiguration {
      * @return {@code true} if the route is excluded, {@code false} otherwise
      */
     public boolean shouldExcludeRoute(JoltContext context) {
-        String path = context.getRequest().getPathInfo() != null
-                ? context.getRequest().getPathInfo()
-                : context.getRequest().getServletPath();
+        String path = context.rawRequest().getPathInfo() != null
+                ? context.rawRequest().getPathInfo()
+                : context.rawRequest().getServletPath();
         path = (path == null || path.isEmpty()) ? "/" : path;
 
         if (excludedRoutes.contains(path)) {

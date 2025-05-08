@@ -25,7 +25,7 @@ public class AuthenticationFilter extends JoltFilter {
         HttpServletResponse httpResponse = (HttpServletResponse) response;
 
         JoltContext ctx = buildJoltContext(httpRequest, httpResponse);
-        String path = ctx.requestPath();
+        String path = ctx.rawPath();
         String method = httpRequest.getMethod();
 
         List<RouteRule> rules = JoltContainer.getInstance().getBean(SecurityConfiguration.class).getRouteConfig()

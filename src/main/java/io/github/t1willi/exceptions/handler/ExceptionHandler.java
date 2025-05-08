@@ -25,7 +25,7 @@ public interface ExceptionHandler {
      * @param ctx The current request and response context
      */
     default void handle(Throwable t, JoltContext ctx) {
-        handle(t, ctx.getResponse());
+        handle(t, ctx.rawResponse());
     }
 
     /**

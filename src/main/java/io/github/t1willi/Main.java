@@ -23,7 +23,7 @@ public class Main extends JoltApplication {
             throw new RuntimeException("WTF BITCH");
         });
         post("/form", ctx -> {
-            Form form = ctx.buildForm();
+            Form form = ctx.form();
 
             form.field("message")
                     .required("The message is required.")
@@ -45,7 +45,7 @@ public class Main extends JoltApplication {
 
         group("/api", 1, () -> {
             group("/product", () -> {
-                get("", ctx -> ctx.text("Des produits"));
+                get("", ctx -> ctx.plain("Des produits"));
             });
             get("/user", ctx -> ctx
                     .json(Map.of("User", Map.of("name", "Wlliam Beaudin", "age", 20, "profession", "Developer"))));

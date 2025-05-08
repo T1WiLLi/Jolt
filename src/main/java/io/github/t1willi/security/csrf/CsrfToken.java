@@ -86,7 +86,7 @@ public final class CsrfToken {
      * @param config  The CSRF configuration
      */
     public static void storeInCookie(JoltContext context, String token, CsrfConfiguration config) {
-        HttpServletRequest request = context.getRequest();
+        HttpServletRequest request = context.rawRequest();
 
         context.addCookie()
                 .setName(
@@ -112,7 +112,7 @@ public final class CsrfToken {
      */
     public static String getFromCookie(JoltContext context) {
         String token = context
-                .getCookieValue(
+                .cookieValue(
                         JoltContainer.getInstance().getBean(SecurityConfiguration.class).getCsrfConfig().getTokenName())
                 .orElse(null);
         logger.fine(() -> "Retrieved CSRF token from cookie: " + (token != null ? token : "none"));

@@ -18,7 +18,7 @@ public class InvocationStep implements PipelineStep {
             Object result = context.getMatch().route().getHandler().handle(context.getContext());
             if (!context.getResponse().isCommitted() && result != null && !(result instanceof JoltContext)) {
                 if (result instanceof String str) {
-                    context.getContext().text(str);
+                    context.getContext().plain(str);
                 } else {
                     context.getContext().json(result);
                 }

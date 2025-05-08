@@ -248,7 +248,7 @@ public final class ControllerRegistry {
             return ctx;
         }
         if (Form.class.isAssignableFrom(p.getType())) {
-            return ctx.buildForm();
+            return ctx.form();
         }
         if (Template.class.isAssignableFrom(p.getType())) {
             throw new JoltDIException(
@@ -272,7 +272,7 @@ public final class ControllerRegistry {
         }
         if (result instanceof String s) {
             if (s.matches(".+\\.[a-z]{2,4}")) {
-                return ctx.serve(s);
+                return ctx.serveStatic(s);
             }
             return ctx.html(s);
         }

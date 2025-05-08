@@ -27,6 +27,6 @@ public class ProcessingContext {
         this.context = new JoltContext(req, res, null, List.of());
         this.startTime = startTime;
         this.method = req.getMethod();
-        this.path = this.context.requestPath();
+        this.path = this.context.rawPath();
     }
 }

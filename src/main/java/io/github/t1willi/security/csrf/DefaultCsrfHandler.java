@@ -49,7 +49,7 @@ public final class DefaultCsrfHandler implements CsrfHandler {
             return;
         }
 
-        String path = context.requestPath();
+        String path = context.rawPath();
         if (config.getIgnoreUrlPatterns().stream().anyMatch(path::startsWith)) {
             logger.fine(() -> "Path " + path + " is ignored for CSRF validation");
             return;
@@ -71,7 +71,7 @@ public final class DefaultCsrfHandler implements CsrfHandler {
         String expectedToken = storedToken;
         logger.fine(() -> "Expected CSRF token: " + expectedToken);
 
-        String requestToken = context.getHeader(CSRF_HEADER);
+        String requestToken = context.header(CSRF_HEADER);
         if (requestToken == null) {
             requestToken = context.query(config.getTokenName());
         }

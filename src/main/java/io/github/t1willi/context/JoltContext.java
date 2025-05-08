@@ -100,7 +100,7 @@ public final class JoltContext {
      * @return
      *         The raw servlet request.
      */
-    public HttpServletRequest getRequest() {
+    public HttpServletRequest rawRequest() {
         return requestContext.getRequest();
     }
 
@@ -122,7 +122,7 @@ public final class JoltContext {
      * @return
      *         The normalized request path, never empty.
      */
-    public String requestPath() {
+    public String rawPath() {
         return requestContext.getPath();
     }
 
@@ -146,7 +146,7 @@ public final class JoltContext {
      * @return The client's user agent.
      */
     public String userAgent() {
-        return getHeader("User-Agent");
+        return header("User-Agent");
     }
 
     /**
@@ -291,7 +291,7 @@ public final class JoltContext {
      * 
      * @return List<{@link JoltFile}> of JoltFile objects.
      */
-    public List<JoltFile> getFiles() {
+    public List<JoltFile> files() {
         return requestContext.getFiles();
     }
 
@@ -303,7 +303,7 @@ public final class JoltContext {
      * @return
      *         The header value, or {@code null} if it does not exist.
      */
-    public String getHeader(String n) {
+    public String header(String n) {
         return requestContext.getHeader(n);
     }
 
@@ -317,7 +317,7 @@ public final class JoltContext {
      * @return
      *         The raw servlet response.
      */
-    public HttpServletResponse getResponse() {
+    public HttpServletResponse rawResponse() {
         return responseContext.getResponse();
     }
 
@@ -370,7 +370,7 @@ public final class JoltContext {
      * @return
      *         This {@code JoltContext}, for fluent chaining.
      */
-    public JoltContext setHeader(String name, String value) {
+    public JoltContext header(String name, String value) {
         if (committed) {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot set header after response has been committed");
@@ -423,7 +423,7 @@ public final class JoltContext {
      * @throws JoltHttpException
      *                           If an I/O error occurs while writing.
      */
-    public JoltContext text(String data) {
+    public JoltContext plain(String data) {
         if (committed) {
             throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
                     "Cannot write text after response has been committed");
@@ -488,6 +488,16 @@ public final class JoltContext {
         return this;
     }
 
+    /**
+     * Write the given data directly to the underlying response object without any
+     * prior check or type-conversion.
+     * <p>
+     * 
+     * You have to manually set the response content-type and headers as needed.
+     * 
+     * @param data the data to write to the response
+     * @return this {@code JoltContext} for fluent chaining.
+     */
     public JoltContext write(Object data) {
         try {
             responseContext.write(data);
@@ -509,7 +519,7 @@ public final class JoltContext {
      *                 "image.png")
      * @return this {@code JoltContext} for fluent chaining.
      */
-    public JoltContext serve(String resource) {
+    public JoltContext serveStatic(String resource) {
         responseContext.serve(resource);
         return this;
     }
@@ -653,7 +663,7 @@ public final class JoltContext {
      * @return
      *         The matching {@link Cookie}, or {@code null} if not found.
      */
-    public Cookie getCookie(String name) {
+    public Cookie cookie(String name) {
         return requestContext.getCookie(name);
     }
 
@@ -663,9 +673,9 @@ public final class JoltContext {
      * @param name The cookie name to look up.
      * @return The value of the cookie, or an empty Optional if not found.
      */
-    public Optional<String> getCookieValue(String name) {
-        return getCookie(name) != null && getCookie(name).getValue() != null
-                ? Optional.of(getCookie(name).getValue())
+    public Optional<String> cookieValue(String name) {
+        return cookie(name) != null && cookie(name).getValue() != null
+                ? Optional.of(cookie(name).getValue())
                 : Optional.empty();
     }
 
@@ -677,8 +687,8 @@ public final class JoltContext {
      * @param onFound    The action to perform if the cookie is found.
      * @param onNotFound The action to perform if the cookie is not found.
      */
-    public void getCookieValue(String name, Consumer<String> onFound, Runnable onNotFound) {
-        Cookie cookie = getCookie(name);
+    public void cookieValue(String name, Consumer<String> onFound, Runnable onNotFound) {
+        Cookie cookie = cookie(name);
         if (cookie != null && cookie.getValue() != null) {
             onFound.accept(cookie.getValue());
         } else {
@@ -745,7 +755,7 @@ public final class JoltContext {
      * @return A new {@link Form} instance populated with all available input data.
      * @throws JoltBadRequestException If JSON parsing fails.
      */
-    public Form buildForm(String... excludes) {
+    public Form form(String... excludes) {
         Map<String, String> formData = new HashMap<>();
         addQueryParameters(formData, excludes);
         addJsonBodyParameters(formData, excludes);

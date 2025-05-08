@@ -257,7 +257,7 @@ public final class Session {
                 .map(Boolean::valueOf)
                 .orElse(false);
         if (!was && authenticated) {
-            js.changeSessionId(getCtx().getRequest());
+            js.changeSessionId(getCtx().rawRequest());
         }
         js.setAttribute(KEY_IS_AUTHENTICATED, authenticated);
     }
@@ -278,7 +278,7 @@ public final class Session {
      * Invalidates the current session (logout).
      */
     public static void destroy() {
-        HttpSession s = getCtx().getRequest().getSession(false);
+        HttpSession s = getCtx().rawRequest().getSession(false);
         if (s != null)
             s.invalidate();
     }
@@ -289,7 +289,7 @@ public final class Session {
      */
     public static void invalidate() {
         JoltContext ctx = getCtx();
-        HttpServletRequest req = ctx.getRequest();
+        HttpServletRequest req = ctx.rawRequest();
         HttpSession old = req.getSession(false);
         if (old != null)
             old.invalidate();
@@ -314,7 +314,7 @@ public final class Session {
     private static JoltSession ensure(boolean create) {
         loadLifetime();
         JoltContext ctx = getCtx();
-        HttpSession raw = ctx.getRequest().getSession(create);
+        HttpSession raw = ctx.rawRequest().getSession(create);
         if (raw == null)
             return null;
 

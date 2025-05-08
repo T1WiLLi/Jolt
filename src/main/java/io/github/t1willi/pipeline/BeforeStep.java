@@ -17,7 +17,7 @@ public class BeforeStep implements PipelineStep {
     @Override
     public boolean execute(ProcessingContext context) throws IOException, ServletException {
         for (LifecycleEntry entry : router.getBeforeHandlers()) {
-            if (entry.matches(context.getContext().requestPath())) {
+            if (entry.matches(context.getContext().rawPath())) {
                 entry.execute(context.getContext());
             }
         }
