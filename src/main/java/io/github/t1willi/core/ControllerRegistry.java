@@ -1,5 +1,6 @@
 package io.github.t1willi.core;
 
+import io.github.t1willi.annotations.Body;
 import io.github.t1willi.annotations.Controller;
 import io.github.t1willi.annotations.Get;
 import io.github.t1willi.annotations.Mapping;
@@ -8,6 +9,7 @@ import io.github.t1willi.annotations.Put;
 import io.github.t1willi.annotations.Delete;
 import io.github.t1willi.annotations.Path;
 import io.github.t1willi.annotations.Query;
+import io.github.t1willi.annotations.ToForm;
 import io.github.t1willi.annotations.Version;
 import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.exceptions.JoltDIException;
@@ -244,23 +246,22 @@ public final class ControllerRegistry {
             String raw = ctx.query(paramName);
             return HelpMethods.convert(raw, p.getType());
         }
+        if (p.isAnnotationPresent(Body.class)) {
+            return ctx.body(p.getType());
+        }
+        if (p.isAnnotationPresent(ToForm.class)) {
+            if (p.getType() == Form.class) {
+                return ctx.form();
+            } else {
+                throw new JoltDIException("Cannot convert to form for type: " + p.getType());
+            }
+        }
         if (JoltContext.class.isAssignableFrom(p.getType())) {
             return ctx;
         }
-        if (Form.class.isAssignableFrom(p.getType())) {
-            return ctx.form();
-        }
-        if (Template.class.isAssignableFrom(p.getType())) {
-            throw new JoltDIException(
-                    "Template cannot be used as parameter type in controller method, for method: " + m.getName()
-                            + "(...)");
-        }
-        try {
-            return ctx.body(p.getType());
-        } catch (Exception e) {
-            throw new JoltDIException(
-                    "Unable to bind @Body to " + p.getType().getSimpleName() + " for method: " + m.getName(), e);
-        }
+
+        throw new JoltDIException("Cannot resolve parameter: " + p.getName()
+                + ". Must be annotated with either @Path, @Query, @Body, @ToForm");
     }
 
     private static JoltContext dispatchReturn(JoltContext ctx, Object result) {

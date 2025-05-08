@@ -3,6 +3,10 @@ package io.github.t1willi.form;
 import java.util.List;
 import java.util.Map;
 
+import com.fasterxml.jackson.core.type.TypeReference;
+
+import io.github.t1willi.template.JoltModel;
+
 public interface Form {
     Field field(String name);
 
@@ -13,4 +17,12 @@ public interface Form {
     Map<String, List<String>> allErrors();
 
     Form setValue(String name, String val);
+
+    <T> T buildEntity(TypeReference<T> type, String... ignoreFields);
+
+    <T> T buildEntity(Class<T> type, String... ignoreFields);
+
+    <T> T updateEntity(T entity, String... ignoreFields);
+
+    JoltModel buildModel(String... ignoreFields);
 }
