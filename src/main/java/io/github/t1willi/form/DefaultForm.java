@@ -42,9 +42,11 @@ public final class DefaultForm implements Form {
         return fields.computeIfAbsent(name, n -> new DefaultField(n, this));
     }
 
-    void addError(String field, String msg) {
-        all.computeIfAbsent(field, k -> new ArrayList<>()).add(msg);
-        first.putIfAbsent(field, msg);
+    @Override
+    public Form addError(String field, String errorMessage) {
+        all.computeIfAbsent(field, k -> new ArrayList<>()).add(errorMessage);
+        first.putIfAbsent(field, errorMessage);
+        return this;
     }
 
     @Override

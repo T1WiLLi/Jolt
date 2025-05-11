@@ -13,6 +13,8 @@ public interface Form {
 
     boolean validate();
 
+    Form addError(String field, String errorMessage);
+
     Map<String, String> errors();
 
     Map<String, List<String>> allErrors();
