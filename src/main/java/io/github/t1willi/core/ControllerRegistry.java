@@ -47,16 +47,18 @@ public final class ControllerRegistry {
     }
 
     public static void registerControllers() {
-        List<BaseController> controllers = Optional.ofNullable(
-                JoltContainer.getInstance().getBeans(BaseController.class))
-                .orElse(List.of()).stream()
-                .filter(bean -> bean.getClass().isAnnotationPresent(Controller.class))
-                .toList();
-
-        if (controllers.isEmpty()) {
+        List<BaseController> controllers;
+        try {
+            controllers = Optional.ofNullable(
+                    JoltContainer.getInstance().getBeans(BaseController.class))
+                    .orElse(List.of()).stream()
+                    .filter(bean -> bean.getClass().isAnnotationPresent(Controller.class))
+                    .toList();
+        } catch (Exception e) {
             log.warning("No @Controller beans found.");
             return;
         }
+
         for (BaseController controller : controllers) {
             registerController(controller);
         }

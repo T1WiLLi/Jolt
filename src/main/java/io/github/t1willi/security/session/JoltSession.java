@@ -2,14 +2,17 @@ package io.github.t1willi.security.session;
 
 import io.github.t1willi.security.cryptography.Cryptography;
 import io.github.t1willi.server.config.ConfigurationManager;
-
+import io.github.t1willi.utils.JacksonUtil;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
 
+import java.lang.reflect.Type;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
+
+import com.fasterxml.jackson.databind.JavaType;
 
 /**
  * Wraps a standard {@link HttpSession} to provide:
@@ -57,15 +60,26 @@ public final class JoltSession {
 
     /**
      * Stores an attribute under {@code key}. If encryption is enabled and
-     * {@code value} is a String (and not in NO_ENCRYPT), it is encrypted first.
+     * the attribute is eligible for encryption, it is serialized and encrypted
+     * first.
      *
      * @param key   the attribute name
      * @param value the attribute value
      */
     public void setAttribute(String key, Object value) {
+        if (value == null) {
+            session.setAttribute(key, null);
+            return;
+        }
+
         Object toStore = value;
-        if (ENCRYPT && value instanceof String str && !NO_ENCRYPT.contains(key)) {
-            toStore = Cryptography.encrypt(str);
+        if (ENCRYPT && !NO_ENCRYPT.contains(key)) {
+            try {
+                String jsonValue = JacksonUtil.getObjectMapper().writeValueAsString(value);
+                toStore = Cryptography.encrypt(jsonValue);
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to serialize or encrypt attribute: " + key, e);
+            }
         }
         session.setAttribute(key, toStore);
     }
@@ -74,17 +88,51 @@ public final class JoltSession {
      * Retrieves the attribute under {@code key}, decrypted if needed.
      *
      * @param key the attribute name
-     * @return an Optional containing the stored String, or empty
+     * @return an Optional containing the stored value as a String, or empty
      */
     public Optional<String> getAttribute(String key) {
         Object raw = session.getAttribute(key);
-        if (raw == null)
+        if (raw == null) {
             return Optional.empty();
+        }
 
         if (ENCRYPT && raw instanceof String enc && !NO_ENCRYPT.contains(key)) {
-            return Optional.of(Cryptography.decrypt(enc));
+            try {
+                return Optional.of(Cryptography.decrypt(enc));
+            } catch (Exception e) {
+                throw new RuntimeException("Failed to decrypt attribute: " + key, e);
+            }
         }
         return Optional.of(String.valueOf(raw));
+    }
+
+    /**
+     * Retrieves the attribute under {@code key} as the specified type,
+     * decrypted and deserialized if needed.
+     *
+     * @param <T>  the type of the attribute
+     * @param key  the attribute name
+     * @param type the Type from java.lang.reflect representing the type to
+     *             deserialize to
+     * @return an Optional containing the deserialized object, or empty
+     */
+    public <T> Optional<T> getAttribute(String key, Type type) {
+        Object raw = session.getAttribute(key);
+        if (raw == null) {
+            return Optional.empty();
+        }
+
+        try {
+            if (ENCRYPT && raw instanceof String enc && !NO_ENCRYPT.contains(key)) {
+                String decrypted = Cryptography.decrypt(enc);
+                JavaType javaType = JacksonUtil.getObjectMapper().constructType(type);
+                return Optional.of(JacksonUtil.getObjectMapper().readValue(decrypted, javaType));
+            }
+            JavaType javaType = JacksonUtil.getObjectMapper().constructType(type);
+            return Optional.of(JacksonUtil.getObjectMapper().convertValue(raw, javaType));
+        } catch (Exception e) {
+            throw new RuntimeException("Failed to deserialize attribute: " + key, e);
+        }
     }
 
     /**
