@@ -7,7 +7,6 @@ import com.fasterxml.jackson.core.type.TypeReference;
 
 import io.github.t1willi.template.JoltModel;
 
-//TODO: Add funmction to add error to the form. :)
 public interface Form {
     Field field(String name);
 

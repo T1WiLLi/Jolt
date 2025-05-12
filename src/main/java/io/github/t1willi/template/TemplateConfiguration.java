@@ -9,7 +9,7 @@ import freemarker.core.XHTMLOutputFormat;
 import freemarker.template.Configuration;
 import freemarker.template.TemplateExceptionHandler;
 import io.github.t1willi.exceptions.TemplatingException;
-import io.github.t1willi.security.nonce.NonceDirective;
+import io.github.t1willi.template.engines.NonceDirective;
 import lombok.Getter;
 
 /**
