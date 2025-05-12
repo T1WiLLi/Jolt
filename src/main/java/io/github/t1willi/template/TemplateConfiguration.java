@@ -1,25 +1,17 @@
 package io.github.t1willi.template;
 
-import java.io.File;
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.Map;
 
-import freemarker.core.XHTMLOutputFormat;
-import freemarker.template.Configuration;
-import freemarker.template.TemplateExceptionHandler;
-import io.github.t1willi.exceptions.TemplatingException;
-import io.github.t1willi.template.engines.NonceDirective;
+import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 
 /**
- * Defines an abstract configuration mechanism for FreeMarker templates.
- * Provides capabilities to configure the FreeMarker engine and template loader.
- * ie: loading paths, caching settings, etc.
+ * Defines the configuration mechanism for template engines in the Jolt
+ * framework.
  * <p>
- * 
- * Subclasses should implement {@link #configure()} to perform the
- * configuration.
+ * This class allows configuring template engines and provides access
+ * to the template engine registry.
  * 
  * @author William Beaudin.
  * @since 2.0
@@ -27,30 +19,46 @@ import lombok.Getter;
 public abstract class TemplateConfiguration {
 
     /**
-     * The underlying FreeMarker configuration.
+     * The configuration for template engines.
      */
     @Getter
-    protected final Configuration configuration;
+    protected final TemplateEngineConfig engineConfig;
 
     /**
-     * Map of custom Freemarker functions/methods to be added to templates.
+     * The registry for template engines.
+     */
+    @Getter
+    protected final TemplateEngineRegistry engineRegistry;
+
+    /**
+     * Map of custom functions/methods to be added to templates.
      */
     protected final Map<String, Object> globalFunctions = new HashMap<>();
 
+    /**
+     * Creates a new template configuration.
+     */
     public TemplateConfiguration() {
-        this.configuration = new Configuration(Configuration.VERSION_2_3_32);
-        this.configuration.setDefaultEncoding("UTF-8");
-        this.configuration.setTemplateExceptionHandler(TemplateExceptionHandler.RETHROW_HANDLER);
-        this.configuration.setIncompatibleImprovements(Configuration.VERSION_2_3_32);
-        this.configuration.setOutputFormat(XHTMLOutputFormat.INSTANCE);
-        this.configuration.setLogTemplateExceptions(true);
-        this.configuration.setWrapUncheckedExceptions(true);
-        this.configuration.setSharedVariable("nonce", new NonceDirective());
-        this.configure();
+        this.engineConfig = new TemplateEngineConfig();
+        this.engineRegistry = new TemplateEngineRegistry();
     }
 
     /**
-     * Performs any necessary Freemarker configuration steps.
+     * Initializes the template engines after configuration.
+     */
+    @PostConstruct
+    public void postConstruct() {
+        // Add global functions to the engine config
+        for (Map.Entry<String, Object> entry : globalFunctions.entrySet()) {
+            engineConfig.addGlobalVariable(entry.getKey(), entry.getValue());
+        }
+
+        // Initialize all engines with the config
+        engineRegistry.initializeAll(engineConfig);
+    }
+
+    /**
+     * Performs any necessary template configuration steps.
      * <p>
      * Intended to be overridden by subclasses providing
      * additional setup logic.
@@ -60,29 +68,11 @@ public abstract class TemplateConfiguration {
     /**
      * Sets the directory for template loading.
      *
-     * @param directory The directory containing templates
-     * @return This configuration instance for method chaining
-     * @throws IOException If the directory cannot be accessed
-     */
-    public TemplateConfiguration setTemplateDirectory(String directory) throws IOException {
-        try {
-            configuration.setDirectoryForTemplateLoading(new File(directory));
-        } catch (IOException e) {
-            throw new TemplatingException("Failed to set template directory", e);
-        }
-        return this;
-    }
-
-    /**
-     * Sets the class loader for template loading.
-     * Useful for loading templates from classpath resources.
-     *
-     * @param prefix The classpath prefix (e.g., "/templates")
-     * @param clazz  The class whose class loader to use
+     * @param path The classpath prefix (e.g., "/templates")
      * @return This configuration instance for method chaining
      */
-    public TemplateConfiguration setTemplateClasspath(String prefix) {
-        configuration.setClassLoaderForTemplateLoading(this.getClass().getClassLoader(), prefix);
+    public TemplateConfiguration setTemplateClasspath(String path) {
+        engineConfig.setTemplatePath(path);
         return this;
     }
 
@@ -93,7 +83,18 @@ public abstract class TemplateConfiguration {
      * @return This configuration instance for method chaining
      */
     public TemplateConfiguration setCaching(boolean enabled) {
-        configuration.setTemplateUpdateDelayMilliseconds(enabled ? 3600000 : 0);
+        engineConfig.setCachingEnabled(enabled);
+        return this;
+    }
+
+    /**
+     * Sets the default encoding for templates.
+     *
+     * @param encoding The encoding to use
+     * @return This configuration instance for method chaining
+     */
+    public TemplateConfiguration setDefaultEncoding(String encoding) {
+        engineConfig.setDefaultEncoding(encoding);
         return this;
     }
 
@@ -106,6 +107,7 @@ public abstract class TemplateConfiguration {
      */
     public TemplateConfiguration addGlobalFunction(String name, Object impl) {
         globalFunctions.put(name, impl);
+        engineConfig.addGlobalVariable(name, impl);
         return this;
     }
 
@@ -116,6 +118,47 @@ public abstract class TemplateConfiguration {
      */
     public Map<String, Object> getGlobalFunctions() {
         return new HashMap<>(globalFunctions);
+    }
+
+    /**
+     * Sets the default template engine to use.
+     *
+     * @param engineName The name of the engine to use as default
+     * @return This configuration instance for method chaining
+     */
+    public TemplateConfiguration setDefaultEngine(String engineName) {
+        engineRegistry.setDefaultEngine(engineName);
+        return this;
+    }
+
+    /**
+     * Registers a custom template engine.
+     *
+     * @param engine The template engine to register
+     * @return This configuration instance for method chaining
+     */
+    public TemplateConfiguration registerEngine(TemplateEngine engine) {
+        engineRegistry.register(engine);
+        return this;
+    }
+
+    /**
+     * Gets the default template engine.
+     *
+     * @return The default template engine
+     */
+    public TemplateEngine getDefaultEngine() {
+        return engineRegistry.getDefaultEngine();
+    }
+
+    /**
+     * Gets a template engine by name.
+     *
+     * @param engineName The name of the engine to get
+     * @return The template engine
+     */
+    public TemplateEngine getEngine(String engineName) {
+        return engineRegistry.getEngine(engineName);
     }
 
     /**

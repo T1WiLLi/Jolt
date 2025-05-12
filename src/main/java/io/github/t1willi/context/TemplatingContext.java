@@ -18,15 +18,20 @@ import io.github.t1willi.security.config.SecurityConfiguration;
 import io.github.t1willi.security.csrf.CsrfToken;
 import io.github.t1willi.template.JoltModel;
 import io.github.t1willi.template.TemplateConfiguration;
+import io.github.t1willi.template.TemplateEngine;
 
 final class TemplatingContext {
     private static final Logger logger = Logger.getLogger(TemplatingContext.class.getName());
     private static final Pattern FORM_PATTERN = Pattern.compile("<form\\b[^>]*>", Pattern.CASE_INSENSITIVE);
 
-    private final Configuration configuration;
+    private final TemplateEngine templateEngine;
+    private final String defaultEngineName;
 
     public TemplatingContext() {
-        this.configuration = JoltContainer.getInstance().getBean(TemplateConfiguration.class).getConfiguration();
+        TemplateConfiguration config = JoltContainer.getInstance().getBean(TemplateConfiguration.class);
+        this.templateEngine = config.getDefaultEngine();
+        this.defaultEngineName = templateEngine.getName();
+        logger.info("Using template engine: " + defaultEngineName);
     }
 
     public void render(ResponseContext response, String templatePath, JoltModel model) {
