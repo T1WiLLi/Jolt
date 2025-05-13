@@ -28,7 +28,9 @@ public final class DefaultGlobalExceptionHandler extends GlobalExceptionHandler 
         try {
             String message = t.getMessage() != null && !t.getMessage().isBlank() ? t.getMessage()
                     : HttpStatus.fromCode(res.getStatus()).reason();
-            res.sendError(res.getStatus(), message);
+            if (!res.isCommitted()) {
+                res.sendError(res.getStatus(), message);
+            }
         } catch (Exception ex) {
             log.severe("Failed to write error message: " + ex.getMessage());
         }
