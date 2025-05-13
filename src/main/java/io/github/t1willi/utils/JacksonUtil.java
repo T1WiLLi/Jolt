@@ -11,6 +11,9 @@ import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import com.fasterxml.jackson.datatype.jsr310.deser.LocalDateTimeDeserializer;
 import com.fasterxml.jackson.datatype.jsr310.ser.LocalDateTimeSerializer;
 
+import io.github.t1willi.mapper.BeanDtoMapper;
+import io.github.t1willi.mapper.MappingModule;
+
 public final class JacksonUtil {
 
     private static final ObjectMapper OBJECT_MAPPER;
@@ -24,6 +27,7 @@ public final class JacksonUtil {
         OBJECT_MAPPER = new ObjectMapper()
                 .registerModule(new Jdk8Module())
                 .registerModule(javaTimeModule)
+                .registerModule(new MappingModule(new BeanDtoMapper()))
                 .configure(SerializationFeature.WRITE_DATES_AS_TIMESTAMPS, false)
                 .configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false);
     }

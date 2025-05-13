@@ -3,6 +3,7 @@ package io.github.t1willi;
 import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import io.github.t1willi.core.JoltApplication;
@@ -22,6 +23,19 @@ public class Main extends JoltApplication {
         get("/thymeleaf", ctx -> {
             return ctx.render("thymeleaf", createTestModel());
         });
+
+        get("/json", ctx -> {
+            List<User> users = createList();
+            return ctx.json(users);
+        });
+    }
+
+    private static List<User> createList() {
+        return Arrays.asList(
+                new User("Alice", "alice@example.com", "password123"),
+                new User("Jordan", "jordan@gmail.com", "password123"),
+                new User("Bob", "bob@example.com", "password123"),
+                new User("Charlie", "charlie@example.com", "password123"));
     }
 
     private static JoltModel createTestModel() {
