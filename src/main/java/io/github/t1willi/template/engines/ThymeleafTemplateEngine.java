@@ -32,13 +32,13 @@ import io.github.t1willi.template.TemplateEngineConfig;
  * @author William Beaudin
  * @since 2.1
  */
-// TODO: Add support for global variables and functions like freemarker has.
 public class ThymeleafTemplateEngine implements io.github.t1willi.template.TemplateEngine {
 
     private static final Logger LOGGER = Logger.getLogger(ThymeleafTemplateEngine.class.getName());
     private static final String ENGINE_NAME = "Thymeleaf";
     private static final String FILE_EXTENSION = ".html";
 
+    private TemplateEngineConfig config;
     private TemplateEngine templateEngine;
     private boolean initialized = false;
 
@@ -60,6 +60,7 @@ public class ThymeleafTemplateEngine implements io.github.t1willi.template.Templ
 
     @Override
     public void initialize(TemplateEngineConfig config) {
+        this.config = config;
         ClassLoaderTemplateResolver templateResolver = new ClassLoaderTemplateResolver();
         templateResolver.setTemplateMode(TemplateMode.HTML);
         templateResolver.setPrefix(config.getTemplatePath() + "/");
@@ -77,6 +78,12 @@ public class ThymeleafTemplateEngine implements io.github.t1willi.template.Templ
 
     private IContext createContext(JoltModel model) {
         Context context = new Context();
+
+        Map<String, Object> globalVars = config.getGlobalVariables();
+        for (Map.Entry<String, Object> entry : globalVars.entrySet()) {
+            context.setVariable(entry.getKey(), entry.getValue());
+        }
+
         for (Map.Entry<String, Object> entry : model.asMap().entrySet()) {
             context.setVariable(entry.getKey(), entry.getValue());
         }
