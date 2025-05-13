@@ -17,7 +17,6 @@ import freemarker.template.TemplateMethodModelEx;
 import freemarker.template.TemplateModelException;
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.http.HttpStatus;
-import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.security.nonce.Nonce;
 import io.github.t1willi.template.JoltModel;
 import io.github.t1willi.template.TemplateEngine;
@@ -29,7 +28,6 @@ import io.github.t1willi.template.TemplateEngineConfig;
  * @author William Beaudin
  * @since 2.6.6
  */
-@Bean
 public class FreemarkerTemplateEngine implements TemplateEngine {
 
     private static final Logger LOGGER = Logger.getLogger(FreemarkerTemplateEngine.class.getName());

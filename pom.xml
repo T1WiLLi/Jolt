@@ -6,7 +6,7 @@
 
     <groupId>io.github.t1willi</groupId>
     <artifactId>jolt</artifactId>
-    <version>2.6.7</version>
+    <version>2.6.8</version>
     <packaging>jar</packaging>
 
     <name>Jolt</name>
@@ -109,7 +109,6 @@
             <groupId>org.thymeleaf</groupId>
             <artifactId>thymeleaf</artifactId>
             <version>3.1.1.RELEASE</version>
-            <scope>provided</scope>
         </dependency>
 
         <!-- Lombok -->
