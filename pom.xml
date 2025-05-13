@@ -98,7 +98,7 @@
             <version>2.2.0</version>
         </dependency>
 
-        <!-- Freemarker Template Engine -->
+        <!-- Freemarker Template Engine (Default Jolt Template Engine) -->
         <dependency>
             <groupId>org.freemarker</groupId>
             <artifactId>freemarker</artifactId>
