@@ -32,6 +32,7 @@ import io.github.t1willi.template.TemplateEngineConfig;
  * @author William Beaudin
  * @since 2.1
  */
+// TODO: Add support for global variables and functions like freemarker has.
 public class ThymeleafTemplateEngine implements io.github.t1willi.template.TemplateEngine {
 
     private static final Logger LOGGER = Logger.getLogger(ThymeleafTemplateEngine.class.getName());
@@ -79,7 +80,6 @@ public class ThymeleafTemplateEngine implements io.github.t1willi.template.Templ
         for (Map.Entry<String, Object> entry : model.asMap().entrySet()) {
             context.setVariable(entry.getKey(), entry.getValue());
         }
-
         return context;
     }
 

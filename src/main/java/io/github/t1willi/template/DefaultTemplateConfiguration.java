@@ -2,6 +2,8 @@ package io.github.t1willi.template;
 
 import io.github.t1willi.injector.annotation.Configuration;
 import io.github.t1willi.injector.type.ConfigurationType;
+import io.github.t1willi.template.engines.FreemarkerTemplateEngine;
+import jakarta.annotation.PostConstruct;
 
 /**
  * Provides the default template configuration for the Jolt framework.
@@ -15,23 +17,28 @@ import io.github.t1willi.injector.type.ConfigurationType;
  * overridden in custom implementations to provide additional logic.
  *
  * @author William Beaudin.
- * @since 2.0
+ * @since 3.0
  */
 @Configuration(value = ConfigurationType.TEMPLATE, isDefault = true)
 public final class DefaultTemplateConfiguration extends TemplateConfiguration {
+
+    @PostConstruct
+    public void init() {
+
+    }
 
     /**
      * Performs template configuration steps for the default setup.
      * <p>
      * The default implementation sets up templates to be loaded from
      * the "templates" directory in the resources folder, enables caching,
-     * and adds the standard formatting functions.
+     * and adds the standard formatting functions. It also sets FreeMarker
+     * as the default template engine.
      */
     @Override
     public void configure() {
         setTemplateClasspath("/templates");
         setCaching(true);
-        addGlobalFunction("format", new TemplateFormatters());
-        // Use FreeMarker as the default engine (already set in registry)
+        setEngine(new FreemarkerTemplateEngine());
     }
 }

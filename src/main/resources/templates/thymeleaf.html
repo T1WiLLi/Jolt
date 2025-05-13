@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+
+<head>
+    <title th:text="${title}"></title>
+    <style>
+        body {
+            font-family: 'Arial', sans-serif;
+            background-color: #f9f9f9;
+            color: #333;
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 850px;
+            background: white;
+            padding: 25px;
+            border-radius: 10px;
+            box-shadow: 0px 4px 10px rgba(0, 0, 0, 0.2);
+        }
+
+        h1 {
+            color: #009688;
+        }
+
+        ul {
+            padding: 0;
+        }
+
+        li {
+            list-style: none;
+            background: #009688;
+            color: white;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 5px;
+        }
+
+        .info-section {
+            margin-top: 20px;
+            padding: 15px;
+            background: #eeeeee;
+            border-radius: 6px;
+        }
+
+        footer {
+            margin-top: 25px;
+            font-size: 0.9em;
+            color: #666;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1 th:text="${title}"></h1>
+        <p th:text="${message}"></p>
+        <p><strong>User:</strong> <span th:text="${user.name}"></span></p>
+
+        <h2>Items List:</h2>
+        <ul>
+            <li th:each="item : ${items}" th:text="${item}"></li>
+        </ul>
+
+        <div class="info-section" th:if="${showSection}">
+            <p><strong>Date:</strong> <span th:text="${#dates.format(date, 'EEEE, MMMM d, yyyy')}"></span></p>
+            <p><strong>Formatted Number:</strong> <span th:text="${#numbers.formatDecimal(number, 1, 2)}"></span></p>
+        </div>
+
+        <footer>
+            <p th:text="${copyright}"></p>
+        </footer>
+    </div>
+</body>
+
+</html>

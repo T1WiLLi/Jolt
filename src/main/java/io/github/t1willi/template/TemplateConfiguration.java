@@ -2,21 +2,22 @@ package io.github.t1willi.template;
 
 import java.util.HashMap;
 import java.util.Map;
+import java.util.logging.Logger;
 
-import jakarta.annotation.PostConstruct;
 import lombok.Getter;
 
 /**
  * Defines the configuration mechanism for template engines in the Jolt
  * framework.
  * <p>
- * This class allows configuring template engines and provides access
- * to the template engine registry.
+ * This class allows configuring a single template engine instead of multiple
+ * engines.
  * 
  * @author William Beaudin.
- * @since 2.0
+ * @since 3.0
  */
 public abstract class TemplateConfiguration {
+    private static final Logger LOGGER = Logger.getLogger(TemplateConfiguration.class.getName());
 
     /**
      * The configuration for template engines.
@@ -25,10 +26,9 @@ public abstract class TemplateConfiguration {
     protected final TemplateEngineConfig engineConfig;
 
     /**
-     * The registry for template engines.
+     * The template engine instance.
      */
-    @Getter
-    protected final TemplateEngineRegistry engineRegistry;
+    private TemplateEngine engine;
 
     /**
      * Map of custom functions/methods to be added to templates.
@@ -40,21 +40,17 @@ public abstract class TemplateConfiguration {
      */
     public TemplateConfiguration() {
         this.engineConfig = new TemplateEngineConfig();
-        this.engineRegistry = new TemplateEngineRegistry();
-    }
+        configure();
 
-    /**
-     * Initializes the template engines after configuration.
-     */
-    @PostConstruct
-    public void postConstruct() {
-        // Add global functions to the engine config
         for (Map.Entry<String, Object> entry : globalFunctions.entrySet()) {
             engineConfig.addGlobalVariable(entry.getKey(), entry.getValue());
         }
 
-        // Initialize all engines with the config
-        engineRegistry.initializeAll(engineConfig);
+        if (engine != null && !engine.isInitialized()) {
+            engine.initialize(engineConfig.copy());
+        } else {
+            LOGGER.severe("No template engine set!");
+        }
     }
 
     /**
@@ -121,44 +117,44 @@ public abstract class TemplateConfiguration {
     }
 
     /**
-     * Sets the default template engine to use.
+     * Sets the template engine.
      *
-     * @param engineName The name of the engine to use as default
+     * @param engine The template engine to use
      * @return This configuration instance for method chaining
      */
-    public TemplateConfiguration setDefaultEngine(String engineName) {
-        engineRegistry.setDefaultEngine(engineName);
+    public TemplateConfiguration setEngine(TemplateEngine engine) {
+        this.engine = engine;
         return this;
     }
 
     /**
-     * Registers a custom template engine.
+     * Sets the template engine by class.
      *
-     * @param engine The template engine to register
+     * @param engineClass The class of the template engine to use
      * @return This configuration instance for method chaining
+     * @throws IllegalArgumentException If the engine couldn't be instantiated
      */
-    public TemplateConfiguration registerEngine(TemplateEngine engine) {
-        engineRegistry.register(engine);
-        return this;
+    public TemplateConfiguration setEngine(Class<? extends TemplateEngine> engineClass) {
+        try {
+            this.engine = engineClass.getDeclaredConstructor().newInstance();
+            return this;
+        } catch (Exception e) {
+            LOGGER.severe("Failed to instantiate template engine: " + engineClass.getName());
+            throw new IllegalArgumentException("Failed to instantiate template engine", e);
+        }
     }
 
     /**
-     * Gets the default template engine.
+     * Gets the template engine.
      *
-     * @return The default template engine
-     */
-    public TemplateEngine getDefaultEngine() {
-        return engineRegistry.getDefaultEngine();
-    }
-
-    /**
-     * Gets a template engine by name.
-     *
-     * @param engineName The name of the engine to get
      * @return The template engine
+     * @throws IllegalStateException If no engine is set
      */
-    public TemplateEngine getEngine(String engineName) {
-        return engineRegistry.getEngine(engineName);
+    public TemplateEngine getEngine() {
+        if (engine == null) {
+            throw new IllegalStateException("No template engine set");
+        }
+        return engine;
     }
 
     /**
@@ -166,6 +162,7 @@ public abstract class TemplateConfiguration {
      */
     public void reset() {
         globalFunctions.clear();
+        engine = null;
         configure();
     }
 }
