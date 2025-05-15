@@ -159,7 +159,9 @@ public abstract class JoltApplication {
      * <p>
      * This method is invoked automatically by {@link #launch(Class, String)}.
      */
-    protected abstract void init();
+    protected void init() {
+        // No-op by default.
+    };
 
     /**
      * Registers a before-handler for the specified routes.

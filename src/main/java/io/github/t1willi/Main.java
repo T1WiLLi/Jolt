@@ -6,9 +6,4 @@ public class Main extends JoltApplication {
     public static void main(String[] args) {
         launch(Main.class);
     }
-
-    @Override
-    protected void init() {
-        // No-op
-    }
 }
