@@ -110,6 +110,11 @@ public final class DefaultForm implements Form {
         return JoltModel.from(objectData);
     }
 
+    @Override
+    public String toString() {
+        return allErrors().toString();
+    }
+
     private Map<String, String> getFilteredFieldValues(String... ignoreFields) {
         Map<String, String> data = new HashMap<>(values);
         for (String field : ignoreFields) {

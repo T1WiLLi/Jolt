@@ -10,13 +10,10 @@ import io.github.t1willi.annotations.Delete;
 import io.github.t1willi.annotations.Path;
 import io.github.t1willi.annotations.Query;
 import io.github.t1willi.annotations.ToForm;
-import io.github.t1willi.annotations.Valid;
 import io.github.t1willi.annotations.Version;
 import io.github.t1willi.context.JoltContext;
-import io.github.t1willi.exceptions.FormException;
 import io.github.t1willi.exceptions.JoltDIException;
 import io.github.t1willi.exceptions.JoltRoutingException;
-import io.github.t1willi.form.AnnotationRuleFactory;
 import io.github.t1willi.form.Form;
 import io.github.t1willi.http.HttpMethod;
 import io.github.t1willi.injector.JoltContainer;
@@ -229,8 +226,12 @@ public final class ControllerRegistry {
                 return dispatchReturn(ctx, result);
             } catch (InvocationTargetException ite) {
                 Throwable cause = ite.getCause();
-                if (cause instanceof RuntimeException re)
+                if (cause instanceof RuntimeException re) {
                     throw re;
+                }
+                if (cause instanceof Error er) {
+                    throw er;
+                }
                 throw new JoltRoutingException("Error invoking " + m.getName(), cause);
             } catch (Exception e) {
                 throw new JoltDIException(e.getMessage(), e);
@@ -252,14 +253,7 @@ public final class ControllerRegistry {
             return HelpMethods.convert(raw, p.getType());
         }
         if (p.isAnnotationPresent(Body.class)) {
-            Form form = ctx.form();
-            if (p.isAnnotationPresent(Valid.class)) {
-                AnnotationRuleFactory.applyRules(form, p.getType());
-                if (!form.validate()) {
-                    throw new FormException(form);
-                }
-            }
-            return form.buildEntity(p.getType());
+            return ctx.body(p.getType());
         }
         if (p.isAnnotationPresent(ToForm.class)) {
             if (p.getType() == Form.class) {
@@ -273,7 +267,7 @@ public final class ControllerRegistry {
         }
 
         throw new JoltDIException("Cannot resolve parameter: " + p.getName()
-                + ". Must be annotated with either @Path, @Query, @Body, @ToForm");
+                + ". Must be annotated with either @Path, @Query, @Body, @ToForm or be of type JoltContext");
     }
 
     private static JoltContext dispatchReturn(JoltContext ctx, Object result) {

@@ -39,28 +39,19 @@ final class TemplatingContext {
      * @param model        The data model for the template
      */
     public void render(ResponseContext response, String templatePath, JoltModel model) {
-        // Get or create the base language model
         JoltModel baseModel = LanguageService.getGlobalLanguageModel();
         if (baseModel == null) {
             baseModel = JoltModel.create();
         }
 
-        // Generate CSRF token
         String csrfToken = CsrfToken.generate();
         String tokenName = JoltContainer.getInstance().getBean(SecurityConfiguration.class)
                 .getCsrfConfig()
                 .getTokenName();
 
-        // Merge models if provided
         JoltModel finalModel = model != null ? baseModel.merge(model) : baseModel;
-
-        // Render template
         String renderedHtml = renderTemplate(templatePath, finalModel);
-
-        // Inject CSRF tokens into forms
         renderedHtml = injectCsrfTokenIntoForms(renderedHtml, csrfToken, tokenName);
-
-        // Set response content
         response.setContentType("text/html; charset=UTF-8");
         response.html(renderedHtml);
     }
@@ -93,37 +84,40 @@ final class TemplatingContext {
      */
     private String injectCsrfTokenIntoForms(String html, String csrfToken, String tokenName) {
         if (csrfToken == null || tokenName == null) {
-            logger.fine("CSRF token or token name not available, skipping form injection");
+            logger.fine("No CSRF token or token name, skipping injection");
             return html;
         }
 
-        StringBuilder modifiedHtml = new StringBuilder();
-        Matcher matcher = FORM_PATTERN.matcher(html);
+        StringBuilder out = new StringBuilder();
+        Matcher m = FORM_PATTERN.matcher(html);
         int lastEnd = 0;
 
-        while (matcher.find()) {
-            int end = matcher.end();
+        while (m.find()) {
+            String formTag = m.group();
+            String lower = formTag.toLowerCase();
 
-            modifiedHtml.append(html, lastEnd, end);
+            out.append(html, lastEnd, m.end());
 
-            String formTag = matcher.group();
-            String formTagLower = formTag.toLowerCase();
-            if (formTagLower.contains("method=\"post\"") ||
-                    formTagLower.contains("method=\"put\"") ||
-                    formTagLower.contains("method=\"delete\"") ||
-                    formTagLower.contains("method=\"patch\"")) {
-                modifiedHtml.append("<input type=\"hidden\" name=\"")
-                        .append(tokenName)
-                        .append("\" value=\"")
-                        .append(csrfToken)
-                        .append("\">");
-                logger.fine(() -> "Injected CSRF token into form: " + formTag);
+            boolean isStateful = lower.contains("method=\"post\"")
+                    || lower.contains("method=\"put\"")
+                    || lower.contains("method=\"delete\"")
+                    || lower.contains("method=\"patch\"")
+                    || lower.contains("hx-post")
+                    || lower.contains("hx-put")
+                    || lower.contains("hx-delete")
+                    || lower.contains("hx-patch");
+
+            if (isStateful) {
+                out.append("\n  <input type=\"hidden\" ")
+                        .append("name=\"").append(tokenName).append("\" ")
+                        .append("value=\"").append(csrfToken).append("\">");
+                logger.fine(() -> "Injected CSRF into: " + formTag);
             }
 
-            lastEnd = end;
+            lastEnd = m.end();
         }
 
-        modifiedHtml.append(html.substring(lastEnd));
-        return modifiedHtml.toString();
+        out.append(html.substring(lastEnd));
+        return out.toString();
     }
 }

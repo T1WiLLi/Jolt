@@ -77,7 +77,6 @@ public final class DefaultCsrfHandler implements CsrfHandler {
         }
 
         if (requestToken == null) {
-            logger.warning("CSRF token missing in request (header or form parameter)");
             throw new JoltHttpException(HttpStatus.FORBIDDEN,
                     "CSRF token missing in request. Ensure the token is sent in the 'X-CSRF-TOKEN' header or as a form parameter named '"
                             + config.getTokenName() + "'.");

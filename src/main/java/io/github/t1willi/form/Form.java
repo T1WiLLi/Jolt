@@ -27,4 +27,6 @@ public interface Form {
     <T> T updateEntity(T entity, String... ignoreFields);
 
     JoltModel buildModel(String... ignoreFields);
+
+    String toString();
 }

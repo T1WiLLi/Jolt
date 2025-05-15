@@ -50,7 +50,6 @@ public final class CsrfFilter extends JoltFilter {
             handler.validate(context, config);
             chain.doFilter(request, response);
         } catch (JoltHttpException e) {
-            logger.warning(() -> "CSRF validation failed: " + e.getMessage());
             throw new CsrfTokenException(e.getStatus(), e.getMessage());
         } catch (Exception e) {
             logger.severe(() -> "Error validating CSRF token: " + e.getMessage());
