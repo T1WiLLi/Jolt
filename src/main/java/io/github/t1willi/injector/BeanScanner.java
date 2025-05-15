@@ -42,7 +42,7 @@ final class BeanScanner {
      * @throws JoltDIException if scanning fails.
      */
     public void scanPackage(String basePackage) {
-        logger.info(() -> "Scanning package: " + basePackage);
+        logger.fine(() -> "Scanning package: " + basePackage);
         try {
             String path = basePackage.replace('.', '/');
             ClassLoader classLoader = Thread.currentThread().getContextClassLoader();
