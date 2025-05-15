@@ -9,9 +9,9 @@ import java.util.function.Predicate;
 public interface Field {
     Field required(String msg);
 
-    Field minLength(int min, String msg);
+    Field min(long min, String msg);
 
-    Field maxLength(int max, String msg);
+    Field max(long max, String msg);
 
     Field email(String msg);
 
@@ -51,12 +51,12 @@ public interface Field {
         return required("Value is required.");
     }
 
-    default Field minLength(int m) {
-        return minLength(m, "Minimum length is " + m + ".");
+    default Field min(long m) {
+        return min(m, "Minimum length is " + m + ".");
     }
 
-    default Field maxLength(int m) {
-        return maxLength(m, "Maximum length is " + m + ".");
+    default Field max(long m) {
+        return max(m, "Maximum length is " + m + ".");
     }
 
     default Field email() {

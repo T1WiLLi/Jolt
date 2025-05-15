@@ -74,8 +74,8 @@ class FormTests {
     @DisplayName("Test minLength and maxLength validation")
     void testLengthValidation() {
         DefaultForm form = new DefaultForm();
-        form.field("username").minLength(5, "Username must be at least 5 characters")
-                .maxLength(10, "Username must be at most 10 characters");
+        form.field("username").min(5, "Username must be at least 5 characters")
+                .max(10, "Username must be at most 10 characters");
 
         // Invalid: too short
         form.setValue("username", "bob");
@@ -353,7 +353,7 @@ class FormTests {
     void testMultipleErrors() {
         DefaultForm form = new DefaultForm();
         form.field("username").required("Username is required")
-                .minLength(5, "Minimum 5 characters")
+                .min(5, "Minimum 5 characters")
                 .alphanumeric("Only letters and digits");
 
         form.setValue("username", "#");

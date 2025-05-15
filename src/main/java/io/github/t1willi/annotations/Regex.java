@@ -7,7 +7,7 @@ import java.lang.annotation.Target;
 
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.FIELD)
-public @interface Pattern {
+public @interface Regex {
     String regex();
 
     String message() default "{field} must match {regex}";

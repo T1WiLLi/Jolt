@@ -13,12 +13,28 @@ final class BaseRules {
         return Rule.custom(data -> data != null && !data.trim().isEmpty(), msg);
     }
 
-    static Rule minLength(int min, String msg) {
-        return Rule.custom(data -> data != null && data.length() >= min, msg);
+    static Rule min(Number min, String msg) {
+        return Rule.custom(data -> {
+            if (data == null || data.isEmpty())
+                return false;
+            try {
+                return Double.parseDouble(data) >= min.doubleValue();
+            } catch (NumberFormatException e) {
+                return data.length() >= min.intValue();
+            }
+        }, msg);
     }
 
-    static Rule maxLength(int max, String msg) {
-        return Rule.custom(data -> data != null && data.length() <= max, msg);
+    static Rule max(Number max, String msg) {
+        return Rule.custom(data -> {
+            if (data == null || data.isEmpty())
+                return false;
+            try {
+                return Double.parseDouble(data) <= max.doubleValue();
+            } catch (NumberFormatException e) {
+                return data.length() <= max.intValue();
+            }
+        }, msg);
     }
 
     static Rule email(String msg) {

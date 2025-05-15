@@ -27,14 +27,14 @@ class DefaultField implements Field {
     }
 
     @Override
-    public Field minLength(int m, String msg) {
-        add(BaseRules.minLength(m, msg));
+    public Field min(long m, String msg) {
+        add(BaseRules.min(m, msg));
         return this;
     }
 
     @Override
-    public Field maxLength(int m, String msg) {
-        add(BaseRules.maxLength(m, msg));
+    public Field max(long m, String msg) {
+        add(BaseRules.max(m, msg));
         return this;
     }
 
