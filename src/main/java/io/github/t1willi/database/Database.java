@@ -43,20 +43,16 @@ public final class Database {
                 return;
             }
 
-            // Load the PostgreSQL driver
-            try {
-                Class.forName("org.postgresql.Driver");
-            } catch (ClassNotFoundException e) {
-                logger.warning("PostgreSQL driver not found in classpath. Database functionality will be disabled.");
-                return;
-            }
-
             // Configure HikariCP connection pool
             HikariConfig hikariConfig = new HikariConfig();
             hikariConfig.setJdbcUrl(config.getUrl());
             hikariConfig.setUsername(config.getUsername());
             hikariConfig.setPassword(config.getPassword());
             hikariConfig.setMaximumPoolSize(config.getMaxConnections());
+
+            hikariConfig.setConnectionTimeout(30000);
+            hikariConfig.setIdleTimeout(600000);
+            hikariConfig.setMaxLifetime(1800000);
 
             // Initialize the connection pool
             logger.info("Initializing database connection pool");
