@@ -19,7 +19,7 @@ public final class FilterStep implements PipelineStep {
 
     @Override
     public boolean execute(ProcessingContext context) throws IOException, ServletException {
-        for (JoltFilter filter : filters) {
+        for (JoltFilter filter : filters.reversed()) {
             if (config.shouldExcludeRoute(context.getContext())) {
                 continue;
             }
