@@ -1,6 +1,7 @@
 package io.github.t1willi.pipeline;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 
 import io.github.t1willi.filters.FilterConfiguration;
@@ -14,12 +15,15 @@ public final class FilterStep implements PipelineStep {
 
     public FilterStep() {
         this.config = JoltContainer.getInstance().getBean(FilterConfiguration.class);
-        this.filters = JoltContainer.getInstance().getBeans(JoltFilter.class);
+        this.filters = JoltContainer.getInstance().getBeans(JoltFilter.class)
+                .stream()
+                .sorted(Comparator.comparingInt(config::getOrder))
+                .toList();
     }
 
     @Override
     public boolean execute(ProcessingContext context) throws IOException, ServletException {
-        for (JoltFilter filter : filters.reversed()) {
+        for (JoltFilter filter : filters) {
             if (config.shouldExcludeRoute(context.getContext())) {
                 continue;
             }
