@@ -5,6 +5,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -38,6 +39,9 @@ public abstract class Broker<T> {
 
     /** Tracks the last affected row count from database operations */
     private int lastAffectedRows = 0;
+
+    /** Tracks the last inserted ID from database operations */
+    private long lastInsertedId = -1;
 
     /**
      * Constructs a new Broker instance.
@@ -144,15 +148,18 @@ public abstract class Broker<T> {
     }
 
     /**
-     * Executes a SQL update or insert query.
+     * Executes a SQL update or insert query and returns the number of affected rows
+     * or the
+     * generated ID for insert operations.
      *
      * @param sql    The SQL query to execute.
      * @param params The parameters to bind to the SQL query.
-     * @return True if the query affected at least one row, otherwise false.
+     * @return For INSERT operations with generated keys, returns the generated ID.
+     *         For other operations, returns the number of affected rows.
      * @throws DatabaseException If the SQL query is invalid or a database error
      *                           occurs.
      */
-    protected boolean query(String sql, Object... params) {
+    protected int query(String sql, Object... params) {
         if (!SqlSecurity.isValidRawSql(sql)) {
             throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
                     "The SQL query is not valid! Please change it.",
@@ -165,11 +172,32 @@ public abstract class Broker<T> {
             connection = Database.getInstance().getConnection();
             connection.setAutoCommit(false);
 
-            try (PreparedStatement stmt = prepareStatement(connection, sql, params)) {
+            // Determine if this is an INSERT query to handle RETURN_GENERATED_KEYS
+            boolean isInsert = sql.trim().toUpperCase().startsWith("INSERT");
+
+            try (PreparedStatement stmt = isInsert ? connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
+                    : connection.prepareStatement(sql)) {
+
+                for (int i = 0; i < params.length; i++) {
+                    stmt.setObject(i + 1, params[i]);
+                }
+
                 int rowsAffected = stmt.executeUpdate();
-                lastAffectedRows = rowsAffected; // Store the affected row count
+                lastAffectedRows = rowsAffected;
+
+                // For INSERT operations, try to retrieve the generated ID
+                if (isInsert) {
+                    try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
+                        if (generatedKeys.next()) {
+                            lastInsertedId = generatedKeys.getLong(1);
+                            connection.commit();
+                            return (int) lastInsertedId; // Return the generated ID for INSERT
+                        }
+                    }
+                }
+
                 connection.commit();
-                return rowsAffected > 0;
+                return lastAffectedRows; // Return affected rows count for UPDATE/DELETE
             }
         } catch (SQLException e) {
             rollbackSilently(connection);
@@ -188,57 +216,18 @@ public abstract class Broker<T> {
      *
      * @return The number of rows affected by the last database operation.
      */
-    public int returnLastAffectedRows() {
+    public int getLastAffectedRows() {
         return lastAffectedRows;
     }
 
     /**
-     * Retrieves the last inserted ID for the current connection after an INSERT
-     * operation.
-     * This method uses JDBC's standard `RETURN_GENERATED_KEYS` feature to retrieve
-     * the generated key.
+     * Returns the last inserted ID after an INSERT operation.
      *
-     * @param stmt The PreparedStatement used to execute the INSERT query.
-     * @return The last inserted ID, or -1 if no ID was generated or an error
-     *         occurred.
-     * @throws DatabaseException If a database error occurs.
+     * @return The last inserted ID, or -1 if no ID was generated or the last
+     *         operation wasn't an INSERT.
      */
-    protected long getReturningId(PreparedStatement stmt) {
-        try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-            if (generatedKeys.next()) {
-                return generatedKeys.getLong(1);
-            }
-            return -1;
-        } catch (SQLException e) {
-            logger.severe(() -> "Failed to retrieve last inserted ID: " + e.getMessage());
-            throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
-                    "An unexpected database error occurred while retrieving the last inserted ID.",
-                    "Unhandled database error: " + e.getMessage(),
-                    e);
-        }
-    }
-
-    /**
-     * Retrieves the number of rows affected by the last executed SQL update or
-     * insert query.
-     *
-     * @param stmt The PreparedStatement used to execute the query.
-     * @return The number of rows affected by the last query, or -1 if the count is
-     *         unavailable.
-     * @throws DatabaseException If a database error occurs.
-     * @deprecated Use {@link #returnLastAffectedRows()} instead.
-     */
-    @Deprecated
-    protected int getLastAffectedRowCount(PreparedStatement stmt) {
-        try {
-            return stmt.getUpdateCount();
-        } catch (SQLException e) {
-            logger.severe(() -> "Failed to retrieve affected row count: " + e.getMessage());
-            throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
-                    "An unexpected database error occurred. Please try again later.",
-                    "Unhandled database error: " + e.getMessage(),
-                    e);
-        }
+    public long getLastInsertedId() {
+        return lastInsertedId;
     }
 
     /**

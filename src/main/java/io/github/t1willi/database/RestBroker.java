@@ -168,10 +168,10 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
      * Deletes an entity by its primary key.
      *
      * @param id The primary key of the entity to delete.
-     * @return `true` if the entity was deleted, otherwise `false`.
+     * @return the number of affect rows.
      * @throws IllegalArgumentException If the ID is null.
      */
-    public boolean deleteById(ID id) {
+    public int deleteById(ID id) {
         if (id == null) {
             throw new IllegalArgumentException("ID cannot be null");
         }
