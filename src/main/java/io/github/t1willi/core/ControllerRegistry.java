@@ -233,8 +233,10 @@ public final class ControllerRegistry {
                     throw er;
                 }
                 throw new JoltRoutingException("Error invoking " + m.getName(), cause);
+            } catch (IllegalAccessException e) {
+                throw new JoltRoutingException("Illegal access invoking " + m.getName(), e);
             } catch (Exception e) {
-                throw new JoltDIException(e.getMessage(), e);
+                throw e;
             }
         };
     }

@@ -36,6 +36,9 @@ public abstract class Broker<T> {
     /** The class type of the entity this broker handles. */
     protected final Class<T> entityClass;
 
+    /** Tracks the last affected row count from database operations */
+    private int lastAffectedRows = 0;
+
     /**
      * Constructs a new Broker instance.
      *
@@ -81,6 +84,7 @@ public abstract class Broker<T> {
 
             try (PreparedStatement stmt = prepareStatement(connection, sql, params);
                     ResultSet rs = stmt.executeQuery()) {
+                lastAffectedRows = 0; // Reset affected rows for SELECT
                 if (rs.next()) {
                     return Optional.of(mapToEntity(rs));
                 }
@@ -125,6 +129,7 @@ public abstract class Broker<T> {
                 while (rs.next()) {
                     results.add(mapToEntity(rs));
                 }
+                lastAffectedRows = results.size(); // Set affected rows to count of returned records
                 return results;
             }
         } catch (SQLException e) {
@@ -162,6 +167,7 @@ public abstract class Broker<T> {
 
             try (PreparedStatement stmt = prepareStatement(connection, sql, params)) {
                 int rowsAffected = stmt.executeUpdate();
+                lastAffectedRows = rowsAffected; // Store the affected row count
                 connection.commit();
                 return rowsAffected > 0;
             }
@@ -175,6 +181,15 @@ public abstract class Broker<T> {
         } finally {
             resetConnectionAndRelease(connection);
         }
+    }
+
+    /**
+     * Returns the number of rows affected by the last database operation.
+     *
+     * @return The number of rows affected by the last database operation.
+     */
+    public int returnLastAffectedRows() {
+        return lastAffectedRows;
     }
 
     /**
@@ -211,7 +226,9 @@ public abstract class Broker<T> {
      * @return The number of rows affected by the last query, or -1 if the count is
      *         unavailable.
      * @throws DatabaseException If a database error occurs.
+     * @deprecated Use {@link #returnLastAffectedRows()} instead.
      */
+    @Deprecated
     protected int getLastAffectedRowCount(PreparedStatement stmt) {
         try {
             return stmt.getUpdateCount();
