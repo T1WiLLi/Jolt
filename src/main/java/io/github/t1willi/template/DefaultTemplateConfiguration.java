@@ -38,7 +38,7 @@ public final class DefaultTemplateConfiguration extends TemplateConfiguration {
     @Override
     public void configure() {
         setTemplateClasspath("/templates");
-        setCaching(true);
+        setCaching(false);
         setEngine(new FreemarkerTemplateEngine());
     }
 }
