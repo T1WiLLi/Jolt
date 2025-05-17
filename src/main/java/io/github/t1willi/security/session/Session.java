@@ -9,6 +9,8 @@ import io.github.t1willi.server.config.ConfigurationManager;
 import io.github.t1willi.utils.Constant;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpSession;
+
+import java.lang.reflect.Type;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.ZoneId;
@@ -127,6 +129,11 @@ public final class Session {
      */
     public static String get(String key) {
         return getOptional(key).orElse(null);
+    }
+
+    public static <T> Optional<T> getOptional(String key, Type type) {
+        JoltSession js = ensure(false);
+        return (js == null) ? Optional.empty() : js.getAttribute(key, type);
     }
 
     /**
