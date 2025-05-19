@@ -153,7 +153,6 @@ public final class TomcatServer {
 
     private void configureContext() throws ServerException {
         try {
-            // 1) création du contexte (docBase = tempDir)
             context = tomcat.addContext(
                     "",
                     new File(config.getTempDir()).getAbsolutePath());
@@ -163,21 +162,17 @@ public final class TomcatServer {
             context.setAllowCasualMultipartParsing(false);
             context.setReloadable(false);
 
-            // 2) détermination des chemins de static et de listing
             ServerConfig sconf = ConfigurationManager.getInstance().getServerConfig();
             String listingPath = sconf.getDirectoryListingPath(); // ex "/directory"
             File staticDir = Paths.get("src", "main", "resources", "static").toFile();
 
-            // 3) montage des ressources statiques
             WebResourceRoot resources = new StandardRoot(context);
             if (staticDir.isDirectory()) {
-                // a) point d'accès “/static/**” pour votre méthode serve(...)
                 resources.addPreResources(new DirResourceSet(
                         resources,
                         "/static",
                         staticDir.getAbsolutePath(),
                         "/"));
-                // b) point d'accès “/directory/**” pour les listings
                 if (!listingPath.equals("/static")) {
                     resources.addPreResources(new DirResourceSet(
                             resources,
@@ -188,7 +183,6 @@ public final class TomcatServer {
             }
             context.setResources(resources);
 
-            // 4) DefaultServlet pour /directory/* (listings + fichiers bruts)
             Wrapper defaultServlet = Tomcat.addServlet(
                     context,
                     "default",
@@ -199,7 +193,6 @@ public final class TomcatServer {
                     sconf.isDirectoryListingEnabled() ? "true" : "false");
             context.addServletMappingDecoded(listingPath + "/*", "default");
 
-            // 5) JoltDispatcherServlet pour tout le reste
             MultipartConfigElement multipartConfig = new MultipartConfigElement(
                     (String) context
                             .getServletContext()
