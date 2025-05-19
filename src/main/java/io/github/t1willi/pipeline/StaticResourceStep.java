@@ -26,7 +26,7 @@ public class StaticResourceStep implements PipelineStep {
         }
 
         String clean = path.replaceAll("\\.\\./", "").replaceAll("\\.\\.\\\\", "");
-        String resourcePath = "static/" + clean.replaceAll("\\.\\./", "").replaceAll("\\.\\.\\\\", "");
+        String resourcePath = "resources/static/" + clean.replaceAll("\\.\\./", "").replaceAll("\\.\\.\\\\", "");
         InputStream in = getClass().getClassLoader().getResourceAsStream(resourcePath);
         if (in == null && !clean.contains(".")) {
             String idx = resourcePath + (resourcePath.endsWith("/") ? "" : "/") + "index.html";

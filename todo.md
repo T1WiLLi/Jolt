@@ -265,6 +265,9 @@ public Template index() {
 }
 ```
 
+- Remove necessicity to secify which configuration type it is, we can find it based off the Configuration parent it's extending from.
+- make the @configure call itself in the constructor instead of making the user define @PostConstruct public void init() { configure(); }.
+
 New server properties : 
 
 server.logging.level=SEVERE, WARNING, INFO, FINE, FINER, FINEST, ALL, OFF
