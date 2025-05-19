@@ -225,6 +225,9 @@ public final class ControllerRegistry {
 
     private static RouteHandler createHandler(Object ctrl, Method m) {
         return ctx -> {
+            if (ctrl instanceof BaseController baseCtrl) {
+                baseCtrl.setContext(ctx);
+            }
             try {
                 Object[] args = Arrays.stream(m.getParameters())
                         .map(p -> resolveParam(p, ctx, m))

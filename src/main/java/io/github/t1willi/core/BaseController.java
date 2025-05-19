@@ -17,7 +17,7 @@ import io.github.t1willi.context.JoltContext;
  */
 public abstract class BaseController {
 
-    protected final JoltContext context;
+    protected JoltContext context;
 
     private final List<LifecycleHandler> specificBeforeHandlers = new ArrayList<>();
     private final List<LifecycleHandler> specificAfterHandlers = new ArrayList<>();
@@ -95,7 +95,7 @@ public abstract class BaseController {
     protected record LifecycleHandler(Consumer<JoltContext> handler, List<String> paths) {
     }
 
-    protected BaseController() {
-        this.context = JoltDispatcherServlet.getCurrentContext();
+    void setContext(JoltContext ctx) {
+        this.context = ctx;
     }
 }
