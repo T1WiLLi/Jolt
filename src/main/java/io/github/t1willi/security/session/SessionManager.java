@@ -48,7 +48,7 @@ public class SessionManager {
             Database db = Database.getInstance();
             if (db.isInitialized()) {
                 PersistentManager manager = new PersistentManager();
-                manager.setMaxActiveSessions(0);
+                manager.setMaxActiveSessions(1);
                 manager.setProcessExpiresFrequency(1);
 
                 JoltJDBCStore jdbcStore = new JoltJDBCStore();
