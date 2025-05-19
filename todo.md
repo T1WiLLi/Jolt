@@ -228,6 +228,43 @@ public void validateNew(Form form) {
 }
 ```
 
+# Template system & Controllers
+
+```java
+public class ApiController extends BaseController {
+    // Add function for API-like element.
+}
+
+public class MvcController extends BaseController {
+    // Add function for MVC-like element : 
+
+    public void render(String template, JoltModel model) {
+        // ...
+    }
+
+    public void redirect(String location) {
+        JoltDispatcher.getCurrentContext().redirect(location);
+    }
+
+    // And so on ...
+}
+
+// Update the return type of the functions of any given element : 
+
+- JoltContext (ctx)
+- String (static element, like a simple text)
+- Template (dynamic element, like template (.ftl, .html, .jsp, etc.))
+- Any Object directly as JSON
+
+// Update how the Template works : 
+
+public Template index() {
+    return Template
+        .view("index")
+        .model(JoltModel.with(Map.of(...)));
+}
+```
+
 New server properties : 
 
 server.logging.level=SEVERE, WARNING, INFO, FINE, FINER, FINEST, ALL, OFF
