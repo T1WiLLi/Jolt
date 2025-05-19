@@ -16,12 +16,13 @@ import io.github.t1willi.exceptions.JoltDIException;
 import io.github.t1willi.exceptions.JoltRoutingException;
 import io.github.t1willi.form.Form;
 import io.github.t1willi.http.HttpMethod;
+import io.github.t1willi.http.ModelView;
+import io.github.t1willi.http.ResponseEntity;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.security.authentification.AuthStrategy;
 import io.github.t1willi.security.authentification.Authorize;
 import io.github.t1willi.security.authentification.RouteRule;
-import io.github.t1willi.template.Template;
 import io.github.t1willi.utils.HelpMethods;
 
 import java.lang.annotation.Annotation;
@@ -29,6 +30,8 @@ import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.Parameter;
+import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -211,9 +214,13 @@ public final class ControllerRegistry {
     }
 
     private static void validateSignature(Method m) {
+        if (m.isSynthetic() || m.isBridge()) {
+            return;
+        }
         int mods = m.getModifiers();
-        if (!Modifier.isPublic(mods) || Modifier.isStatic(mods))
+        if (!Modifier.isPublic(mods) || Modifier.isStatic(mods)) {
             throw new JoltDIException(m.getName() + " must be public, non-static");
+        }
     }
 
     private static RouteHandler createHandler(Object ctrl, Method m) {
@@ -242,34 +249,54 @@ public final class ControllerRegistry {
     }
 
     private static Object resolveParam(Parameter p, JoltContext ctx, Method m) {
+        if (p.isAnnotationPresent(Query.class) && p.getType() == Optional.class) {
+            Query queryAnn = p.getAnnotation(Query.class);
+            String name = queryAnn.value().isEmpty() ? p.getName() : queryAnn.value();
+            String raw = ctx.query(name);
+            if (raw == null) {
+                return Optional.empty();
+            }
+            Type type = p.getParameterizedType();
+            if (type instanceof ParameterizedType pt) {
+                Type arg = pt.getActualTypeArguments()[0];
+                Class<?> inner = (Class<?>) arg;
+                Object converted = HelpMethods.convert(raw, inner);
+                return Optional.ofNullable(converted);
+            }
+            return Optional.of(raw);
+        }
+
         if (p.isAnnotationPresent(Path.class)) {
             Path pathAnn = p.getAnnotation(Path.class);
             String paramName = pathAnn.value().isEmpty() ? p.getName() : pathAnn.value();
             String raw = ctx.path(paramName);
             return HelpMethods.convert(raw, p.getType());
         }
+
         if (p.isAnnotationPresent(Query.class)) {
             Query queryAnn = p.getAnnotation(Query.class);
             String paramName = queryAnn.value().isEmpty() ? p.getName() : queryAnn.value();
             String raw = ctx.query(paramName);
             return HelpMethods.convert(raw, p.getType());
         }
+
         if (p.isAnnotationPresent(Body.class)) {
             return ctx.body(p.getType());
         }
+
         if (p.isAnnotationPresent(ToForm.class)) {
             if (p.getType() == Form.class) {
                 return ctx.form();
-            } else {
-                throw new JoltDIException("Cannot convert to form for type: " + p.getType());
             }
+            throw new JoltDIException("Cannot convert to form for type: " + p.getType());
         }
+
         if (JoltContext.class.isAssignableFrom(p.getType())) {
             return ctx;
         }
 
-        throw new JoltDIException("Cannot resolve parameter: " + p.getName()
-                + ". Must be annotated with either @Path, @Query, @Body, @ToForm or be of type JoltContext");
+        throw new JoltDIException("Cannot resolve parameter: " + p.getName() +
+                ". Must be annotated with @Path, @Query, @Body, @ToForm or be JoltContext");
     }
 
     private static JoltContext dispatchReturn(JoltContext ctx, Object result) {
@@ -279,16 +306,46 @@ public final class ControllerRegistry {
         if (result instanceof JoltContext jc) {
             return jc;
         }
+        if (result instanceof ResponseEntity<?> resp) {
+            return handleResponseEntity(ctx, resp);
+        }
+        if (result instanceof ModelView mv) {
+            return ctx.render(mv.getView(), mv.getModel());
+        }
         if (result instanceof String s) {
             if (s.matches(".+\\.[a-z]{2,4}")) {
                 return ctx.serveStatic(s);
             }
             return ctx.html(s);
         }
-        if (result instanceof Template t) {
-            return ctx.render(t.getView(), t.getModel());
-        }
         return ctx.json(result);
+    }
+
+    private static JoltContext handleResponseEntity(JoltContext ctx, ResponseEntity<?> resp) {
+        ctx.status(resp.getStatus());
+        resp.getHeaders().forEach((name, values) -> values.forEach(value -> ctx.header(name, value)));
+        if (resp.isRedirect()) {
+            String location = resp.getHeaders()
+                    .getOrDefault("Location", List.of())
+                    .stream().findFirst().orElse(null);
+            return location != null ? ctx.redirect(location) : ctx;
+        }
+        Object body = resp.getBody();
+        if (body == null) {
+            return ctx;
+        }
+        if (body instanceof ModelView mv) {
+            return ctx.render(mv.getView(), mv.getModel());
+        }
+        if (body instanceof String str) {
+            List<String> contentTypes = resp.getHeaders().get("Content-Type");
+            if (contentTypes != null && !contentTypes.isEmpty()) {
+                ctx.contentType(contentTypes.get(0));
+                return ctx.write(str);
+            }
+            return ctx.html(str);
+        }
+        return ctx.json(body);
     }
 
     private static String invokeValue(Annotation a) {

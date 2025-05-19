@@ -231,6 +231,15 @@ public void validateNew(Form form) {
 # Template system & Controllers
 
 ```java
+public class BaseController {
+
+    protected JoltContext context;
+
+    public BaseController() {
+        this.context = JoltDispatcher.getCurrentContext();
+    }
+}
+
 public class ApiController extends BaseController {
     // Add function for API-like element.
 }
@@ -238,12 +247,12 @@ public class ApiController extends BaseController {
 public class MvcController extends BaseController {
     // Add function for MVC-like element : 
 
-    public void render(String template, JoltModel model) {
+    public ResponseEntity<ModelView> render(String template, JoltModel model) {
         // ...
     }
 
     public void redirect(String location) {
-        JoltDispatcher.getCurrentContext().redirect(location);
+        super.context.redirect(location);
     }
 
     // And so on ...
@@ -253,15 +262,30 @@ public class MvcController extends BaseController {
 
 - JoltContext (ctx)
 - String (static element, like a simple text)
-- Template (dynamic element, like template (.ftl, .html, .jsp, etc.))
+- ModelView (dynamic element, like template (.ftl, .html, .jsp, etc.))
+- ResponseEntity<T> (Json, XML, Object, ModelView, etc.)
 - Any Object directly as JSON
 
-// Update how the Template works : 
+- ResponseEntity<T> 
+- A ResponseEntity<T> is a wrapper around the response object, which allows you to set the status code, headers, and body of the response in a single object. This is useful for returning complex responses that require more than just a simple body :
 
-public Template index() {
-    return Template
-        .view("index")
-        .model(JoltModel.with(Map.of(...)));
+```java
+public ResponseEntity<String> get() {
+    return ResponseEntity
+        .status(HttpStatus.OK)
+        .header("Content-Type", "application/json")
+        .body("{\"message\": \"Hello World\"}");
+}
+
+public ResponseEntity<ModelView> get() {
+    return ResponseEntity
+        .status(HttpStatus.OK)
+        .header("Content-Type", "text/html")
+        .body(ModelView.of("index.ftl", JoltModel.with(Map.of(...))));
+}
+
+public ResponseEntity<Void> get() {
+    return redirect("/index");
 }
 ```
 
