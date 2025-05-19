@@ -4,10 +4,13 @@ import jakarta.servlet.MultipartConfigElement;
 import lombok.Getter;
 
 import org.apache.catalina.Context;
+import org.apache.catalina.WebResourceRoot;
 import org.apache.catalina.Wrapper;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardThreadExecutor;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.catalina.webresources.DirResourceSet;
+import org.apache.catalina.webresources.StandardRoot;
 import org.apache.coyote.http2.Http2Protocol;
 import org.apache.tomcat.util.net.SSLHostConfig;
 import org.apache.tomcat.util.net.SSLHostConfigCertificate;
@@ -15,10 +18,12 @@ import org.apache.tomcat.util.net.SSLHostConfigCertificate;
 import io.github.t1willi.core.JoltDispatcherServlet;
 import io.github.t1willi.exceptions.ServerException;
 import io.github.t1willi.security.session.SessionManager;
+import io.github.t1willi.server.config.ConfigurationManager;
 import io.github.t1willi.server.config.ServerConfig;
 
 import java.io.File;
 import java.net.ServerSocket;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.logging.Logger;
@@ -148,31 +153,69 @@ public final class TomcatServer {
 
     private void configureContext() throws ServerException {
         try {
-            context = tomcat.addContext("", new File(config.getTempDir()).getAbsolutePath());
+            // 1) création du contexte (docBase = tempDir)
+            context = tomcat.addContext(
+                    "",
+                    new File(config.getTempDir()).getAbsolutePath());
 
             context.setMapperContextRootRedirectEnabled(false);
             context.setMapperDirectoryRedirectEnabled(false);
             context.setAllowCasualMultipartParsing(false);
             context.setReloadable(false);
 
-            Wrapper defaultServlet = Tomcat.addServlet(context, "default",
-                    "org.apache.catalina.servlets.DefaultServlet");
-            defaultServlet.addInitParameter("listings", "false");
-            defaultServlet.setLoadOnStartup(1);
-            context.addServletMappingDecoded("/", "default");
+            // 2) détermination des chemins de static et de listing
+            ServerConfig sconf = ConfigurationManager.getInstance().getServerConfig();
+            String listingPath = sconf.getDirectoryListingPath(); // ex "/directory"
+            File staticDir = Paths.get("src", "main", "resources", "static").toFile();
 
+            // 3) montage des ressources statiques
+            WebResourceRoot resources = new StandardRoot(context);
+            if (staticDir.isDirectory()) {
+                // a) point d'accès “/static/**” pour votre méthode serve(...)
+                resources.addPreResources(new DirResourceSet(
+                        resources,
+                        "/static",
+                        staticDir.getAbsolutePath(),
+                        "/"));
+                // b) point d'accès “/directory/**” pour les listings
+                if (!listingPath.equals("/static")) {
+                    resources.addPreResources(new DirResourceSet(
+                            resources,
+                            listingPath,
+                            staticDir.getAbsolutePath(),
+                            "/"));
+                }
+            }
+            context.setResources(resources);
+
+            // 4) DefaultServlet pour /directory/* (listings + fichiers bruts)
+            Wrapper defaultServlet = Tomcat.addServlet(
+                    context,
+                    "default",
+                    "org.apache.catalina.servlets.DefaultServlet");
+            defaultServlet.setLoadOnStartup(1);
+            defaultServlet.addInitParameter(
+                    "listings",
+                    sconf.isDirectoryListingEnabled() ? "true" : "false");
+            context.addServletMappingDecoded(listingPath + "/*", "default");
+
+            // 5) JoltDispatcherServlet pour tout le reste
             MultipartConfigElement multipartConfig = new MultipartConfigElement(
-                    (String) context.getServletContext().getAttribute("javax.servlet.context.tempdir"),
+                    (String) context
+                            .getServletContext()
+                            .getAttribute("javax.servlet.context.tempdir"),
                     config.getMultipartMaxFileSize(),
                     config.getMultipartMaxRequestSize(),
                     config.getMultipartFileSizeThreshold());
-
-            JoltDispatcherServlet dispatcher = new JoltDispatcherServlet();
-            Wrapper servletWrapper = Tomcat.addServlet(context, "JoltServlet", dispatcher);
-            servletWrapper.setMultipartConfigElement(multipartConfig);
+            Wrapper jolt = Tomcat.addServlet(
+                    context,
+                    "JoltServlet",
+                    new JoltDispatcherServlet());
+            jolt.setMultipartConfigElement(multipartConfig);
             context.addServletMappingDecoded("/*", "JoltServlet");
+
         } catch (Exception e) {
-            throw new ServerException("Failed to configure context " + e.getMessage(), e);
+            throw new ServerException("Failed to configure context: " + e.getMessage(), e);
         }
     }
 

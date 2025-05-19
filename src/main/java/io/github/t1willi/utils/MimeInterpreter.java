@@ -392,8 +392,12 @@ public enum MimeInterpreter {
      * @return the corresponding MIME type, or "text/plain" if not found
      */
     public static String getMime(String extension) {
+        String normalizedExt = extension.startsWith(".")
+                ? extension
+                : "." + extension;
+
         for (MimeInterpreter mime : values()) {
-            if (mime.getExtension().equals(extension)) {
+            if (mime.getExtension().equals(normalizedExt)) {
                 return mime.getMimeType();
             }
         }

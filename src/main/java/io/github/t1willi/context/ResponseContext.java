@@ -11,7 +11,9 @@ import io.github.t1willi.files.JoltFile;
 import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.utils.JacksonUtil;
 import io.github.t1willi.utils.MimeInterpreter;
+import jakarta.servlet.ServletContext;
 import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import lombok.Getter;
 
@@ -137,22 +139,25 @@ final class ResponseContext {
      *
      * @param resource the resource path relative to the "static" directory
      */
-    public void serve(String resource) {
-        String normalizedResource = resource.startsWith("/") ? resource.substring(1) : resource;
-        InputStream in = getClass().getClassLoader().getResourceAsStream("static/" + normalizedResource);
-        if (in == null) {
-            throw new JoltHttpException(HttpStatus.NOT_FOUND, "Static resource not found: " + resource);
-        }
-        try {
+    public void serve(HttpServletRequest request, String resource) {
+        String normalized = resource.startsWith("/") ? resource.substring(1) : resource;
+        ServletContext sc = request.getServletContext();
+
+        try (InputStream in = sc.getResourceAsStream("/static/" + normalized)) {
+            if (in == null) {
+                throw new JoltHttpException(HttpStatus.NOT_FOUND, "Resource not found: " + resource);
+            }
             byte[] data = in.readAllBytes();
-            int dotIndex = resource.lastIndexOf('.');
-            String extension = (dotIndex != -1) ? resource.substring(dotIndex) : "";
-            String mimeType = MimeInterpreter.getMime(extension);
-            setHeader("Content-Type", mimeType);
+            int dot = normalized.lastIndexOf('.');
+            String ext = (dot != -1) ? normalized.substring(dot + 1) : "";
+            String mime = MimeInterpreter.getMime(ext);
+            setContentType(mime);
             buffer.setBinaryBody(data);
         } catch (IOException e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error serving static resource: " + e.getMessage(), e);
+            throw new JoltHttpException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error serving static resource: " + e.getMessage(),
+                    e);
         }
     }
 

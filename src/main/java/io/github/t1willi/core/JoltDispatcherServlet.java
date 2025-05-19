@@ -21,7 +21,6 @@ import io.github.t1willi.pipeline.ProcessingContext;
 import io.github.t1willi.pipeline.ResponseStep;
 import io.github.t1willi.pipeline.RoutePipeline;
 import io.github.t1willi.pipeline.RoutingStep;
-import io.github.t1willi.pipeline.StaticResourceStep;
 import io.github.t1willi.utils.HelpMethods;
 
 /**
@@ -63,7 +62,6 @@ public final class JoltDispatcherServlet extends HttpServlet {
                 new FilterStep(),
                 new BeforeStep(),
                 new RoutingStep(),
-                new StaticResourceStep(),
                 new ParamBindingStep(),
                 new InvocationStep(),
                 new ResponseStep()));
