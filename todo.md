@@ -289,8 +289,9 @@ public ResponseEntity<Void> get() {
 }
 ```
 
-- Remove necessicity to secify which configuration type it is, we can find it based off the Configuration parent it's extending from.
-- make the @configure call itself in the constructor instead of making the user define @PostConstruct public void init() { configure(); }.
+- Fix ResponseEntity BiConsumer crashing when headers are null. Which is a common case when using the ResponseEntity class.
+- Make it so that you can pass a JoltModel in redirect() function . Which is useful when you want to pass a model to a view in a redirect.
+- Add more overload method to ResponseEntity class to make it easier to use. For example, you can now pass a JoltModel directly in the constructor of ResponseEntity class. This is useful when you want to return a model directly in the response.
 
 New server properties : 
 
