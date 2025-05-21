@@ -14,4 +14,9 @@ public abstract class MvcController extends BaseController {
     protected ResponseEntity<Void> redirect(String location) {
         return ResponseEntity.redirect(location);
     }
+
+    protected ResponseEntity<JoltModel> redirect(String location, JoltModel model) {
+        return ResponseEntity.redirect(location, model)
+                .header("Content-Type", "text/html");
+    }
 }

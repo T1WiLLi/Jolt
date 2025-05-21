@@ -23,6 +23,7 @@ import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.security.authentification.AuthStrategy;
 import io.github.t1willi.security.authentification.Authorize;
 import io.github.t1willi.security.authentification.RouteRule;
+import io.github.t1willi.template.JoltModel;
 import io.github.t1willi.utils.HelpMethods;
 
 import java.lang.annotation.Annotation;
@@ -331,6 +332,9 @@ public final class ControllerRegistry {
             String location = resp.getHeaders()
                     .getOrDefault("Location", List.of())
                     .stream().findFirst().orElse(null);
+            if (resp.getBody() instanceof JoltModel model) {
+                return ctx.render(location, model);
+            }
             return location != null ? ctx.redirect(location) : ctx;
         }
         Object body = resp.getBody();
