@@ -6,6 +6,7 @@ import com.fasterxml.jackson.core.type.TypeReference;
 import io.github.t1willi.http.json.JsonSerializer;
 
 import java.io.IOException;
+import java.lang.reflect.Type;
 import java.net.http.HttpHeaders;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
@@ -44,7 +45,7 @@ public class HttpResponse {
                 raw.body(),
                 new TypeReference<List<T>>() {
                     @Override
-                    public java.lang.reflect.Type getType() {
+                    public Type getType() {
                         return json.getMapper()
                                 .getTypeFactory()
                                 .constructCollectionType(List.class, cls);

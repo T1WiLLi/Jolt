@@ -114,4 +114,8 @@ public abstract class SecurityConfiguration {
         this.maxRequest = maxRequest;
         return this;
     }
+
+    protected SecurityConfiguration() {
+        configure();
+    }
 }

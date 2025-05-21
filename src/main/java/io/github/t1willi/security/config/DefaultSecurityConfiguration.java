@@ -26,7 +26,7 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
          */
         @PostConstruct
         public void init() {
-                configure();
+
         }
 
         /**
