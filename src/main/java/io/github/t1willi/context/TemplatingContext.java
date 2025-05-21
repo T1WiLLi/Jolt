@@ -1,5 +1,6 @@
 package io.github.t1willi.context;
 
+import java.util.logging.Level;
 import java.util.logging.Logger;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -41,7 +42,13 @@ final class TemplatingContext {
     public void render(ResponseContext response, String templatePath, JoltModel model) {
         JoltModel baseModel = LanguageService.getGlobalLanguageModel();
         if (baseModel == null) {
-            baseModel = JoltModel.create();
+            baseModel = JoltModel.empty();
+        }
+
+        JoltModel finalModel = baseModel.clone();
+
+        if (model != null) {
+            finalModel.merge(model);
         }
 
         String csrfToken = CsrfToken.generate();
@@ -49,11 +56,19 @@ final class TemplatingContext {
                 .getCsrfConfig()
                 .getTokenName();
 
-        JoltModel finalModel = model != null ? baseModel.merge(model) : baseModel;
-        String renderedHtml = renderTemplate(templatePath, finalModel);
-        renderedHtml = injectCsrfTokenIntoForms(renderedHtml, csrfToken, tokenName);
-        response.setContentType("text/html; charset=UTF-8");
-        response.html(renderedHtml);
+        try {
+            String renderedHtml = renderTemplate(templatePath, finalModel);
+            renderedHtml = injectCsrfTokenIntoForms(renderedHtml, csrfToken, tokenName);
+            response.setContentType("text/html; charset=UTF-8");
+            response.html(renderedHtml);
+
+            logger.log(Level.FINE, () -> "Rendered template: " + templatePath +
+                    " with model keys: " + String.join(", ", finalModel.getKeys()));
+        } catch (Exception e) {
+            logger.log(Level.SEVERE, "Failed to render template: " + templatePath, e);
+            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error while rendering template: " + templatePath, e);
+        }
     }
 
     /**

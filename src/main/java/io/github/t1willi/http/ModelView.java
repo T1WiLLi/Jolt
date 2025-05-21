@@ -10,7 +10,7 @@ public final class ModelView {
 
     private ModelView(String view, JoltModel model) {
         this.view = view;
-        this.model = model != null ? model : JoltModel.create();
+        this.model = model != null ? model : JoltModel.empty();
     }
 
     public static ModelView of(String view, JoltModel model) {

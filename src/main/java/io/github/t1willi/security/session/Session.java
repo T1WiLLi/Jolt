@@ -7,7 +7,9 @@ import io.github.t1willi.exceptions.SessionIpMismatchException;
 import io.github.t1willi.exceptions.SessionUserAgentMismatchException;
 import io.github.t1willi.server.config.ConfigurationManager;
 import io.github.t1willi.utils.Constant;
+import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 import jakarta.servlet.http.HttpSession;
 
 import java.lang.reflect.Type;
@@ -22,8 +24,7 @@ import java.util.function.Supplier;
 
 /**
  * A central utility for managing and validating user {@link HttpSession}
- * instances
- * in the Jolt framework.
+ * instances in the Jolt framework.
  *
  * <p>
  * <strong>Features:</strong>
@@ -32,9 +33,10 @@ import java.util.function.Supplier;
  * <li>Configurable session lifetime (with optional sliding expiration)</li>
  * <li>Automatic IP &amp; User‑Agent binding to thwart hijacking</li>
  * <li>Session‑ID rotation on authentication to prevent fixation</li>
- * <li>“Last access” timestamp updates on every read/write</li>
+ * <li>"Last access" timestamp updates on every read/write</li>
  * <li>Type‑safe, transparent encryption of stored values (via
  * {@link JoltSession})</li>
+ * <li>Secure session cleanup and cookie removal</li>
  * </ul>
  *
  * @see JoltSession
@@ -109,8 +111,7 @@ public final class Session {
 
     /**
      * Retrieves the value of the given session attribute, or returns
-     * {@code defaultValue}
-     * if missing or not a String.
+     * {@code defaultValue} if missing or not a String.
      *
      * @param key          the session attribute name
      * @param defaultValue the fallback to return if attribute absent
@@ -171,7 +172,7 @@ public final class Session {
      * Stores a session attribute (and triggers initialization on first write).
      *
      * @param key   the attribute name
-     * @param value the value to store (Strings may be encrypted)
+     * @param value the value to store (primitives and objects are supported)
      */
     public static void set(String key, Object value) {
         JoltSession js = ensure(true);
@@ -198,7 +199,7 @@ public final class Session {
     }
 
     /**
-     * Returns the active session’s ID, optionally creating one if none exists.
+     * Returns the active session's ID, optionally creating one if none exists.
      *
      * @return the HTTP session ID
      */
@@ -229,7 +230,7 @@ public final class Session {
     }
 
     /**
-     * Returns a human‑readable “last access” time or “N/A”.
+     * Returns a human‑readable "last access" time or "N/A".
      *
      * @return formatted access timestamp
      */
@@ -241,7 +242,7 @@ public final class Session {
     }
 
     /**
-     * Returns a human‑readable “expire” time or “N/A”.
+     * Returns a human‑readable "expire" time or "N/A".
      *
      * @return formatted expire timestamp
      */
@@ -282,24 +283,42 @@ public final class Session {
     }
 
     /**
-     * Invalidates the current session (logout).
+     * Completely destroys the current session by:
+     * <ul>
+     * <li>Clearing all session attributes securely</li>
+     * <li>Invalidating the server session</li>
+     * <li>Removing the session cookie from the client</li>
+     * </ul>
+     * 
+     * This provides a clean logout experience.
      */
     public static void destroy() {
-        HttpSession s = getCtx().rawRequest().getSession(false);
-        if (s != null)
-            s.invalidate();
+        JoltContext ctx = getCtx();
+        HttpServletRequest request = ctx.rawRequest();
+        HttpServletResponse response = ctx.rawResponse();
+        HttpSession session = request.getSession(false);
+
+        if (session != null) {
+            JoltSession js = wrap(session);
+            js.invalidate();
+        }
+
+        removeSessionCookie(request, response);
     }
 
     /**
-     * Fully invalidates and recreates a session, then re‑initializes it
-     * and rotates its ID.
+     * Fully invalidates and recreates a session with secure cleanup,
+     * then re‑initializes it and rotates its ID.
      */
     public static void invalidate() {
         JoltContext ctx = getCtx();
         HttpServletRequest req = ctx.rawRequest();
         HttpSession old = req.getSession(false);
-        if (old != null)
-            old.invalidate();
+
+        if (old != null) {
+            wrap(old).invalidate();
+        }
+
         HttpSession neu = req.getSession(true);
         initialize(neu, ctx);
         wrap(neu).changeSessionId(req);
@@ -361,7 +380,7 @@ public final class Session {
             Supplier<RuntimeException> exceptionSupplier) {
         String stored = js.getAttribute(key).orElse(null);
         if (!Objects.equals(stored, actual)) {
-            js.raw().invalidate();
+            js.invalidate();
             throw exceptionSupplier.get();
         }
     }
@@ -372,13 +391,36 @@ public final class Session {
         long now = Instant.now().toEpochMilli();
 
         if (now > exp) {
-            js.raw().invalidate();
+            js.invalidate();
             throw new SessionExpiredException();
         }
 
         if (SLIDING) {
             js.setAttribute(KEY_EXPIRE_TIME,
                     now + Duration.ofSeconds(getLifetime()).toMillis());
+        }
+    }
+
+    /**
+     * Removes the session cookie from the client by setting it to expire
+     * immediately.
+     */
+    private static void removeSessionCookie(HttpServletRequest request, HttpServletResponse response) {
+        Cookie[] cookies = request.getCookies();
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if ("JSESSIONID".equals(cookie.getName())) {
+                    Cookie expiredCookie = new Cookie("JSESSIONID", "");
+                    expiredCookie.setPath(cookie.getPath() != null ? cookie.getPath() : "/");
+                    expiredCookie.setMaxAge(0); // Expire immediately
+                    expiredCookie.setHttpOnly(true);
+                    if (request.isSecure()) {
+                        expiredCookie.setSecure(true);
+                    }
+                    response.addCookie(expiredCookie);
+                    break;
+                }
+            }
         }
     }
 

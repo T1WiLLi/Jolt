@@ -42,26 +42,27 @@ public class SessionManager {
     }
 
     private static void configureSessionPersistence(TomcatServer server) {
-        try {
-            Context context = server.getContext();
+        Context context = server.getContext();
+        Database db = Database.getInstance();
 
-            Database db = Database.getInstance();
-            if (db.isInitialized()) {
-                PersistentManager manager = new PersistentManager();
-                manager.setProcessExpiresFrequency(1);
+        if (db.isInitialized()) {
+            PersistentManager manager = new PersistentManager();
 
-                JoltJDBCStore jdbcStore = new JoltJDBCStore();
-                manager.setStore(jdbcStore);
-                logger.info("JoltJDBCStore configured for session persistence.");
-                context.setManager(manager);
-            } else {
-                logger.warning("Database not initialized; using StandardManager for in-memory session management.");
-                StandardManager manager = new StandardManager();
-                context.setManager(manager);
-            }
-        } catch (Exception e) {
-            logger.severe("Failed to configure session persistence: " + e.getMessage());
-            throw new RuntimeException("Failed to configure session persistence", e);
+            manager.setProcessExpiresFrequency(2);
+            manager.setMaxIdleBackup(60);
+            manager.setMinIdleSwap(120);
+            manager.setMaxActive(-1);
+            manager.setSaveOnRestart(true);
+
+            JoltJDBCStore jdbcStore = new JoltJDBCStore();
+            manager.setStore(jdbcStore);
+
+            context.setManager(manager);
+            logger.info("JoltJDBCStore configured for immediate session persistence.");
+        } else {
+            StandardManager manager = new StandardManager();
+            context.setManager(manager);
+            logger.warning("Database not initialized; using in-memory session manager.");
         }
     }
 

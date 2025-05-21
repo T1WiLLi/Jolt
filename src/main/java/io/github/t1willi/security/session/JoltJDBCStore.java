@@ -10,6 +10,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import io.github.t1willi.database.Database;
@@ -23,7 +24,7 @@ import org.apache.catalina.session.StoreBase;
 public class JoltJDBCStore extends StoreBase {
     private static final Logger logger = Logger.getLogger(JoltJDBCStore.class.getName());
     private static final String DEFAULT_SESSION_TABLE = Constant.Security.DEFAULT_SESSION_TABLE_NAME;
-    private static String sessionTable;
+    private String sessionTable;
     private Database database;
 
     @Override
@@ -34,9 +35,12 @@ public class JoltJDBCStore extends StoreBase {
             logger.severe("Database not initialized; JoltJDBCStore cannot function.");
             throw new IllegalStateException("Database not initialized");
         }
-        // fixed property lookup: no stray '='
-        sessionTable = ConfigurationManager.getInstance()
-                .getProperty("session.name", DEFAULT_SESSION_TABLE);
+
+        // Get table name from configuration
+        this.sessionTable = ConfigurationManager.getInstance()
+                .getProperty("session.table", DEFAULT_SESSION_TABLE);
+
+        logger.info("Using session table: " + sessionTable);
         createTableIfNotExists();
     }
 
@@ -50,6 +54,7 @@ public class JoltJDBCStore extends StoreBase {
                         "max_inactive INT NOT NULL, " +
                         "expiry_time BIGINT NOT NULL)",
                 sessionTable);
+
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.executeUpdate();
@@ -92,16 +97,26 @@ public class JoltJDBCStore extends StoreBase {
 
     @Override
     public Session load(String id) throws IOException {
+        if (id == null || id.isEmpty()) {
+            return null;
+        }
+
+        logger.fine("Loading session: " + id);
         String sql = "SELECT data, max_inactive, expiry_time FROM " + sessionTable + " WHERE id = ?";
+
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, id);
+
             try (ResultSet rs = stmt.executeQuery()) {
                 if (!rs.next()) {
+                    logger.fine("No session found with ID: " + id);
                     return null;
                 }
+
                 long expiryTime = rs.getLong("expiry_time");
                 if (System.currentTimeMillis() > expiryTime) {
+                    logger.fine("Session " + id + " has expired, removing it");
                     remove(id);
                     return null;
                 }
@@ -109,30 +124,47 @@ public class JoltJDBCStore extends StoreBase {
                 byte[] data = rs.getBytes("data");
                 int maxInactive = rs.getInt("max_inactive");
 
+                // Create a new session
+                StandardSession session = (StandardSession) getManager().createEmptySession();
+                session.setId(id, false); // Don't notify listeners yet
+                session.setMaxInactiveInterval(maxInactive);
+
                 try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
                         ObjectInputStream ois = new ObjectInputStream(bais)) {
+                    session.readObjectData(ois);
+                    session.setManager(getManager());
 
-                    StandardSession std = (StandardSession) getManager().createEmptySession();
-                    std.setId(id);
-                    std.setMaxInactiveInterval(maxInactive);
-                    std.readObjectData(ois);
+                    // Session is now valid - notify listeners
+                    session.setId(id, true);
 
-                    // don't resurrect invalidated sessions
-                    if (!std.isValid()) {
-                        remove(id);
-                        return null;
-                    }
-                    return std;
+                    logger.fine("Loaded session " + id + " successfully");
+                    return session;
                 }
             }
-        } catch (SQLException | ClassNotFoundException e) {
-            logger.severe("Failed to load session " + id + ": " + e.getMessage());
-            throw new IOException("Failed to load session", e);
+        } catch (SQLException e) {
+            logger.log(Level.SEVERE, "Failed to load session " + id, e);
+            throw new IOException("Failed to load session: " + e.getMessage(), e);
+        } catch (ClassNotFoundException e) {
+            logger.log(Level.SEVERE, "Failed to deserialize session " + id, e);
+            throw new IOException("Failed to deserialize session", e);
         }
     }
 
     @Override
     public void save(Session session) throws IOException {
+        if (session == null || !(session instanceof StandardSession)) {
+            return;
+        }
+
+        StandardSession standardSession = (StandardSession) session;
+        if (!standardSession.isValid()) {
+            logger.fine("Skip saving invalid session: " + session.getId());
+            remove(session.getId());
+            return;
+        }
+
+        logger.fine("Saving session: " + session.getId());
+
         String sql = String.format(
                 "INSERT INTO %s (id, data, app_name, last_access, max_inactive, expiry_time) " +
                         "VALUES (?, ?, ?, ?, ?, ?) " +
@@ -143,9 +175,18 @@ public class JoltJDBCStore extends StoreBase {
                         "max_inactive = EXCLUDED.max_inactive, " +
                         "expiry_time = EXCLUDED.expiry_time",
                 sessionTable);
+
+        // Calculate expiry time correctly
+        long lastAccessedTime = session.getLastAccessedTime();
+        int maxInactiveInterval = session.getMaxInactiveInterval();
+        long expiryTime = maxInactiveInterval > 0
+                ? lastAccessedTime + (maxInactiveInterval * 1000L)
+                : -1; // No expiry
+
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 ObjectOutputStream oos = new ObjectOutputStream(baos)) {
-            ((StandardSession) session).writeObjectData(oos);
+
+            standardSession.writeObjectData(oos);
             oos.flush();
             byte[] blob = baos.toByteArray();
 
@@ -154,39 +195,54 @@ public class JoltJDBCStore extends StoreBase {
                 stmt.setString(1, session.getId());
                 stmt.setBytes(2, blob);
                 stmt.setString(3, session.getManager().getContext().getName());
-                stmt.setLong(4, session.getLastAccessedTime());
-                stmt.setInt(5, session.getMaxInactiveInterval());
-                stmt.setLong(6, session.getLastAccessedTime() + (session.getMaxInactiveInterval() * 1000L));
-                stmt.executeUpdate();
+                stmt.setLong(4, lastAccessedTime);
+                stmt.setInt(5, maxInactiveInterval);
+                stmt.setLong(6, expiryTime);
+
+                int rowsUpdated = stmt.executeUpdate();
+                logger.fine("Session " + session.getId() + " " +
+                        (rowsUpdated > 0 ? "saved successfully" : "not saved"));
             }
         } catch (SQLException e) {
-            logger.severe("Failed to save session " + session.getId() + ": " + e.getMessage());
-            throw new IOException("Failed to save session", e);
+            logger.log(Level.SEVERE, "Failed to save session " + session.getId(), e);
+            throw new IOException("Failed to save session: " + e.getMessage(), e);
         }
     }
 
     @Override
     public void remove(String id) throws IOException {
+        if (id == null || id.isEmpty()) {
+            return;
+        }
+
+        logger.fine("Removing session: " + id);
         String sql = "DELETE FROM " + sessionTable + " WHERE id = ?";
+
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, id);
-            stmt.executeUpdate();
+            int rowsDeleted = stmt.executeUpdate();
+
+            logger.fine("Session " + id + " " +
+                    (rowsDeleted > 0 ? "removed successfully" : "not found"));
         } catch (SQLException e) {
-            logger.severe("Failed to remove session " + id + ": " + e.getMessage());
-            throw new IOException("Failed to remove session", e);
+            logger.log(Level.SEVERE, "Failed to remove session " + id, e);
+            throw new IOException("Failed to remove session: " + e.getMessage(), e);
         }
     }
 
     @Override
     public void clear() throws IOException {
+        logger.fine("Clearing all sessions");
         String sql = "DELETE FROM " + sessionTable;
+
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-            stmt.executeUpdate();
+            int rowsDeleted = stmt.executeUpdate();
+            logger.fine("Cleared " + rowsDeleted + " sessions");
         } catch (SQLException e) {
-            logger.severe("Failed to clear sessions: " + e.getMessage());
-            throw new IOException("Failed to clear sessions", e);
+            logger.log(Level.SEVERE, "Failed to clear sessions", e);
+            throw new IOException("Failed to clear sessions: " + e.getMessage(), e);
         }
     }
 }

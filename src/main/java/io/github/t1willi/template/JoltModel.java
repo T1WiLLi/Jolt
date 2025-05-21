@@ -1,135 +1,175 @@
 package io.github.t1willi.template;
 
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 /**
- * Provides a fluent interface for building data models to be used with
- * Freemarker templates.
- * <p>
- * This class wraps a map of values and provides convenient methods for adding
- * values
- * to the model.
- *
- * @since 1.0
+ * Model class for passing data to templates.
+ * This implementation is designed to be immutable during template rendering.
  */
 public class JoltModel {
+    private final Map<String, Object> model;
 
-    private final Map<String, Object> values = new HashMap<>();
-
-    /**
-     * Creates a new empty template model.
-     *
-     * @return A new template model instance
-     */
-    public static JoltModel create() {
-        return new JoltModel();
+    private JoltModel(Map<String, Object> initialData) {
+        this.model = new HashMap<>(initialData != null ? initialData : Collections.emptyMap());
     }
 
     /**
-     * Creates a new template model with the specified key-value pair.
-     *
+     * Creates a new empty model.
+     * 
+     * @return A new empty model
+     */
+    public static JoltModel empty() {
+        return new JoltModel(null);
+    }
+
+    /**
+     * Creates a new model with initial data.
+     * 
+     * @param initialData Initial data for the model
+     * @return A new model with initial data
+     */
+    public static JoltModel of(Map<String, Object> initialData) {
+        return new JoltModel(initialData);
+    }
+
+    /**
+     * Adds a value to the model.
+     * 
      * @param key   The key
      * @param value The value
-     * @return A new template model instance
-     */
-    public static JoltModel of(String key, Object value) {
-        return new JoltModel().with(key, value);
-    }
-
-    /**
-     * Creates a new template model from the specified map.
-     *
-     * @param map The map of values
-     * @return A new template model instance
-     */
-    public static JoltModel from(Map<String, Object> map) {
-        JoltModel model = new JoltModel();
-        model.values.putAll(map);
-        return model;
-    }
-
-    /**
-     * Adds a value to the model with the specified key.
-     *
-     * @param key   The key
-     * @param value The value
-     * @return This model instance for method chaining
+     * @return This model instance for chaining
      */
     public JoltModel with(String key, Object value) {
-        values.put(key, value);
+        if (key == null) {
+            throw new IllegalArgumentException("Model key cannot be null");
+        }
+        model.put(key, value);
         return this;
     }
 
     /**
-     * Adds all entries from the specified map to the model.
-     *
-     * @param map The map of values to add
-     * @return This model instance for method chaining
-     */
-    public JoltModel withAll(Map<String, Object> map) {
-        values.putAll(map);
-        return this;
-    }
-
-    /**
-     * Merges another template model into this one.
-     *
-     * @param other The other template model to merge
-     * @return This model instance for method chaining
+     * Merges another model into this one.
+     * Values in the other model will override values in this model.
+     * 
+     * @param other The model to merge
+     * @return This model instance with merged data
      */
     public JoltModel merge(JoltModel other) {
-        values.putAll(other.values);
+        if (other != null) {
+            model.putAll(other.model);
+        }
         return this;
     }
 
     /**
-     * Gets the underlying map of values.
-     *
-     * @return The map of values
+     * Creates a deep clone of this model.
+     * This ensures that modifications to the returned model don't affect this
+     * model.
+     * 
+     * @return A new model with the same data
+     */
+    public JoltModel clone() {
+        return new JoltModel(this.model);
+    }
+
+    /**
+     * Returns the model as an unmodifiable map.
+     * 
+     * @return The model as an unmodifiable map
      */
     public Map<String, Object> asMap() {
-        return new HashMap<>(values);
+        return Collections.unmodifiableMap(model);
     }
 
     /**
-     * Checks if the model contains a value with the specified key.
-     *
-     * @param key The key to check
-     * @return True if the model contains the key, false otherwise
-     */
-    public boolean has(String key) {
-        return values.containsKey(key);
-    }
-
-    /**
-     * Gets the value associated with the specified key.
-     *
+     * Gets a value from the model.
+     * 
      * @param key The key
-     * @return The value, or null if the key does not exist
+     * @return The value or null if not found
      */
     public Object get(String key) {
-        return values.get(key);
+        return model.get(key);
     }
 
     /**
-     * Removes the value associated with the specified key.
-     *
-     * @param key The key
-     * @return This model instance for method chaining
+     * Gets a typed value from the model.
+     * 
+     * @param <T>  The expected type
+     * @param key  The key
+     * @param type The class of the expected type
+     * @return The value cast to the expected type, or null if not found
+     * @throws ClassCastException if the value cannot be cast to the expected type
      */
-    public JoltModel remove(String key) {
-        values.remove(key);
-        return this;
+    @SuppressWarnings("unchecked")
+    public <T> T get(String key, Class<T> type) {
+        Object value = model.get(key);
+        if (value == null) {
+            return null;
+        }
+        if (type.isInstance(value)) {
+            return (T) value;
+        }
+        throw new ClassCastException("Value for key '" + key + "' is not of type " + type.getName());
     }
 
     /**
-     * Clears all values from the model.
-     *
-     * @return This model instance for method chaining
+     * Checks if the model contains a key.
+     * 
+     * @param key The key to check
+     * @return true if the model contains the key, false otherwise
+     */
+    public boolean containsKey(String key) {
+        return model.containsKey(key);
+    }
+
+    /**
+     * Gets all keys in the model.
+     * 
+     * @return A set of all keys
+     */
+    public Set<String> getKeys() {
+        return Collections.unmodifiableSet(model.keySet());
+    }
+
+    /**
+     * Gets the size of the model.
+     * 
+     * @return The number of key-value pairs in the model
+     */
+    public int size() {
+        return model.size();
+    }
+
+    /**
+     * Checks if the model is empty.
+     * 
+     * @return true if the model has no key-value pairs, false otherwise
+     */
+    public boolean isEmpty() {
+        return model.isEmpty();
+    }
+
+    /**
+     * Removes a key-value pair from the model.
+     * 
+     * @param key The key to remove
+     * @return The previous value associated with the key, or null if there was no
+     *         mapping
+     */
+    public Object remove(String key) {
+        return model.remove(key);
+    }
+
+    /**
+     * Clears all key-value pairs from the model.
+     * 
+     * @return This model instance for chaining
      */
     public JoltModel clear() {
-        values.clear();
+        model.clear();
         return this;
     }
 }

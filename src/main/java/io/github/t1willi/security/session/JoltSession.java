@@ -1,3 +1,4 @@
+// JoltSession.java
 package io.github.t1willi.security.session;
 
 import io.github.t1willi.security.cryptography.Cryptography;
@@ -8,6 +9,7 @@ import jakarta.servlet.http.HttpSession;
 
 import java.lang.reflect.Type;
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
@@ -20,11 +22,12 @@ import com.fasterxml.jackson.databind.JavaType;
  * <li>Optional AES‑GCM encryption for String values</li>
  * <li>Type‑safe {@link Optional} getters</li>
  * <li>Session‑ID rotation for fixation protection</li>
+ * <li>Secure attribute cleanup</li>
  * </ul>
  *
  * <p>
  * When {@code session.encrypt=true}, all stored Strings (except
- * core keys) are encrypted with the app’s master key and
+ * core keys) are encrypted with the app's master key and
  * transparently decrypted on read.
  * </p>
  *
@@ -144,6 +147,34 @@ public final class JoltSession {
         session.removeAttribute(key);
     }
 
+    /**
+     * Securely clears all session attributes by setting them to null first,
+     * then removing them completely. This helps ensure sensitive data
+     * doesn't linger in memory.
+     */
+    public void clearAllAttributes() {
+        try {
+            var attributeNames = Collections.list(session.getAttributeNames());
+
+            for (String attributeName : attributeNames) {
+                try {
+                    session.setAttribute(attributeName, null);
+                } catch (Exception e) {
+                    continue; // Continue cleanup even if individual attribute fails
+                }
+            }
+
+            for (String attributeName : attributeNames) {
+                try {
+                    session.removeAttribute(attributeName);
+                } catch (Exception e) {
+                    continue; // Continue cleanup even if individual attribute fails
+                }
+            }
+        } catch (IllegalStateException e) {
+        }
+    }
+
     /** @return true if the session was just created in this request */
     public boolean isNew() {
         return session.isNew();
@@ -155,9 +186,10 @@ public final class JoltSession {
     }
 
     /**
-     * Invalidates the wrapped session (all attributes removed).
+     * Invalidates the wrapped session after clearing all attributes.
      */
     public void invalidate() {
+        clearAllAttributes();
         session.invalidate();
     }
 

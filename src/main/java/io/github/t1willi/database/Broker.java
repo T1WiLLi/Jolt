@@ -8,6 +8,7 @@ import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Types;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -344,7 +345,13 @@ public abstract class Broker<T> {
         try {
             stmt = conn.prepareStatement(sql);
             for (int i = 0; i < params.length; i++) {
-                stmt.setObject(i + 1, params[i]);
+                Object param = params[i];
+                if (param instanceof Collection<?> || param instanceof Map<?, ?>
+                        || param != null && param.getClass().isArray()) {
+                    continue; // Skip binding for collections, maps, or arrays
+                } else {
+                    stmt.setObject(i + 1, param);
+                }
             }
             return stmt;
         } catch (SQLException e) {

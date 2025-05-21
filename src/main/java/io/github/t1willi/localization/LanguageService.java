@@ -39,17 +39,17 @@ public class LanguageService {
     private static void initializeLanguage(String langToUse) {
         if (langToUse == null) {
             languageConfig = null;
-            globalLanguageModel = JoltModel.create();
+            globalLanguageModel = JoltModel.empty();
         } else {
             languageConfig = new LanguageConfig(langToUse);
             Map<String, Object> translations = languageConfig.getTranslations();
             if (translations == null) {
                 logger.severe("Failed to load translations for language: " + langToUse +
                         ". Check that /lang/" + langToUse + ".json exists and is valid.");
-                globalLanguageModel = JoltModel.create();
+                globalLanguageModel = JoltModel.empty();
             } else {
                 translations.put("languageCode", langToUse);
-                globalLanguageModel = JoltModel.from(Map.of("lang", translations));
+                globalLanguageModel = JoltModel.of(Map.of("lang", translations));
             }
         }
         lang = langToUse;

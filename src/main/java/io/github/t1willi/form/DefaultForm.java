@@ -107,7 +107,7 @@ public final class DefaultForm implements Form {
     public JoltModel buildModel(String... ignoreFields) {
         Map<String, String> data = getFilteredFieldValues(ignoreFields);
         Map<String, Object> objectData = new HashMap<>(data);
-        return JoltModel.from(objectData);
+        return JoltModel.of(objectData);
     }
 
     @Override

@@ -7,7 +7,7 @@ import io.github.t1willi.template.JoltModel;
 public abstract class MvcController extends BaseController {
 
     protected ResponseEntity<ModelView> render(String view, JoltModel model) {
-        JoltModel m = model != null ? model : JoltModel.create();
+        JoltModel m = model != null ? model : JoltModel.empty();
         return ResponseEntity.ok(ModelView.of(view, m))
                 .header("Content-Type", "text/html");
     }
