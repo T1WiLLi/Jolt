@@ -289,10 +289,6 @@ public ResponseEntity<Void> get() {
 }
 ```
 
-- Fix ResponseEntity BiConsumer crashing when headers are null. Which is a common case when using the ResponseEntity class.
-- Make it so that you can pass a JoltModel in redirect() function . Which is useful when you want to pass a model to a view in a redirect.
-- Add more overload method to ResponseEntity class to make it easier to use. For example, you can now pass a JoltModel directly in the constructor of ResponseEntity class. This is useful when you want to return a model directly in the response.
-
 New server properties : 
 
 server.logging.level=SEVERE, WARNING, INFO, FINE, FINER, FINEST, ALL, OFF

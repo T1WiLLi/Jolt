@@ -15,7 +15,6 @@ import java.util.logging.Logger;
 import io.github.t1willi.database.Database;
 import io.github.t1willi.server.config.ConfigurationManager;
 import io.github.t1willi.utils.Constant;
-
 import org.apache.catalina.Manager;
 import org.apache.catalina.Session;
 import org.apache.catalina.session.StandardSession;
@@ -32,30 +31,31 @@ public class JoltJDBCStore extends StoreBase {
         super.setManager(manager);
         this.database = Database.getInstance();
         if (!database.isInitialized()) {
-            logger.severe("Database not initialized; CustomJDBCStore cannot function.");
+            logger.severe("Database not initialized; JoltJDBCStore cannot function.");
             throw new IllegalStateException("Database not initialized");
         }
-        sessionTable = ConfigurationManager.getInstance().getProperty("session.name=", DEFAULT_SESSION_TABLE);
+        // fixed property lookup: no stray '='
+        sessionTable = ConfigurationManager.getInstance()
+                .getProperty("session.name", DEFAULT_SESSION_TABLE);
         createTableIfNotExists();
     }
 
     private void createTableIfNotExists() {
-        String createTableSQL = """
-                CREATE TABLE IF NOT EXISTS %s (
-                    id VARCHAR(255) NOT NULL PRIMARY KEY,
-                    data BYTEA NOT NULL,
-                    app_name VARCHAR(255),
-                    last_access BIGINT NOT NULL,
-                    max_inactive INT NOT NULL,
-                    expiry_time BIGINT NOT NULL
-                )
-                """.formatted(sessionTable);
+        String sql = String.format(
+                "CREATE TABLE IF NOT EXISTS %s (" +
+                        "id VARCHAR(255) NOT NULL PRIMARY KEY, " +
+                        "data BYTEA NOT NULL, " +
+                        "app_name VARCHAR(255), " +
+                        "last_access BIGINT NOT NULL, " +
+                        "max_inactive INT NOT NULL, " +
+                        "expiry_time BIGINT NOT NULL)",
+                sessionTable);
         try (Connection conn = database.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(createTableSQL)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.executeUpdate();
-            logger.info("Database table '" + sessionTable + "' created or already exists.");
+            logger.info("Session table '" + sessionTable + "' created or already exists.");
         } catch (SQLException e) {
-            logger.severe("Failed to create " + sessionTable + " table: " + e.getMessage());
+            logger.severe("Failed to create session table: " + e.getMessage());
             throw new RuntimeException("Failed to initialize session persistence", e);
         }
     }
@@ -66,10 +66,7 @@ public class JoltJDBCStore extends StoreBase {
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 ResultSet rs = stmt.executeQuery()) {
-            if (rs.next()) {
-                return rs.getInt(1);
-            }
-            return 0;
+            return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) {
             logger.severe("Failed to get session count: " + e.getMessage());
             throw new IOException("Failed to get session count", e);
@@ -82,11 +79,11 @@ public class JoltJDBCStore extends StoreBase {
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 ResultSet rs = stmt.executeQuery()) {
-            ArrayList<String> keys = new ArrayList<>();
+            var list = new ArrayList<String>();
             while (rs.next()) {
-                keys.add(rs.getString("id"));
+                list.add(rs.getString("id"));
             }
-            return keys.toArray(new String[0]);
+            return list.toArray(new String[0]);
         } catch (SQLException e) {
             logger.severe("Failed to get session keys: " + e.getMessage());
             throw new IOException("Failed to get session keys", e);
@@ -100,27 +97,34 @@ public class JoltJDBCStore extends StoreBase {
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
-                if (rs.next()) {
-                    byte[] data = rs.getBytes("data");
-                    int maxInactive = rs.getInt("max_inactive");
-                    long expiryTime = rs.getLong("expiry_time");
+                if (!rs.next()) {
+                    return null;
+                }
+                long expiryTime = rs.getLong("expiry_time");
+                if (System.currentTimeMillis() > expiryTime) {
+                    remove(id);
+                    return null;
+                }
 
-                    if (System.currentTimeMillis() > expiryTime) {
+                byte[] data = rs.getBytes("data");
+                int maxInactive = rs.getInt("max_inactive");
+
+                try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
+                        ObjectInputStream ois = new ObjectInputStream(bais)) {
+
+                    StandardSession std = (StandardSession) getManager().createEmptySession();
+                    std.setId(id);
+                    std.setMaxInactiveInterval(maxInactive);
+                    std.readObjectData(ois);
+
+                    // don't resurrect invalidated sessions
+                    if (!std.isValid()) {
                         remove(id);
                         return null;
                     }
-
-                    try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
-                            ObjectInputStream ois = new ObjectInputStream(bais)) {
-                        Session session = getManager().createEmptySession();
-                        session.setId(id);
-                        session.setMaxInactiveInterval(maxInactive);
-                        ((StandardSession) session).readObjectData(ois);
-                        return session;
-                    }
+                    return std;
                 }
             }
-            return null;
         } catch (SQLException | ClassNotFoundException e) {
             logger.severe("Failed to load session " + id + ": " + e.getMessage());
             throw new IOException("Failed to load session", e);
@@ -129,26 +133,26 @@ public class JoltJDBCStore extends StoreBase {
 
     @Override
     public void save(Session session) throws IOException {
-        String sql = """
-                INSERT INTO %s (id, data, app_name, last_access, max_inactive, expiry_time)
-                VALUES (?, ?, ?, ?, ?, ?)
-                ON CONFLICT (id) DO UPDATE
-                SET data = EXCLUDED.data,
-                    app_name = EXCLUDED.app_name,
-                    last_access = EXCLUDED.last_access,
-                    max_inactive = EXCLUDED.max_inactive,
-                    expiry_time = EXCLUDED.expiry_time
-                """.formatted(sessionTable);
+        String sql = String.format(
+                "INSERT INTO %s (id, data, app_name, last_access, max_inactive, expiry_time) " +
+                        "VALUES (?, ?, ?, ?, ?, ?) " +
+                        "ON CONFLICT (id) DO UPDATE SET " +
+                        "data = EXCLUDED.data, " +
+                        "app_name = EXCLUDED.app_name, " +
+                        "last_access = EXCLUDED.last_access, " +
+                        "max_inactive = EXCLUDED.max_inactive, " +
+                        "expiry_time = EXCLUDED.expiry_time",
+                sessionTable);
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 ObjectOutputStream oos = new ObjectOutputStream(baos)) {
             ((StandardSession) session).writeObjectData(oos);
             oos.flush();
-            byte[] data = baos.toByteArray();
+            byte[] blob = baos.toByteArray();
 
             try (Connection conn = database.getConnection();
                     PreparedStatement stmt = conn.prepareStatement(sql)) {
                 stmt.setString(1, session.getId());
-                stmt.setBytes(2, data);
+                stmt.setBytes(2, blob);
                 stmt.setString(3, session.getManager().getContext().getName());
                 stmt.setLong(4, session.getLastAccessedTime());
                 stmt.setInt(5, session.getMaxInactiveInterval());
