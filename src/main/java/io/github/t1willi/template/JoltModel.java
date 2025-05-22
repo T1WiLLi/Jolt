@@ -36,6 +36,17 @@ public class JoltModel {
     }
 
     /**
+     * Creates a new model with a single key-value pair.
+     * 
+     * @param key   The key of the value
+     * @param value The value to be associated with the key
+     * @return A new model with the key-value pair
+     */
+    public static JoltModel of(String key, Object value) {
+        return new JoltModel(Map.of(key, value));
+    }
+
+    /**
      * Adds a value to the model.
      * 
      * @param key   The key
