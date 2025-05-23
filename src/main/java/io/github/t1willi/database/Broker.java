@@ -32,16 +32,9 @@ import io.github.t1willi.utils.StringUtils;
 public abstract class Broker<T> {
     private static final Logger logger = Logger.getLogger(Broker.class.getName());
 
-    /** The name of the database table associated with this broker. */
     protected final String table;
-
-    /** The class type of the entity this broker handles. */
     protected final Class<T> entityClass;
-
-    /** Tracks the last affected row count from database operations */
     private int lastAffectedRows = 0;
-
-    /** Tracks the last inserted ID from database operations */
     private long lastInsertedId = -1;
 
     /**
@@ -89,7 +82,7 @@ public abstract class Broker<T> {
 
             try (PreparedStatement stmt = prepareStatement(connection, sql, params);
                     ResultSet rs = stmt.executeQuery()) {
-                lastAffectedRows = 0; // Reset affected rows for SELECT
+                lastAffectedRows = 0;
                 if (rs.next()) {
                     return Optional.of(mapToEntity(rs));
                 }
@@ -173,7 +166,6 @@ public abstract class Broker<T> {
             connection = Database.getInstance().getConnection();
             connection.setAutoCommit(false);
 
-            // Determine if this is an INSERT query to handle RETURN_GENERATED_KEYS
             boolean isInsert = sql.trim().toUpperCase().startsWith("INSERT");
 
             try (PreparedStatement stmt = isInsert ? connection.prepareStatement(sql, Statement.RETURN_GENERATED_KEYS)
@@ -186,19 +178,18 @@ public abstract class Broker<T> {
                 int rowsAffected = stmt.executeUpdate();
                 lastAffectedRows = rowsAffected;
 
-                // For INSERT operations, try to retrieve the generated ID
                 if (isInsert) {
                     try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
                         if (generatedKeys.next()) {
                             lastInsertedId = generatedKeys.getLong(1);
                             connection.commit();
-                            return (int) lastInsertedId; // Return the generated ID for INSERT
+                            return (int) lastInsertedId;
                         }
                     }
                 }
 
                 connection.commit();
-                return lastAffectedRows; // Return affected rows count for UPDATE/DELETE
+                return lastAffectedRows;
             }
         } catch (SQLException e) {
             rollbackSilently(connection);
@@ -332,7 +323,8 @@ public abstract class Broker<T> {
     }
 
     /**
-     * Prepares a SQL statement with the given parameters.
+     * Prepares a SQL statement with the given parameters. This method only binds
+     * scalar values to the statement. (Any List, Map or Array) will be ignored.
      *
      * @param conn   The database connection to use.
      * @param sql    The SQL query to prepare.
@@ -341,29 +333,17 @@ public abstract class Broker<T> {
      * @throws SQLException If a database access error occurs.
      */
     private PreparedStatement prepareStatement(Connection conn, String sql, Object... params) throws SQLException {
-        PreparedStatement stmt = null;
-        try {
-            stmt = conn.prepareStatement(sql);
-            for (int i = 0; i < params.length; i++) {
-                Object param = params[i];
-                if (param instanceof Collection<?> || param instanceof Map<?, ?>
-                        || param != null && param.getClass().isArray()) {
-                    continue; // Skip binding for collections, maps, or arrays
-                } else {
-                    stmt.setObject(i + 1, param);
-                }
+        PreparedStatement stmt = conn.prepareStatement(sql);
+        int bindIndex = 1;
+        for (Object param : params) {
+            if (param instanceof Collection<?> ||
+                    param instanceof Map<?, ?> ||
+                    (param != null && param.getClass().isArray())) {
+                continue;
             }
-            return stmt;
-        } catch (SQLException e) {
-            if (stmt != null) {
-                try {
-                    stmt.close();
-                } catch (SQLException closeEx) {
-                    logger.warning(() -> "Failed to close PreparedStatement: " + closeEx.getMessage());
-                }
-            }
-            throw e;
+            stmt.setObject(bindIndex++, param);
         }
+        return stmt;
     }
 
     /**

@@ -289,6 +289,42 @@ public ResponseEntity<Void> get() {
 }
 ```
 
+# OpenAPI documentation support : 
+
+- To define OpenAPI, we can use the '@OpenAPI' annotation on the class or method level. if use on the class extending JoltApplication, it will be used for the whole application.
+
+```java
+@OpenAPI( // The OpenAPI annotation, altought has a lot of parameters, none of them are required. Element such as title, version and description are the most important ones, but can all be get from the controller itself, so they are not required to be set here.
+    title = "My API",
+    version = "1.0.0", // If the @Version annotation is used, it will precede the version of the OpenAPI annotation.
+    description = "My API description",
+    contact = @Contact(
+        name = "John Doe",
+        email = "john.doe@example.com",
+        url = "https://example.com"
+    ),
+    license = @License(
+        name = "Apache 2.0",
+        url = "https://www.apache.org/licenses/LICENSE-2.0.html"
+    ),
+    tags = {
+        @Tag(name = "users", description = "User management"),
+        @Tag(name = "products", description = "Product management")
+    }
+)
+@Controller("[controller]")
+public class HomeController extends ApiController {
+
+    @Get // OpenAPI, sees a GET, no param, no body, returns a String, in this case application/json because it's set.
+    public ResponseEntity<String> get() {
+        return ResponseEntity
+            .status(HttpStatus.OK)
+            .header("Content-Type", "application/json")
+            .body("{\"message\": \"Hello World\"}");
+    }
+}
+```
+
 New server properties : 
 
 server.logging.level=SEVERE, WARNING, INFO, FINE, FINER, FINEST, ALL, OFF
