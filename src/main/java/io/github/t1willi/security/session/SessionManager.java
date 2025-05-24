@@ -1,16 +1,28 @@
 package io.github.t1willi.security.session;
 
+import java.time.Duration;
 import java.util.Collections;
+import java.util.EnumSet;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
-import org.apache.catalina.Context;
-import org.apache.catalina.Lifecycle;
-import org.apache.catalina.session.PersistentManager;
-import org.apache.catalina.session.StandardManager;
+import javax.sql.DataSource;
+
+import org.springframework.core.io.ClassPathResource;
+import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.datasource.DataSourceTransactionManager;
+import org.springframework.jdbc.datasource.init.ResourceDatabasePopulator;
+import org.springframework.session.Session;
+import org.springframework.session.MapSessionRepository;
+import org.springframework.session.jdbc.JdbcIndexedSessionRepository;
+import org.springframework.session.web.http.SessionRepositoryFilter;
+import org.springframework.transaction.PlatformTransactionManager;
+import org.springframework.transaction.support.TransactionTemplate;
 
 import io.github.t1willi.database.Database;
 import io.github.t1willi.server.TomcatServer;
 import io.github.t1willi.server.config.ConfigurationManager;
+import jakarta.servlet.DispatcherType;
 import jakarta.servlet.ServletContext;
 import jakarta.servlet.SessionCookieConfig;
 import jakarta.servlet.SessionTrackingMode;
@@ -19,71 +31,55 @@ public class SessionManager {
     private static final Logger logger = Logger.getLogger(SessionManager.class.getName());
 
     public static void initialize(TomcatServer server) {
-        configureSessionCookies(server.getContext());
-        configureSessionPersistence(server);
+        ServletContext sc = server.getContext().getServletContext();
+        configureSessionCookies(sc);
+        registerSpringSessionFilter(sc);
     }
 
-    private static void configureSessionCookies(Context context) {
-        context.addLifecycleListener(event -> {
-            if (event.getType().equals(Lifecycle.BEFORE_START_EVENT)) {
-                logger.info("Configuring session cookies...");
-                ServletContext servletContext = context.getServletContext();
-                SessionCookieConfig cookieConfig = servletContext.getSessionCookieConfig();
-                cookieConfig.setHttpOnly(loadHttpOnly());
-                cookieConfig.setSecure(loadSecure());
-                cookieConfig.setPath(loadPath());
-                cookieConfig.setAttribute("SameSite", loadSameSite());
-
-                servletContext.setSessionTrackingModes(Collections.singleton(SessionTrackingMode.COOKIE));
-
-                logger.info("Session cookie configuration completed");
-            }
-        });
+    private static void configureSessionCookies(ServletContext sc) {
+        SessionCookieConfig cfg = sc.getSessionCookieConfig();
+        cfg.setHttpOnly(Boolean.parseBoolean(
+                ConfigurationManager.getInstance().getProperty("session.httponly", "true")));
+        cfg.setSecure(Boolean.parseBoolean(
+                ConfigurationManager.getInstance().getProperty("session.secure", "true")));
+        cfg.setPath(ConfigurationManager.getInstance().getProperty("session.path", "/"));
+        cfg.setAttribute("SameSite", ConfigurationManager.getInstance()
+                .getProperty("session.samesite", "Strict"));
+        sc.setSessionTrackingModes(Collections.singleton(SessionTrackingMode.COOKIE));
+        logger.info("Session cookies configured");
     }
 
-    private static void configureSessionPersistence(TomcatServer server) {
-        Context context = server.getContext();
-        Database db = Database.getInstance();
+    private static void registerSpringSessionFilter(ServletContext sc) {
+        SessionRepositoryFilter<? extends Session> filter;
+        int lifetime = Integer.parseInt(
+                ConfigurationManager.getInstance().getProperty("session.lifetime", "1800"));
 
-        if (db.isInitialized()) {
-            context.setBackgroundProcessorDelay(5);
-            PersistentManager manager = new PersistentManager();
+        if (Database.getInstance().isInitialized()) {
+            DataSource ds = Database.getInstance().getDataSource();
+            String table = ConfigurationManager.getInstance().getProperty("session.table", "sessions");
 
-            manager.setProcessExpiresFrequency(5);
-            manager.setMaxIdleBackup(0);
-            manager.setMinIdleSwap(0);
-            manager.setMaxActive(-1);
-            manager.setSaveOnRestart(true);
+            ResourceDatabasePopulator pop = new ResourceDatabasePopulator();
+            pop.addScript(new ClassPathResource("schema-sessions.sql"));
+            pop.execute(ds);
 
-            JoltJDBCStore jdbcStore = new JoltJDBCStore();
-            manager.setStore(jdbcStore);
+            JdbcTemplate jdbcTemplate = new JdbcTemplate(ds);
+            PlatformTransactionManager tm = new DataSourceTransactionManager(ds);
+            TransactionTemplate txTpl = new TransactionTemplate(tm);
+            JdbcIndexedSessionRepository repo = new JdbcIndexedSessionRepository(jdbcTemplate, txTpl);
+            repo.setTableName(table);
+            repo.setDefaultMaxInactiveInterval(Duration.ofSeconds(lifetime));
 
-            context.setManager(manager);
-            logger.info("JoltJDBCStore configured for immediate session persistence.");
+            filter = new SessionRepositoryFilter<>(repo);
+            logger.info("Using JDBC-backed Spring Session (table=" + table + ")");
         } else {
-            StandardManager manager = new StandardManager();
-            context.setManager(manager);
-            logger.warning("Database not initialized; using in-memory session manager.");
+            MapSessionRepository repo = new MapSessionRepository(new ConcurrentHashMap<>());
+            repo.setDefaultMaxInactiveInterval(Duration.ofSeconds(lifetime));
+            filter = new SessionRepositoryFilter<>(repo);
+            logger.warning("DB not initialized; using in-memory Spring Session");
         }
-    }
 
-    private static boolean loadHttpOnly() {
-        String httpOnlyStr = ConfigurationManager.getInstance().getProperty("session.httponly");
-        return httpOnlyStr != null ? Boolean.parseBoolean(httpOnlyStr) : true; // default to true
-    }
-
-    private static boolean loadSecure() {
-        String secureStr = ConfigurationManager.getInstance().getProperty("session.secure");
-        return secureStr != null ? Boolean.parseBoolean(secureStr) : true;
-    }
-
-    private static String loadPath() {
-        String path = ConfigurationManager.getInstance().getProperty("session.path");
-        return path != null ? path : "/";
-    }
-
-    private static String loadSameSite() {
-        String sameSite = ConfigurationManager.getInstance().getProperty("session.samesite");
-        return sameSite != null ? sameSite : "Strict";
+        sc.addFilter("springSessionFilter", filter)
+                .addMappingForUrlPatterns(EnumSet.of(DispatcherType.REQUEST), false, "/*");
+        logger.info("Spring Session filter registered");
     }
 }

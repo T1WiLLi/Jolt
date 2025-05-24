@@ -5,6 +5,8 @@ import java.sql.SQLException;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import javax.sql.DataSource;
+
 import com.zaxxer.hikari.HikariConfig;
 import com.zaxxer.hikari.HikariDataSource;
 
@@ -125,6 +127,18 @@ public final class Database {
         } catch (SQLException e) {
             logger.warning(() -> "Error closing database connection: " + e.getMessage());
         }
+    }
+
+    /**
+     * Retrieves the HikariCP data source.
+     *
+     * @return The HikariCP data source.
+     * @throws IllegalStateException If the database has not been initialized.
+     */
+    public DataSource getDataSource() {
+        if (!initialized)
+            throw new IllegalStateException("DB not initialized");
+        return dataSource;
     }
 
     /**
