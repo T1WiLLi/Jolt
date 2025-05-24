@@ -8,6 +8,7 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -30,66 +31,28 @@ import io.github.t1willi.utils.StringUtils;
  * @param <T>  The type of the entity.
  */
 public abstract class RestBroker<ID, T> extends Broker<T> {
-    private static final Logger logger = Logger.getLogger(RestBroker.class.getName()); // Logger for RestBroker
-                                                                                       // operations
-    private final Class<ID> id; // The class type of the entity's primary key
-    private final String idColumnName; // The name of the primary key column in the database
+    private static final Logger logger = Logger.getLogger(RestBroker.class.getName());
+    private final Class<ID> id;
+    private final String idColumnName;
 
-    /**
-     * Constructs a new `RestBroker` instance with the specified table name, entity
-     * class,
-     * primary key class, and primary key column name.
-     *
-     * @param table        The name of the database table.
-     * @param entityClass  The class type of the entity.
-     * @param idClass      The class type of the entity's primary key.
-     * @param idColumnName The name of the primary key column in the database.
-     */
     protected RestBroker(String table, Class<T> entityClass, Class<ID> idClass, String idColumnName) {
         super(table, entityClass);
         this.id = idClass;
         this.idColumnName = idColumnName != null ? idColumnName : "id";
     }
 
-    /**
-     * Constructs a new `RestBroker` instance with the specified table name, entity
-     * class,
-     * and primary key class. The primary key column name defaults to "id".
-     *
-     * @param table       The name of the database table.
-     * @param entityClass The class type of the entity.
-     * @param idClass     The class type of the entity's primary key.
-     */
     protected RestBroker(String table, Class<T> entityClass, Class<ID> idClass) {
         this(table, entityClass, idClass, "id");
     }
 
-    /**
-     * Retrieves all entities from the database.
-     *
-     * @return A list of all entities.
-     */
     public List<T> findAll() {
         return selectMany("SELECT * FROM " + table);
     }
 
-    /**
-     * Retrieves a paginated list of entities from the database.
-     *
-     * @param offset The number of entities to skip.
-     * @param limit  The maximum number of entities to return.
-     * @return A list of entities within the specified range.
-     */
     public List<T> findAll(int offset, int limit) {
         return selectMany("SELECT * FROM " + table + " LIMIT ? OFFSET ?", limit, offset);
     }
 
-    /**
-     * Retrieves entities that match the specified criteria.
-     *
-     * @param criteria A map of field names to values to filter the results.
-     * @return A list of entities that match the criteria.
-     */
     public List<T> findByCriteria(Map<String, Object> criteria) {
         if (criteria == null || criteria.isEmpty()) {
             return findAll();
@@ -103,13 +66,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         return selectMany(sql.toString(), criteria.values().toArray());
     }
 
-    /**
-     * Retrieves an entity by its primary key.
-     *
-     * @param id The primary key of the entity.
-     * @return An `Optional` containing the entity if found, otherwise empty.
-     * @throws DatabaseException If the ID is null.
-     */
     public Optional<T> findById(ID id) {
         if (id == null) {
             throw new DatabaseException(DatabaseErrorType.DATA_INTEGRITY_ERROR,
@@ -119,17 +75,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         return selectOne("SELECT * FROM " + table + " WHERE " + idColumnName + " = ?", id);
     }
 
-    /**
-     * Saves an entity to the database. If the entity has a null or empty ID, it is
-     * inserted.
-     * Otherwise, the existing entity is updated.
-     *
-     * @param entity The entity to save.
-     * @return The saved entity.
-     * @throws IllegalArgumentException If the entity is null.
-     * @throws DatabaseException        If an error occurs during the save
-     *                                  operation.
-     */
     public T save(T entity) {
         if (entity == null) {
             throw new IllegalArgumentException("Entity cannot be null");
@@ -164,13 +109,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         }
     }
 
-    /**
-     * Deletes an entity by its primary key.
-     *
-     * @param id The primary key of the entity to delete.
-     * @return the number of affect rows.
-     * @throws IllegalArgumentException If the ID is null.
-     */
     public int deleteById(ID id) {
         if (id == null) {
             throw new IllegalArgumentException("ID cannot be null");
@@ -180,12 +118,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         return query(sql, id);
     }
 
-    /**
-     * Updates an existing entity in the database.
-     *
-     * @param entity   The entity to update.
-     * @param entityId The primary key of the entity.
-     */
     private void updateEntity(T entity, ID entityId) {
         Map<String, Object> fields = extractFields(entity);
         fields.remove(idColumnName);
@@ -214,14 +146,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         query(sql.toString(), params);
     }
 
-    /**
-     * Inserts a new entity into the database and returns its generated primary key.
-     *
-     * @param entity The entity to insert.
-     * @return The generated primary key of the inserted entity.
-     * @throws DatabaseException If the entity has no fields to insert or an error
-     *                           occurs.
-     */
     private ID insertEntity(T entity) {
         Map<String, Object> fields = extractFields(entity);
 
@@ -305,12 +229,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         }
     }
 
-    /**
-     * Extracts the fields of an entity into a map of field names to values.
-     *
-     * @param entity The entity to extract fields from.
-     * @return A map of field names to values.
-     */
     private Map<String, Object> extractFields(T entity) {
         Map<String, Object> fields = new HashMap<>();
         Class<?> entityClass = entity.getClass();
@@ -321,8 +239,11 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
                 if (fieldName != null) {
                     try {
                         Object value = method.invoke(entity);
-                        if (value != null) {
+                        if (value != null && isScalarValue(value)) {
                             fields.put(StringUtils.camelToSnakeCase(fieldName), value);
+                        } else if (value != null) {
+                            logger.fine(() -> "Skipping non-scalar field: " + fieldName + " (type: "
+                                    + value.getClass().getSimpleName() + ")");
                         }
                     } catch (Exception e) {
                         logger.severe(
@@ -334,12 +255,12 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         return fields;
     }
 
-    /**
-     * Checks if a method is a valid getter method.
-     *
-     * @param method The method to check.
-     * @return True if the method is a valid getter, false otherwise.
-     */
+    private boolean isScalarValue(Object value) {
+        return !(value instanceof Collection<?> ||
+                value instanceof Map<?, ?> ||
+                value.getClass().isArray());
+    }
+
     private boolean isValidGetter(Method method) {
         String methodName = method.getName();
         return method.getDeclaringClass() != Object.class
@@ -348,12 +269,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
                 && !methodName.equals("getClass");
     }
 
-    /**
-     * Extracts the field name from a getter method.
-     *
-     * @param method The getter method.
-     * @return The field name, or null if it cannot be determined.
-     */
     private String extractFieldName(Method method) {
         String methodName = method.getName();
         if (methodName.startsWith("is")) {
@@ -364,12 +279,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         return null;
     }
 
-    /**
-     * Retrieves the ID field of an entity class.
-     *
-     * @param clazz The entity class.
-     * @return The ID field, or `null` if not found.
-     */
     private Field getIdField(Class<?> clazz) {
         Class<?> currentClass = clazz;
         while (currentClass != null && currentClass != Object.class) {
@@ -393,12 +302,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         return null;
     }
 
-    /**
-     * Checks if an ID is considered empty (null, 0, or an empty string).
-     *
-     * @param id The ID to check.
-     * @return `true` if the ID is empty, otherwise `false`.
-     */
     private boolean isEmptyId(Object id) {
         if (id == null) {
             return true;
@@ -412,12 +315,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         return false;
     }
 
-    /**
-     * Converts a database value to the appropriate ID type.
-     *
-     * @param dbValue The value from the database.
-     * @return The converted ID.
-     */
     @SuppressWarnings("unchecked")
     private ID convertToIdType(Object dbValue) {
         if (dbValue == null) {
