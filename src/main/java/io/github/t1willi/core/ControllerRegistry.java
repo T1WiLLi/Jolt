@@ -83,11 +83,21 @@ public final class ControllerRegistry {
         registerLifecycles(controller, router, basePath);
         Authorize classAuth = cls.getAnnotation(Authorize.class);
 
-        for (Method method : cls.getMethods()) {
+        for (Method method : filterMethods(cls.getMethods())) {
             validateSignature(method);
             registerHttpRoutes(controller, method, router, basePath, classAuth, classVersion, classPrefix);
             registerMappingRoute(controller, method, router, basePath, classAuth, classVersion, classPrefix);
         }
+    }
+
+    private static List<Method> filterMethods(Method[] methods) {
+        return Arrays.asList(methods).stream()
+                .filter(method -> method.isAnnotationPresent(Get.class) ||
+                        method.isAnnotationPresent(Post.class) ||
+                        method.isAnnotationPresent(Put.class) ||
+                        method.isAnnotationPresent(Delete.class) ||
+                        method.isAnnotationPresent(Mapping.class))
+                .toList();
     }
 
     private static void registerLifecycles(BaseController controller, Router router, String basePath) {
@@ -219,8 +229,8 @@ public final class ControllerRegistry {
             return;
         }
         int mods = m.getModifiers();
-        if (Modifier.isStatic(mods)) {
-            throw new JoltDIException(m.getName() + " non-static");
+        if (Modifier.isStatic(mods) || Modifier.isPrivate(mods)) {
+            throw new JoltDIException(m.getName() + "must be public, non-static");
         }
     }
 

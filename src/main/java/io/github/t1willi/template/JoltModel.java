@@ -4,6 +4,7 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * Model class for passing data to templates.
@@ -13,7 +14,13 @@ public class JoltModel {
     private final Map<String, Object> model;
 
     private JoltModel(Map<String, Object> initialData) {
-        this.model = new HashMap<>(initialData != null ? initialData : Collections.emptyMap());
+        if (initialData == null) {
+            this.model = new HashMap<>();
+        } else {
+            this.model = new HashMap<>(initialData.entrySet().stream()
+                    .filter(entry -> entry.getValue() != null)
+                    .collect(Collectors.toMap(Map.Entry::getKey, Map.Entry::getValue)));
+        }
     }
 
     /**
@@ -43,6 +50,12 @@ public class JoltModel {
      * @return A new model with the key-value pair
      */
     public static JoltModel of(String key, Object value) {
+        if (key == null) {
+            throw new IllegalArgumentException("Model key cannot be null");
+        }
+        if (value == null) {
+            return new JoltModel(null);
+        }
         return new JoltModel(Map.of(key, value));
     }
 
@@ -57,7 +70,9 @@ public class JoltModel {
         if (key == null) {
             throw new IllegalArgumentException("Model key cannot be null");
         }
-        model.put(key, value);
+        if (value != null) {
+            model.put(key, value);
+        }
         return this;
     }
 
@@ -70,7 +85,11 @@ public class JoltModel {
      */
     public JoltModel merge(JoltModel other) {
         if (other != null) {
-            model.putAll(other.model);
+            for (Map.Entry<String, Object> entry : other.model.entrySet()) {
+                if (entry.getValue() != null) {
+                    model.put(entry.getKey(), entry.getValue());
+                }
+            }
         }
         return this;
     }
