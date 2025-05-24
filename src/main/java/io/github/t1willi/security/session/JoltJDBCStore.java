@@ -63,11 +63,11 @@ public class JoltJDBCStore extends StoreBase {
 
     private void createIndexesIfNotExists() {
         String idxExpiry = String.format(
-                "CREATE INDEX IF NOT EXISTS idx_%s_expiry ON %s(expiry_time)",
-                sessionTable, sessionTable);
+                "CREATE INDEX IF NOT EXISTS idx_%1$s_expiry ON %1$s(expiry_time)",
+                sessionTable);
         String idxLast = String.format(
-                "CREATE INDEX IF NOT EXISTS idx_%s_last_access ON %s(last_access)",
-                sessionTable, sessionTable);
+                "CREATE INDEX IF NOT EXISTS idx_%1$s_last_access ON %1$s(last_access)",
+                sessionTable);
         try (Connection conn = database.getConnection();
                 Statement stmt = conn.createStatement()) {
             stmt.executeUpdate(idxExpiry);
@@ -110,8 +110,9 @@ public class JoltJDBCStore extends StoreBase {
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 ResultSet rs = stmt.executeQuery()) {
             ArrayList<String> list = new ArrayList<>();
-            while (rs.next())
+            while (rs.next()) {
                 list.add(rs.getString("id"));
+            }
             return list.toArray(new String[0]);
         } catch (SQLException e) {
             throw new IOException("Failed to get session keys", e);
@@ -122,8 +123,7 @@ public class JoltJDBCStore extends StoreBase {
     public Session load(String id) throws IOException {
         if (id == null || id.isEmpty())
             return null;
-        String sql = "SELECT data, max_inactive, expiry_time, ip_address, user_agent FROM "
-                + sessionTable + " WHERE id = ?";
+        String sql = "SELECT data, max_inactive, expiry_time FROM " + sessionTable + " WHERE id = ?";
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, id);
@@ -133,7 +133,7 @@ public class JoltJDBCStore extends StoreBase {
                 long expiry = rs.getLong("expiry_time");
                 if (expiry > 0 && System.currentTimeMillis() > expiry)
                     return null;
-                byte[] blob = rs.getBytes("data");
+                byte[] blob = getDataBlob(id);
                 StandardSession session = (StandardSession) getManager().createEmptySession();
                 session.setId(id, false);
                 session.setMaxInactiveInterval(rs.getInt("max_inactive"));
@@ -150,24 +150,31 @@ public class JoltJDBCStore extends StoreBase {
         }
     }
 
+    // helper to fetch data blob separately
+    private byte[] getDataBlob(String id) throws IOException {
+        String sql = "SELECT data FROM " + sessionTable + " WHERE id = ?";
+        try (Connection conn = database.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, id);
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (rs.next())
+                    return rs.getBytes("data");
+            }
+        } catch (SQLException e) {
+            throw new IOException("Failed to read session data", e);
+        }
+        return new byte[0];
+    }
+
     @Override
     public void save(Session sess) throws IOException {
         if (!(sess instanceof StandardSession))
             return;
         StandardSession s = (StandardSession) sess;
         if (!s.isValid()) {
-            remove(s.getId());
+            deleteById(s.getId());
             return;
         }
-        String sql = String.format(
-                "INSERT INTO %s(id,data,app_name,last_access,max_inactive,expiry_time,ip_address,user_agent)"
-                        + " VALUES(?,?,?,?,?,?,?,?)"
-                        + " ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data,"
-                        + " max_inactive=EXCLUDED.max_inactive,expiry_time=EXCLUDED.expiry_time,last_access=EXCLUDED.last_access",
-                sessionTable);
-        long lastAccess = s.getLastAccessedTime();
-        int interval = s.getMaxInactiveInterval();
-        long expiry = interval > 0 ? lastAccess + (interval * 1000L) : -1;
         byte[] blob;
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 ObjectOutputStream oos = new ObjectOutputStream(baos)) {
@@ -175,13 +182,22 @@ public class JoltJDBCStore extends StoreBase {
             oos.flush();
             blob = baos.toByteArray();
         }
+        String sql = String.format(
+                "INSERT INTO %s (id, data, app_name, last_access, max_inactive, expiry_time, ip_address, user_agent) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
+                        "ON CONFLICT (id) DO UPDATE SET data = EXCLUDED.data, max_inactive = EXCLUDED.max_inactive, " +
+                        "expiry_time = EXCLUDED.expiry_time, last_access = EXCLUDED.last_access",
+                sessionTable);
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, s.getId());
             stmt.setBytes(2, blob);
             stmt.setString(3, s.getManager().getContext().getName());
-            stmt.setLong(4, lastAccess);
-            stmt.setInt(5, interval);
+            stmt.setLong(4, s.getLastAccessedTime());
+            stmt.setInt(5, s.getMaxInactiveInterval());
+            long expiry = s.getMaxInactiveInterval() > 0
+                    ? s.getLastAccessedTime() + (s.getMaxInactiveInterval() * 1000L)
+                    : -1;
             stmt.setLong(6, expiry);
             stmt.setString(7, (String) s.getAttribute(io.github.t1willi.security.session.Session.KEY_IP_ADDRESS));
             stmt.setString(8, (String) s.getAttribute(io.github.t1willi.security.session.Session.KEY_USER_AGENT));
@@ -191,29 +207,38 @@ public class JoltJDBCStore extends StoreBase {
         }
     }
 
+    /**
+     * Deletes a session row by ID unconditionally.
+     */
+    private void deleteById(String id) throws IOException {
+        String sql = "DELETE FROM " + sessionTable + " WHERE id = ?";
+        try (Connection conn = database.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, id);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new IOException("Failed to delete session", e);
+        }
+    }
+
     @Override
     public void remove(String id) throws IOException {
         if (id == null || id.isEmpty())
             return;
-        String check = "SELECT expiry_time FROM " + sessionTable + " WHERE id = ?";
+        // only remove if expired
+        String sql = "SELECT expiry_time FROM " + sessionTable + " WHERE id = ?";
         try (Connection conn = database.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(check)) {
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, id);
             try (ResultSet rs = stmt.executeQuery()) {
-                if (!rs.next() || rs.getLong("expiry_time") > System.currentTimeMillis())
+                if (!rs.next() || rs.getLong("expiry_time") > System.currentTimeMillis()) {
                     return;
+                }
             }
         } catch (SQLException e) {
-            // proceed to delete if check fails
+            // ignore, proceed to delete
         }
-        String del = "DELETE FROM " + sessionTable + " WHERE id = ?";
-        try (Connection conn = database.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(del)) {
-            stmt.setString(1, id);
-            stmt.executeUpdate();
-        } catch (SQLException e) {
-            throw new IOException("Failed to remove session", e);
-        }
+        deleteById(id);
     }
 
     @Override
