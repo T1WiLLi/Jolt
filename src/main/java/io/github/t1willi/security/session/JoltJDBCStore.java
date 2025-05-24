@@ -9,21 +9,25 @@ import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
+import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
-import io.github.t1willi.database.Database;
-import io.github.t1willi.server.config.ConfigurationManager;
-import io.github.t1willi.utils.Constant;
 import org.apache.catalina.Manager;
 import org.apache.catalina.Session;
 import org.apache.catalina.session.StandardSession;
 import org.apache.catalina.session.StoreBase;
 
+import io.github.t1willi.database.Database;
+import io.github.t1willi.server.config.ConfigurationManager;
+import io.github.t1willi.utils.Constant;
+
+/**
+ * JDBC-backed Store for Tomcat sessions with expiration-aware removal and
+ * startup cleanup of expired sessions to support stateless load-balanced
+ * environments.
+ */
 public class JoltJDBCStore extends StoreBase {
-    private static final Logger logger = Logger.getLogger(JoltJDBCStore.class.getName());
-    private static final String DEFAULT_SESSION_TABLE = Constant.Security.DEFAULT_SESSION_TABLE_NAME;
+    private static final String DEFAULT_TABLE = Constant.Security.DEFAULT_SESSION_TABLE_NAME;
     private String sessionTable;
     private Database database;
 
@@ -32,37 +36,58 @@ public class JoltJDBCStore extends StoreBase {
         super.setManager(manager);
         this.database = Database.getInstance();
         if (!database.isInitialized()) {
-            logger.severe("Database not initialized; JoltJDBCStore cannot function.");
             throw new IllegalStateException("Database not initialized");
         }
-
         this.sessionTable = ConfigurationManager.getInstance()
-                .getProperty("session.table", DEFAULT_SESSION_TABLE);
-
-        logger.info("Using session table: " + sessionTable);
+                .getProperty("session.table", DEFAULT_TABLE);
         createTableIfNotExists();
+        createIndexesIfNotExists();
+        cleanupExpiredSessions();
     }
 
     private void createTableIfNotExists() {
         String sql = String.format(
-                "CREATE TABLE IF NOT EXISTS %s (" +
-                        "id VARCHAR(255) NOT NULL PRIMARY KEY, " +
-                        "data BYTEA NOT NULL, " +
-                        "app_name VARCHAR(255), " +
-                        "last_access BIGINT NOT NULL, " +
-                        "max_inactive INT NOT NULL, " +
-                        "expiry_time BIGINT NOT NULL, " +
-                        "ip_address VARCHAR(255), " +
-                        "user_agent TEXT)",
+                "CREATE TABLE IF NOT EXISTS %s ("
+                        + "id VARCHAR(255) PRIMARY KEY, data BYTEA NOT NULL,"
+                        + " app_name VARCHAR(255), last_access BIGINT,"
+                        + " max_inactive INT, expiry_time BIGINT,"
+                        + " ip_address VARCHAR(255), user_agent TEXT)",
                 sessionTable);
-
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.executeUpdate();
-            logger.info("Session table '" + sessionTable + "' created or already exists.");
         } catch (SQLException e) {
-            logger.severe("Failed to create session table: " + e.getMessage());
-            throw new RuntimeException("Failed to initialize session persistence", e);
+            throw new RuntimeException("Failed to initialize session table", e);
+        }
+    }
+
+    private void createIndexesIfNotExists() {
+        String idxExpiry = String.format(
+                "CREATE INDEX IF NOT EXISTS idx_%s_expiry ON %s(expiry_time)",
+                sessionTable, sessionTable);
+        String idxLast = String.format(
+                "CREATE INDEX IF NOT EXISTS idx_%s_last_access ON %s(last_access)",
+                sessionTable, sessionTable);
+        try (Connection conn = database.getConnection();
+                Statement stmt = conn.createStatement()) {
+            stmt.executeUpdate(idxExpiry);
+            stmt.executeUpdate(idxLast);
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to create session indexes", e);
+        }
+    }
+
+    /**
+     * Removes rows whose expiry_time has passed.
+     */
+    private void cleanupExpiredSessions() {
+        String sql = "DELETE FROM " + sessionTable + " WHERE expiry_time > 0 AND expiry_time < ?";
+        try (Connection conn = database.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setLong(1, System.currentTimeMillis());
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new RuntimeException("Failed to cleanup expired sessions", e);
         }
     }
 
@@ -74,7 +99,6 @@ public class JoltJDBCStore extends StoreBase {
                 ResultSet rs = stmt.executeQuery()) {
             return rs.next() ? rs.getInt(1) : 0;
         } catch (SQLException e) {
-            logger.severe("Failed to get session count: " + e.getMessage());
             throw new IOException("Failed to get session count", e);
         }
     }
@@ -85,177 +109,121 @@ public class JoltJDBCStore extends StoreBase {
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql);
                 ResultSet rs = stmt.executeQuery()) {
-            var list = new ArrayList<String>();
-            while (rs.next()) {
+            ArrayList<String> list = new ArrayList<>();
+            while (rs.next())
                 list.add(rs.getString("id"));
-            }
             return list.toArray(new String[0]);
         } catch (SQLException e) {
-            logger.severe("Failed to get session keys: " + e.getMessage());
             throw new IOException("Failed to get session keys", e);
         }
     }
 
     @Override
     public Session load(String id) throws IOException {
-        if (id == null || id.isEmpty()) {
+        if (id == null || id.isEmpty())
             return null;
-        }
-
-        logger.fine("Loading session: " + id);
-        String sql = "SELECT data, max_inactive, expiry_time, ip_address, user_agent FROM " + sessionTable
-                + " WHERE id = ?";
-
+        String sql = "SELECT data, max_inactive, expiry_time, ip_address, user_agent FROM "
+                + sessionTable + " WHERE id = ?";
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
             stmt.setString(1, id);
-
             try (ResultSet rs = stmt.executeQuery()) {
-                if (!rs.next()) {
-                    logger.fine("No session found with ID: " + id);
+                if (!rs.next())
                     return null;
-                }
-
-                long expiryTime = rs.getLong("expiry_time");
-                if (System.currentTimeMillis() > expiryTime) {
-                    logger.fine("Session " + id + " has expired, removing it");
-                    remove(id);
+                long expiry = rs.getLong("expiry_time");
+                if (expiry > 0 && System.currentTimeMillis() > expiry)
                     return null;
-                }
-
-                byte[] data = rs.getBytes("data");
-                int maxInactive = rs.getInt("max_inactive");
-                String ipAddress = rs.getString("ip_address");
-                String userAgent = rs.getString("user_agent");
-
+                byte[] blob = rs.getBytes("data");
                 StandardSession session = (StandardSession) getManager().createEmptySession();
                 session.setId(id, false);
-                session.setMaxInactiveInterval(maxInactive);
-
-                try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
+                session.setMaxInactiveInterval(rs.getInt("max_inactive"));
+                try (ByteArrayInputStream bais = new ByteArrayInputStream(blob);
                         ObjectInputStream ois = new ObjectInputStream(bais)) {
                     session.readObjectData(ois);
-                    session.setManager(getManager());
-
-                    session.setAttribute(io.github.t1willi.security.session.Session.KEY_IP_ADDRESS, ipAddress);
-                    session.setAttribute(io.github.t1willi.security.session.Session.KEY_USER_AGENT, userAgent);
-
-                    session.setId(id, true);
-
-                    logger.fine("Loaded session " + id + " successfully");
-                    return session;
                 }
+                session.setManager(getManager());
+                session.setId(id, true);
+                return session;
             }
-        } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Failed to load session " + id, e);
-            throw new IOException("Failed to load session: " + e.getMessage(), e);
-        } catch (ClassNotFoundException e) {
-            logger.log(Level.SEVERE, "Failed to deserialize session " + id, e);
-            throw new IOException("Failed to deserialize session", e);
+        } catch (SQLException | ClassNotFoundException e) {
+            throw new IOException("Failed to load session", e);
         }
     }
 
     @Override
-    public void save(Session session) throws IOException {
-        if (session == null || !(session instanceof StandardSession)) {
+    public void save(Session sess) throws IOException {
+        if (!(sess instanceof StandardSession))
+            return;
+        StandardSession s = (StandardSession) sess;
+        if (!s.isValid()) {
+            remove(s.getId());
             return;
         }
-
-        StandardSession standardSession = (StandardSession) session;
-        if (!standardSession.isValid()) {
-            logger.fine("Skip saving invalid session: " + session.getId());
-            remove(session.getId());
-            return;
-        }
-
-        logger.fine("Saving session: " + session.getId());
-
         String sql = String.format(
-                "INSERT INTO %s (id, data, app_name, last_access, max_inactive, expiry_time, ip_address, user_agent) " +
-                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
-                        "ON CONFLICT (id) DO UPDATE SET " +
-                        "data = EXCLUDED.data, " +
-                        "app_name = EXCLUDED.app_name, " +
-                        "last_access = EXCLUDED.last_access, " +
-                        "max_inactive = EXCLUDED.max_inactive, " +
-                        "expiry_time = EXCLUDED.expiry_time, " +
-                        "ip_address = EXCLUDED.ip_address, " +
-                        "user_agent = EXCLUDED.user_agent",
+                "INSERT INTO %s(id,data,app_name,last_access,max_inactive,expiry_time,ip_address,user_agent)"
+                        + " VALUES(?,?,?,?,?,?,?,?)"
+                        + " ON CONFLICT(id) DO UPDATE SET data=EXCLUDED.data,"
+                        + " max_inactive=EXCLUDED.max_inactive,expiry_time=EXCLUDED.expiry_time,last_access=EXCLUDED.last_access",
                 sessionTable);
-
-        // Calculate expiry time correctly
-        long lastAccessedTime = session.getLastAccessedTime();
-        int maxInactiveInterval = session.getMaxInactiveInterval();
-        long expiryTime = maxInactiveInterval > 0
-                ? lastAccessedTime + (maxInactiveInterval * 1000L)
-                : -1; // No expiry
-
+        long lastAccess = s.getLastAccessedTime();
+        int interval = s.getMaxInactiveInterval();
+        long expiry = interval > 0 ? lastAccess + (interval * 1000L) : -1;
+        byte[] blob;
         try (ByteArrayOutputStream baos = new ByteArrayOutputStream();
                 ObjectOutputStream oos = new ObjectOutputStream(baos)) {
-
-            standardSession.writeObjectData(oos);
+            s.writeObjectData(oos);
             oos.flush();
-            byte[] blob = baos.toByteArray();
-
-            try (Connection conn = database.getConnection();
-                    PreparedStatement stmt = conn.prepareStatement(sql)) {
-                stmt.setString(1, session.getId());
-                stmt.setBytes(2, blob);
-                stmt.setString(3, session.getManager().getContext().getName());
-                stmt.setLong(4, lastAccessedTime);
-                stmt.setInt(5, maxInactiveInterval);
-                stmt.setLong(6, expiryTime);
-                stmt.setString(7,
-                        (String) standardSession
-                                .getAttribute(io.github.t1willi.security.session.Session.KEY_IP_ADDRESS));
-                stmt.setString(8,
-                        (String) standardSession
-                                .getAttribute(io.github.t1willi.security.session.Session.KEY_USER_AGENT));
-
-                int rowsUpdated = stmt.executeUpdate();
-                logger.fine("Session " + session.getId() + " " +
-                        (rowsUpdated > 0 ? "saved successfully" : "not saved"));
-            }
+            blob = baos.toByteArray();
+        }
+        try (Connection conn = database.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(sql)) {
+            stmt.setString(1, s.getId());
+            stmt.setBytes(2, blob);
+            stmt.setString(3, s.getManager().getContext().getName());
+            stmt.setLong(4, lastAccess);
+            stmt.setInt(5, interval);
+            stmt.setLong(6, expiry);
+            stmt.setString(7, (String) s.getAttribute(io.github.t1willi.security.session.Session.KEY_IP_ADDRESS));
+            stmt.setString(8, (String) s.getAttribute(io.github.t1willi.security.session.Session.KEY_USER_AGENT));
+            stmt.executeUpdate();
         } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Failed to save session " + session.getId(), e);
-            throw new IOException("Failed to save session: " + e.getMessage(), e);
+            throw new IOException("Failed to save session", e);
         }
     }
 
     @Override
     public void remove(String id) throws IOException {
-        if (id == null || id.isEmpty()) {
+        if (id == null || id.isEmpty())
             return;
-        }
-
-        logger.fine("Removing session: " + id);
-        String sql = "DELETE FROM " + sessionTable + " WHERE id = ?";
-
+        String check = "SELECT expiry_time FROM " + sessionTable + " WHERE id = ?";
         try (Connection conn = database.getConnection();
-                PreparedStatement stmt = conn.prepareStatement(sql)) {
+                PreparedStatement stmt = conn.prepareStatement(check)) {
             stmt.setString(1, id);
-            int rowsDeleted = stmt.executeUpdate();
-
-            logger.fine("Session " + id + " " +
-                    (rowsDeleted > 0 ? "removed successfully" : "not found"));
+            try (ResultSet rs = stmt.executeQuery()) {
+                if (!rs.next() || rs.getLong("expiry_time") > System.currentTimeMillis())
+                    return;
+            }
         } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Failed to remove session " + id, e);
-            throw new IOException("Failed to remove session: " + e.getMessage(), e);
+            // proceed to delete if check fails
+        }
+        String del = "DELETE FROM " + sessionTable + " WHERE id = ?";
+        try (Connection conn = database.getConnection();
+                PreparedStatement stmt = conn.prepareStatement(del)) {
+            stmt.setString(1, id);
+            stmt.executeUpdate();
+        } catch (SQLException e) {
+            throw new IOException("Failed to remove session", e);
         }
     }
 
     @Override
     public void clear() throws IOException {
-        logger.fine("Clearing all sessions");
         String sql = "DELETE FROM " + sessionTable;
-
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
-            int rowsDeleted = stmt.executeUpdate();
-            logger.fine("Cleared " + rowsDeleted + " sessions");
+            stmt.executeUpdate();
         } catch (SQLException e) {
-            logger.log(Level.SEVERE, "Failed to clear sessions", e);
-            throw new IOException("Failed to clear sessions: " + e.getMessage(), e);
+            throw new IOException("Failed to clear sessions", e);
         }
     }
 }

@@ -46,11 +46,12 @@ public class SessionManager {
         Database db = Database.getInstance();
 
         if (db.isInitialized()) {
+            context.setBackgroundProcessorDelay(5);
             PersistentManager manager = new PersistentManager();
 
-            manager.setProcessExpiresFrequency(2);
+            manager.setProcessExpiresFrequency(5);
             manager.setMaxIdleBackup(0);
-            manager.setMinIdleSwap(120);
+            manager.setMinIdleSwap(0);
             manager.setMaxActive(-1);
             manager.setSaveOnRestart(true);
 
