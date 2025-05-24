@@ -49,7 +49,7 @@ public class SessionManager {
             PersistentManager manager = new PersistentManager();
 
             manager.setProcessExpiresFrequency(2);
-            manager.setMaxIdleBackup(60);
+            manager.setMaxIdleBackup(0);
             manager.setMinIdleSwap(120);
             manager.setMaxActive(-1);
             manager.setSaveOnRestart(true);

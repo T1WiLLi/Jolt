@@ -370,7 +370,6 @@ public final class Session {
     }
 
     private static void validate(JoltSession js, JoltContext ctx) {
-        bind(js, KEY_IP_ADDRESS, ctx.clientIp(), SessionIpMismatchException::new);
         bind(js, KEY_USER_AGENT, ctx.userAgent(), SessionUserAgentMismatchException::new);
     }
 

@@ -36,7 +36,6 @@ public class JoltJDBCStore extends StoreBase {
             throw new IllegalStateException("Database not initialized");
         }
 
-        // Get table name from configuration
         this.sessionTable = ConfigurationManager.getInstance()
                 .getProperty("session.table", DEFAULT_SESSION_TABLE);
 
@@ -52,7 +51,9 @@ public class JoltJDBCStore extends StoreBase {
                         "app_name VARCHAR(255), " +
                         "last_access BIGINT NOT NULL, " +
                         "max_inactive INT NOT NULL, " +
-                        "expiry_time BIGINT NOT NULL)",
+                        "expiry_time BIGINT NOT NULL, " +
+                        "ip_address VARCHAR(255), " +
+                        "user_agent TEXT)",
                 sessionTable);
 
         try (Connection conn = database.getConnection();
@@ -102,7 +103,8 @@ public class JoltJDBCStore extends StoreBase {
         }
 
         logger.fine("Loading session: " + id);
-        String sql = "SELECT data, max_inactive, expiry_time FROM " + sessionTable + " WHERE id = ?";
+        String sql = "SELECT data, max_inactive, expiry_time, ip_address, user_agent FROM " + sessionTable
+                + " WHERE id = ?";
 
         try (Connection conn = database.getConnection();
                 PreparedStatement stmt = conn.prepareStatement(sql)) {
@@ -123,10 +125,11 @@ public class JoltJDBCStore extends StoreBase {
 
                 byte[] data = rs.getBytes("data");
                 int maxInactive = rs.getInt("max_inactive");
+                String ipAddress = rs.getString("ip_address");
+                String userAgent = rs.getString("user_agent");
 
-                // Create a new session
                 StandardSession session = (StandardSession) getManager().createEmptySession();
-                session.setId(id, false); // Don't notify listeners yet
+                session.setId(id, false);
                 session.setMaxInactiveInterval(maxInactive);
 
                 try (ByteArrayInputStream bais = new ByteArrayInputStream(data);
@@ -134,7 +137,9 @@ public class JoltJDBCStore extends StoreBase {
                     session.readObjectData(ois);
                     session.setManager(getManager());
 
-                    // Session is now valid - notify listeners
+                    session.setAttribute(io.github.t1willi.security.session.Session.KEY_IP_ADDRESS, ipAddress);
+                    session.setAttribute(io.github.t1willi.security.session.Session.KEY_USER_AGENT, userAgent);
+
                     session.setId(id, true);
 
                     logger.fine("Loaded session " + id + " successfully");
@@ -166,14 +171,16 @@ public class JoltJDBCStore extends StoreBase {
         logger.fine("Saving session: " + session.getId());
 
         String sql = String.format(
-                "INSERT INTO %s (id, data, app_name, last_access, max_inactive, expiry_time) " +
-                        "VALUES (?, ?, ?, ?, ?, ?) " +
+                "INSERT INTO %s (id, data, app_name, last_access, max_inactive, expiry_time, ip_address, user_agent) " +
+                        "VALUES (?, ?, ?, ?, ?, ?, ?, ?) " +
                         "ON CONFLICT (id) DO UPDATE SET " +
                         "data = EXCLUDED.data, " +
                         "app_name = EXCLUDED.app_name, " +
                         "last_access = EXCLUDED.last_access, " +
                         "max_inactive = EXCLUDED.max_inactive, " +
-                        "expiry_time = EXCLUDED.expiry_time",
+                        "expiry_time = EXCLUDED.expiry_time, " +
+                        "ip_address = EXCLUDED.ip_address, " +
+                        "user_agent = EXCLUDED.user_agent",
                 sessionTable);
 
         // Calculate expiry time correctly
@@ -198,6 +205,12 @@ public class JoltJDBCStore extends StoreBase {
                 stmt.setLong(4, lastAccessedTime);
                 stmt.setInt(5, maxInactiveInterval);
                 stmt.setLong(6, expiryTime);
+                stmt.setString(7,
+                        (String) standardSession
+                                .getAttribute(io.github.t1willi.security.session.Session.KEY_IP_ADDRESS));
+                stmt.setString(8,
+                        (String) standardSession
+                                .getAttribute(io.github.t1willi.security.session.Session.KEY_USER_AGENT));
 
                 int rowsUpdated = stmt.executeUpdate();
                 logger.fine("Session " + session.getId() + " " +
