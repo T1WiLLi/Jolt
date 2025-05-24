@@ -83,7 +83,7 @@ public final class ControllerRegistry {
         registerLifecycles(controller, router, basePath);
         Authorize classAuth = cls.getAnnotation(Authorize.class);
 
-        for (Method method : cls.getDeclaredMethods()) {
+        for (Method method : cls.getMethods()) {
             validateSignature(method);
             registerHttpRoutes(controller, method, router, basePath, classAuth, classVersion, classPrefix);
             registerMappingRoute(controller, method, router, basePath, classAuth, classVersion, classPrefix);
@@ -219,8 +219,8 @@ public final class ControllerRegistry {
             return;
         }
         int mods = m.getModifiers();
-        if (!Modifier.isPublic(mods) || Modifier.isStatic(mods)) {
-            throw new JoltDIException(m.getName() + " must be public, non-static");
+        if (Modifier.isStatic(mods)) {
+            throw new JoltDIException(m.getName() + " non-static");
         }
     }
 
