@@ -37,6 +37,17 @@ import java.util.function.Supplier;
  * <li>Type‑safe, transparent encryption of stored values (via
  * {@link JoltSession})</li>
  * <li>Secure session cleanup and cookie removal</li>
+ * <li>Proper separation of metadata vs user data storage</li>
+ * </ul>
+ *
+ * <p>
+ * <strong>Storage Architecture:</strong>
+ * </p>
+ * <ul>
+ * <li>Metadata (IP, User-Agent, timestamps, etc.) stored in dedicated DB
+ * columns</li>
+ * <li>User data (application attributes) stored in serialized BYTEA field</li>
+ * <li>Authentication state stored in both places for query efficiency</li>
  * </ul>
  *
  * @see JoltSession

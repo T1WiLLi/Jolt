@@ -1,5 +1,6 @@
 package io.github.t1willi.utils;
 
+import java.util.Set;
 import java.util.regex.Pattern;
 
 public final class Constant {
@@ -32,6 +33,16 @@ public final class Constant {
         public static final String ACCESS_TIME = "access_time";
         public static final String EXPIRE_TIME = "expire_time";
         public static final String IS_AUTHENTICATED = "is_authenticated";
+
+        public static final Set<String> EXCLUDED_KEYS_FOR_SERIALIZATION_OF_SESSION_IN_DATABASE = Set.of(
+                "id",
+                "data",
+                "last_access",
+                "max_inactive",
+                "expiry_time",
+                "ip_address",
+                "user_agent",
+                "updated_time");
     }
 
     public static final class Database {
