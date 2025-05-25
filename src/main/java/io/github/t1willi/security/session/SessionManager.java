@@ -46,10 +46,10 @@ public class SessionManager {
         Database db = Database.getInstance();
 
         if (db.isInitialized()) {
-            context.setBackgroundProcessorDelay(5);
+            context.setBackgroundProcessorDelay(2);
             PersistentManager manager = new PersistentManager();
 
-            manager.setProcessExpiresFrequency(5);
+            manager.setProcessExpiresFrequency(2);
             manager.setMaxIdleBackup(0);
             manager.setMinIdleSwap(0);
             manager.setMaxActive(-1);
@@ -59,6 +59,9 @@ public class SessionManager {
             manager.setStore(jdbcStore);
 
             context.setManager(manager);
+            int sessionTimeoutSeconds = Integer
+                    .parseInt(ConfigurationManager.getInstance().getProperty("session.timeout", "900"));
+            context.setSessionTimeout(sessionTimeoutSeconds / 60);
             logger.info("JoltJDBCStore configured for immediate session persistence.");
         } else {
             StandardManager manager = new StandardManager();

@@ -19,7 +19,7 @@ public final class Constant {
         public static final String CSRF_HEADER_NAME = "X-CSRF-TOKEN";
 
         // Session Constants
-        public static final String DEFAULT_SESSION_TABLE_NAME = "sessions";
+        public static final String DEFAULT_SESSION_TABLE_NAME = "session";
 
         // JWT Constants
         public static final long DEFAULT_JWT_TOKEN_EXPIRATION_IN_MS = 1_800_000l;

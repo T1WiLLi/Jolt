@@ -53,7 +53,7 @@ public final class Session {
                     .getProperty("session.expirationSliding", "false"));
 
     /** Default lifetime in seconds if mis‑configured or missing. */
-    private static final int DEFAULT_LIFETIME = 1_800;
+    private static final int DEFAULT_LIFETIME = 900; // 15 min
 
     /** Single‑run loader for {@code session.lifetime}. */
     private static volatile int lifetimeSeconds;
@@ -85,7 +85,7 @@ public final class Session {
             synchronized (Session.class) {
                 if (lifetimeSeconds == 0) {
                     String raw = ConfigurationManager.getInstance()
-                            .getProperty("session.lifetime");
+                            .getProperty("session.lifetime", "900"); // default 15 min
                     try {
                         lifetimeSeconds = raw != null
                                 ? Integer.parseInt(raw)
