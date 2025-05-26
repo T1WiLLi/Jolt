@@ -12,7 +12,10 @@ import io.github.t1willi.openapi.annotations.ApiParameter;
 import io.github.t1willi.openapi.annotations.ApiResponse;
 import io.github.t1willi.openapi.annotations.Docs;
 import lombok.Getter;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
 
+@JsonInclude(Include.NON_NULL)
 @Getter
 class OperationModel {
         private String summary;

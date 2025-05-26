@@ -1,117 +1,104 @@
 package io.github.t1willi.openapi.models;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.annotation.JsonInclude.Include;
+import com.fasterxml.jackson.annotation.JsonProperty;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.type.TypeFactory;
 import io.github.t1willi.http.ResponseEntity;
 import lombok.Getter;
-import lombok.Setter;
-
-import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.ParameterizedType;
+import java.lang.reflect.Type;
 import java.util.Collection;
 import java.util.LinkedHashMap;
-import java.util.List;
 import java.util.Map;
 
+@JsonInclude(Include.NON_NULL)
 @Getter
-@Setter
 public class SchemaModel {
-    String type;
-    String format;
-    SchemaModel items;
-    Map<String, SchemaModel> properties;
-    String ref;
-    SchemaModel additionalProperties;
+    private String type;
+    private String format;
+    private SchemaModel items;
+    private Map<String, SchemaModel> properties;
+    @JsonProperty("$ref")
+    private String ref;
+    private SchemaModel additionalProperties;
 
-    public static SchemaModel of(Class<?> type, ObjectMapper mapper) {
-        if (type == null || type == Void.class) {
-            return null;
+    public static SchemaModel of(Type javaType, ObjectMapper mapper) {
+        if (javaType instanceof ParameterizedType pt
+                && ResponseEntity.class.equals(pt.getRawType())) {
+            return of(pt.getActualTypeArguments()[0], mapper);
         }
+        Class<?> raw = mapper.getTypeFactory().constructType(javaType).getRawClass();
+        if (Void.class.equals(raw))
+            return null;
+
+        if (!isPrimitiveOrContainer(raw)) {
+            SchemaModel m = new SchemaModel();
+            m.ref = "#/components/schemas/" + raw.getSimpleName();
+            return m;
+        }
+        return buildDefinition(javaType, mapper);
+    }
+
+    public static SchemaModel buildDefinition(Type javaType, ObjectMapper mapper) {
+        if (javaType instanceof ParameterizedType pt
+                && ResponseEntity.class.equals(pt.getRawType())) {
+            javaType = pt.getActualTypeArguments()[0];
+        }
+        Class<?> raw = mapper.getTypeFactory().constructType(javaType).getRawClass();
+        if (Void.class.equals(raw))
+            return null;
 
         SchemaModel model = new SchemaModel();
-
-        if (type == ResponseEntity.class) {
-            model.type = "object";
-            return model;
-        }
-
-        if (type == String.class) {
+        if (String.class.equals(raw)) {
             model.type = "string";
-        } else if (type == Integer.class || type == int.class) {
+        } else if (Integer.class.equals(raw) || int.class.equals(raw)) {
             model.type = "integer";
             model.format = "int32";
-        } else if (type == Long.class || type == long.class) {
+        } else if (Long.class.equals(raw) || long.class.equals(raw)) {
             model.type = "integer";
             model.format = "int64";
-        } else if (type == Double.class || type == double.class) {
+        } else if (Double.class.equals(raw) || double.class.equals(raw)) {
             model.type = "number";
             model.format = "double";
-        } else if (type == Float.class || type == float.class) {
+        } else if (Float.class.equals(raw) || float.class.equals(raw)) {
             model.type = "number";
             model.format = "float";
-        } else if (type == Boolean.class || type == boolean.class) {
+        } else if (Boolean.class.equals(raw) || boolean.class.equals(raw)) {
             model.type = "boolean";
-        } else if (type.isArray()) {
+        } else if (raw.isArray()) {
             model.type = "array";
-            Class<?> componentType = type.getComponentType();
-            model.items = of(componentType, mapper);
-        } else if (Collection.class.isAssignableFrom(type)) {
+            model.items = buildDefinition(raw.getComponentType(), mapper);
+        } else if (Collection.class.isAssignableFrom(raw)) {
             model.type = "array";
-            Class<?> componentType = Object.class; // Default
-            try {
-                componentType = mapper.getTypeFactory()
-                        .constructCollectionType(List.class, type)
-                        .getContentType()
-                        .getRawClass();
-            } catch (Exception e) {
-                // Fallback and ignore
-            }
-            model.items = of(componentType, mapper);
-        } else if (Map.class.isAssignableFrom(type)) {
+            Type elemType = ((ParameterizedType) javaType).getActualTypeArguments()[0];
+            model.items = buildDefinition(elemType, mapper);
+        } else if (Map.class.isAssignableFrom(raw)) {
             model.type = "object";
-            Class<?> valueType = Object.class;
-            try {
-                valueType = mapper.getTypeFactory()
-                        .constructMapType(Map.class, String.class, Object.class)
-                        .getContentType()
-                        .getRawClass();
-            } catch (Exception e) {
-                // Fallback to Object
-            }
-            model.additionalProperties = of(valueType, mapper);
+            Type valueType = ((ParameterizedType) javaType).getActualTypeArguments()[1];
+            model.additionalProperties = buildDefinition(valueType, mapper);
         } else {
             model.type = "object";
-            model.ref = "#/components/schemas/" + type.getSimpleName();
-            model.properties = new LinkedHashMap<>();
-            try {
-                for (Field field : type.getDeclaredFields()) {
-                    if (!Modifier.isStatic(field.getModifiers())) {
-                        model.properties.put(field.getName(), of(field.getType(), mapper));
-                    }
+            Map<String, SchemaModel> props = new LinkedHashMap<>();
+            for (var field : raw.getDeclaredFields()) {
+                if (!Modifier.isStatic(field.getModifiers())) {
+                    props.put(field.getName(),
+                            buildDefinition(field.getGenericType(), mapper));
                 }
-            } catch (Exception e) {
-                model.properties = null;
             }
+            model.properties = props;
         }
-
         return model;
     }
 
-    public static SchemaModel of(Class<?> type, java.lang.reflect.Type genericType, ObjectMapper mapper) {
-        if (type == null || type == Void.class) {
-            return null;
-        }
-
-        if (type == ResponseEntity.class && genericType instanceof ParameterizedType) {
-            ParameterizedType paramType = (ParameterizedType) genericType;
-            java.lang.reflect.Type[] typeArgs = paramType.getActualTypeArguments();
-            if (typeArgs.length > 0) {
-                Class<?> innerType = TypeFactory.rawClass(typeArgs[0]);
-                return of(innerType, typeArgs[0], mapper);
-            }
-        }
-
-        return of(type, mapper);
+    private static boolean isPrimitiveOrContainer(Class<?> raw) {
+        return raw.isPrimitive()
+                || Number.class.isAssignableFrom(raw)
+                || Boolean.class.equals(raw)
+                || String.class.equals(raw)
+                || raw.isArray()
+                || Collection.class.isAssignableFrom(raw)
+                || Map.class.isAssignableFrom(raw);
     }
 }
