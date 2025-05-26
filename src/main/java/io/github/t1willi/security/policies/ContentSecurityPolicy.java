@@ -21,9 +21,27 @@ public class ContentSecurityPolicy {
     public static final String DATA = "data:";
     public static final String NONCE_PLACEHOLDER = "'nonce-{{NONCE}}'"; // Placeholder for runtime nonce injection
 
+    // Trusted third-party sources
     public static final String GOOGLE_FONTS = "https://fonts.googleapis.com https://fonts.gstatic.com";
     public static final String CDNJS = "https://cdnjs.cloudflare.com";
     public static final String CLOUDFLARE = "https://*.cloudflare.com";
+    public static final String GOOGLE_ANALYTICS = "https://www.google-analytics.com https://www.googletagmanager.com";
+    public static final String FACEBOOK = "https://*.facebook.com";
+    public static final String X_COM = "https://x.com";
+    public static final String YOUTUBE = "https://*.youtube.com";
+    public static final String VIMEO = "https://*.vimeo.com";
+
+    // Commonly used CDN providers
+    public static final String JSDELIVR = "https://*.jsdelivr.net";
+    public static final String MICROSOFT_CDN = "https://*.microsoft.com";
+    public static final String AWS_CLOUDFRONT = "https://*.cloudfront.net";
+
+    // Trusted payment gateways
+    public static final String PAYPAL = "https://*.paypal.com";
+    public static final String STRIPE = "https://*.stripe.com";
+
+    // API Providers
+    public static final String OPENAI = "https://api.openai.com";
 
     @Getter
     private List<String> defaultSources = new ArrayList<>(List.of(SELF));
