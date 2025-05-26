@@ -17,8 +17,8 @@ public class ContentSecurityPolicy {
     public static final String NONE = "'none'";
     public static final String UNSAFE_INLINE = "'unsafe-inline'";
     public static final String UNSAFE_EVAL = "'unsafe-eval'";
-    public static final String BLOB = "'blob:'";
-    public static final String DATA = "'data:'";
+    public static final String BLOB = "blob:";
+    public static final String DATA = "data:";
     public static final String NONCE_PLACEHOLDER = "'nonce-{{NONCE}}'"; // Placeholder for runtime nonce injection
 
     public static final String GOOGLE_FONTS = "https://fonts.googleapis.com https://fonts.gstatic.com";
