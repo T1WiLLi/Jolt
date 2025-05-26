@@ -10,6 +10,7 @@ import io.github.t1willi.http.HttpMethod;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.logging.LogConfigurator;
 import io.github.t1willi.logging.StartupLog;
+import io.github.t1willi.openapi.annotations.OpenApi;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.server.TomcatServer;
 import io.github.t1willi.server.config.ConfigurationManager;
@@ -151,6 +152,11 @@ public abstract class JoltApplication {
                 e.printStackTrace();
             }
         }
+    }
+
+    public static OpenApi openApi() {
+        return instance.getClass().isAnnotationPresent(OpenApi.class) ? instance.getClass().getAnnotation(OpenApi.class)
+                : null;
     }
 
     /**

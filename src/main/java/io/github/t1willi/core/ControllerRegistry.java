@@ -25,6 +25,7 @@ import io.github.t1willi.security.authentification.Authorize;
 import io.github.t1willi.security.authentification.RouteRule;
 import io.github.t1willi.template.JoltModel;
 import io.github.t1willi.utils.HelpMethods;
+import lombok.Getter;
 
 import java.lang.annotation.Annotation;
 import java.lang.reflect.InvocationTargetException;
@@ -47,6 +48,9 @@ public final class ControllerRegistry {
     private static final Logger log = Logger.getLogger(ControllerRegistry.class.getName());
     public static final List<RouteRule> AUTHORIZATION = new ArrayList<>();
 
+    @Getter
+    private static List<BaseController> controllers = new ArrayList<>();
+
     private ControllerRegistry() {
     }
 
@@ -63,6 +67,7 @@ public final class ControllerRegistry {
             return;
         }
 
+        ControllerRegistry.controllers = controllers;
         for (BaseController controller : controllers) {
             registerController(controller);
         }
