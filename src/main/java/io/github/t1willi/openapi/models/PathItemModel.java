@@ -1,10 +1,15 @@
 package io.github.t1willi.openapi.models;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import io.github.t1willi.annotations.Delete;
+import io.github.t1willi.annotations.Get;
+import io.github.t1willi.annotations.Mapping;
+import io.github.t1willi.annotations.Post;
+import io.github.t1willi.annotations.Put;
 import io.github.t1willi.openapi.annotations.Docs;
 import lombok.Getter;
 import lombok.Setter;
-import io.github.t1willi.annotations.*;
+
 import java.lang.reflect.Method;
 
 @Setter
@@ -18,7 +23,7 @@ public final class PathItemModel {
 
     public static PathItemModel of(Docs docs, Method method, ObjectMapper mapper) {
         PathItemModel model = new PathItemModel();
-        OperationModel operation = OperationModel.of(docs, mapper);
+        OperationModel operation = OperationModel.of(docs, method, mapper);
 
         if (method != null) {
             if (method.isAnnotationPresent(Get.class)) {
@@ -32,42 +37,17 @@ public final class PathItemModel {
             } else if (method.isAnnotationPresent(Mapping.class)) {
                 Mapping mapping = method.getAnnotation(Mapping.class);
                 switch (mapping.method()) {
-                    case GET:
-                        model.setGet(operation);
-                        break;
-                    case POST:
-                        model.setPost(operation);
-                        break;
-                    case PUT:
-                        model.setPut(operation);
-                        break;
-                    case DELETE:
-                        model.setDelete(operation);
-                        break;
-                    case PATCH:
-                        model.setPatch(operation);
-                        break;
-                    default:
-                        model.setGet(operation);
-                }
-            } else {
-                String methodName = method.getName().toLowerCase();
-                if (methodName.startsWith("get")) {
-                    model.setGet(operation);
-                } else if (methodName.startsWith("post")) {
-                    model.setPost(operation);
-                } else if (methodName.startsWith("put")) {
-                    model.setPut(operation);
-                } else if (methodName.startsWith("delete")) {
-                    model.setDelete(operation);
-                } else if (methodName.startsWith("patch")) {
-                    model.setPatch(operation);
-                } else {
-                    model.setGet(operation);
+                    case GET -> model.setGet(operation);
+                    case POST -> model.setPost(operation);
+                    case PUT -> model.setPut(operation);
+                    case DELETE -> model.setDelete(operation);
+                    case PATCH -> model.setPatch(operation);
+                    case HEAD, OPTIONS, TRACE -> {
+                        // No OperationModel field for these methods, so do nothing or add handling if
+                        // needed
+                    }
                 }
             }
-        } else {
-            model.setGet(operation);
         }
         return model;
     }

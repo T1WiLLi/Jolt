@@ -1,13 +1,5 @@
 package io.github.t1willi.openapi;
 
-import java.lang.reflect.Method;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-import java.util.logging.Logger;
-import java.util.stream.Collectors;
-
 import io.github.t1willi.annotations.Delete;
 import io.github.t1willi.annotations.Get;
 import io.github.t1willi.annotations.Mapping;
@@ -23,6 +15,14 @@ import io.github.t1willi.openapi.annotations.Docs;
 import io.github.t1willi.openapi.annotations.OpenApi;
 import io.github.t1willi.openapi.models.OpenApiModel;
 import jakarta.annotation.PostConstruct;
+
+import java.lang.reflect.Method;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
+import java.util.logging.Logger;
+import java.util.stream.Collectors;
 
 @Bean
 public class OpenapiService {
@@ -63,7 +63,7 @@ public class OpenapiService {
                             .map(method -> Map.entry(method.getAnnotation(Docs.class), method))
                             .collect(Collectors.toList()));
         }
-        return List.of();
+        return result;
     }
 
     private void createEndpoint() {
@@ -79,7 +79,7 @@ public class OpenapiService {
     }
 
     private static List<Method> filterMethods(Method[] methods) {
-        return Arrays.asList(methods).stream()
+        return Arrays.stream(methods)
                 .filter(method -> method.isAnnotationPresent(Get.class) ||
                         method.isAnnotationPresent(Post.class) ||
                         method.isAnnotationPresent(Put.class) ||

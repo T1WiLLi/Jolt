@@ -1,54 +1,61 @@
 package io.github.t1willi.openapi.models;
 
-import java.util.Arrays;
+import java.lang.reflect.Method;
+import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Objects;
-import java.util.stream.Collectors;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
+import io.github.t1willi.openapi.annotations.ApiParameter;
+import io.github.t1willi.openapi.annotations.ApiResponse;
 import io.github.t1willi.openapi.annotations.Docs;
 import lombok.Getter;
 
 @Getter
-public final class OperationModel {
+class OperationModel {
         private String summary;
         private String description;
         private String operationId;
         private List<String> tags;
         private List<ParameterModel> parameters;
         private RequestBodyModel requestBody;
-        private Map<String, ReponseModel> responses;
-        private List<SecurityRequirementModel> security;
+        private Map<String, ResponseModel> responses;
+        private List<Map<String, List<String>>> security;
         private boolean deprecated;
 
-        public static OperationModel of(Docs docs, ObjectMapper mapper) {
+        public static OperationModel of(Docs doc, Method method, ObjectMapper mapper) {
                 OperationModel model = new OperationModel();
-                model.summary = docs.summary();
-                model.description = docs.description().isEmpty() ? null : docs.description();
-                model.operationId = docs.operationId().isEmpty() ? null : docs.operationId();
-                model.tags = docs.tags().length > 0 ? Arrays.asList(docs.tags()) : null;
-                model.parameters = docs.parameters().length > 0
-                                ? Arrays.stream(docs.parameters())
-                                                .map(param -> ParameterModel.of(param, mapper))
-                                                .collect(Collectors.toList())
+                model.summary = doc.summary();
+                model.description = doc.description();
+                model.operationId = doc.operationId();
+                model.tags = doc.tags().length > 0 ? List.of(doc.tags()) : null;
+                model.deprecated = doc.deprecated();
+
+                model.parameters = new ArrayList<>();
+                for (ApiParameter param : doc.parameters()) {
+                        ParameterModel paramModel = ParameterModel.of(param, mapper);
+                        model.parameters.add(paramModel);
+                }
+                if (model.parameters.isEmpty()) {
+                        model.parameters = null;
+                }
+
+                if (doc.requestBody() != Void.class) {
+                        model.requestBody = RequestBodyModel.of(doc, mapper);
+                }
+
+                model.responses = new LinkedHashMap<>();
+                for (ApiResponse resp : doc.responses()) {
+                        ResponseModel respModel = ResponseModel.of(resp, method, mapper);
+                        model.responses.put(String.valueOf(resp.code()), respModel);
+                }
+
+                model.security = doc.security().length > 0
+                                ? List.of(Map.of(doc.security()[0], List.of()))
                                 : null;
-                model.requestBody = RequestBodyModel.of(docs, mapper);
-                model.responses = Arrays.stream(docs.responses())
-                                .collect(Collectors.toMap(
-                                                r -> String.valueOf(r.code()),
-                                                r -> ReponseModel.of(r, mapper),
-                                                (r1, r2) -> r1,
-                                                LinkedHashMap::new));
-                model.security = docs.security().length > 0
-                                ? Arrays.stream(docs.security())
-                                                .map(SecurityRequirementModel::of)
-                                                .filter(Objects::nonNull)
-                                                .collect(Collectors.toList())
-                                : null;
-                model.deprecated = docs.deprecated();
+
                 return model;
         }
 }

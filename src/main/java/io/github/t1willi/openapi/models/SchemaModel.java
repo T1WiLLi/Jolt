@@ -1,28 +1,40 @@
 package io.github.t1willi.openapi.models;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.type.TypeFactory;
+import io.github.t1willi.http.ResponseEntity;
+import lombok.Getter;
+import lombok.Setter;
+
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.util.Collection;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-
-import lombok.Getter;
-
 @Getter
-public final class SchemaModel {
-    private String type;
-    private String format;
-    private String ref;
-    private Map<String, SchemaModel> properties;
-    private List<String> required;
-    private SchemaModel items;
+@Setter
+public class SchemaModel {
+    String type;
+    String format;
+    SchemaModel items;
+    Map<String, SchemaModel> properties;
+    String ref;
+    SchemaModel additionalProperties;
 
     public static SchemaModel of(Class<?> type, ObjectMapper mapper) {
-        if (type == Void.class) {
+        if (type == null || type == Void.class) {
             return null;
         }
+
         SchemaModel model = new SchemaModel();
+
+        if (type == ResponseEntity.class) {
+            model.type = "object";
+            return model;
+        }
 
         if (type == String.class) {
             model.type = "string";
@@ -40,23 +52,41 @@ public final class SchemaModel {
             model.format = "float";
         } else if (type == Boolean.class || type == boolean.class) {
             model.type = "boolean";
-        } else if (type.isArray() || Collection.class.isAssignableFrom(type)) {
+        } else if (type.isArray()) {
             model.type = "array";
-            Class<?> componentType = type.isArray() ? type.getComponentType()
-                    : mapper.getTypeFactory().constructCollectionType(List.class, type).getContentType().getRawClass();
+            Class<?> componentType = type.getComponentType();
+            model.items = of(componentType, mapper);
+        } else if (Collection.class.isAssignableFrom(type)) {
+            model.type = "array";
+            Class<?> componentType = Object.class; // Default
+            try {
+                componentType = mapper.getTypeFactory()
+                        .constructCollectionType(List.class, type)
+                        .getContentType()
+                        .getRawClass();
+            } catch (Exception e) {
+                // Fallback and ignore
+            }
             model.items = of(componentType, mapper);
         } else if (Map.class.isAssignableFrom(type)) {
             model.type = "object";
-            Class<?> valueType = mapper.getTypeFactory().constructMapType(Map.class, String.class, Object.class)
-                    .getContentType().getRawClass();
-            model.properties = Map.of("additionalProperties", of(valueType, mapper));
+            Class<?> valueType = Object.class;
+            try {
+                valueType = mapper.getTypeFactory()
+                        .constructMapType(Map.class, String.class, Object.class)
+                        .getContentType()
+                        .getRawClass();
+            } catch (Exception e) {
+                // Fallback to Object
+            }
+            model.additionalProperties = of(valueType, mapper);
         } else {
             model.type = "object";
             model.ref = "#/components/schemas/" + type.getSimpleName();
+            model.properties = new LinkedHashMap<>();
             try {
-                model.properties = new LinkedHashMap<>();
-                for (var field : type.getDeclaredFields()) {
-                    if (!java.lang.reflect.Modifier.isStatic(field.getModifiers())) {
+                for (Field field : type.getDeclaredFields()) {
+                    if (!Modifier.isStatic(field.getModifiers())) {
                         model.properties.put(field.getName(), of(field.getType(), mapper));
                     }
                 }
@@ -64,6 +94,24 @@ public final class SchemaModel {
                 model.properties = null;
             }
         }
+
         return model;
+    }
+
+    public static SchemaModel of(Class<?> type, java.lang.reflect.Type genericType, ObjectMapper mapper) {
+        if (type == null || type == Void.class) {
+            return null;
+        }
+
+        if (type == ResponseEntity.class && genericType instanceof ParameterizedType) {
+            ParameterizedType paramType = (ParameterizedType) genericType;
+            java.lang.reflect.Type[] typeArgs = paramType.getActualTypeArguments();
+            if (typeArgs.length > 0) {
+                Class<?> innerType = TypeFactory.rawClass(typeArgs[0]);
+                return of(innerType, typeArgs[0], mapper);
+            }
+        }
+
+        return of(type, mapper);
     }
 }

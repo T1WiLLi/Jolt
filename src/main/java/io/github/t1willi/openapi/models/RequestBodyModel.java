@@ -11,18 +11,15 @@ import lombok.Getter;
 public final class RequestBodyModel {
     private String description;
     private boolean required;
-    private Map<String, MediaTypeModel> content;
+    private Map<String, ContentModel> content;
 
-    public static RequestBodyModel of(Docs docs, ObjectMapper mapper) {
-        if (docs.requestBody() == Void.class && docs.requestDescription().isEmpty()) {
-            return null;
-        }
+    public static RequestBodyModel of(Docs doc, ObjectMapper mapper) {
         RequestBodyModel model = new RequestBodyModel();
-        model.description = docs.requestDescription().isEmpty() ? null : docs.requestDescription();
-        model.required = docs.requestBody() != Void.class;
-        model.content = docs.requestBody() != Void.class
-                ? Map.of("application/json", MediaTypeModel.of(docs.requestBody(), mapper))
-                : null;
+        model.description = doc.requestDescription();
+        model.required = true;
+        model.content = Map.of(
+                "application/json",
+                new ContentModel(SchemaModel.of(doc.requestBody(), mapper)));
         return model;
     }
 }

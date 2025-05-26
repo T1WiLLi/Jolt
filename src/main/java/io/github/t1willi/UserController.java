@@ -11,6 +11,9 @@ import io.github.t1willi.annotations.Path;
 import io.github.t1willi.annotations.Post;
 import io.github.t1willi.core.ApiController;
 import io.github.t1willi.http.ResponseEntity;
+import io.github.t1willi.openapi.annotations.ApiParameter;
+import io.github.t1willi.openapi.annotations.ApiResponse;
+import io.github.t1willi.openapi.annotations.Docs;
 import lombok.AllArgsConstructor;
 
 @Controller("[controller]s")
@@ -39,11 +42,22 @@ public class UserController extends ApiController {
     }
 
     @Get
+    @Docs(summary = "Get all users", description = "Get all users in the system", operationId = "getUser", tags = {
+            "users" }, responses = {
+                    @ApiResponse(code = 200, description = "A list of users", schema = User[].class),
+            })
     public List<User> getUsers() {
         return users;
     }
 
     @Get("{user_id}")
+    @Docs(summary = "Get user by id", description = "Get user by id", operationId = "getUserById", tags = {
+            "users" }, parameters = {
+                    @ApiParameter(name = "user_id", in = ApiParameter.In.PATH, description = "The id of the user", required = true, type = Integer.class, example = "1")
+            }, responses = {
+                    @ApiResponse(code = 302, description = "User found", schema = User.class),
+                    @ApiResponse(code = 404, description = "User not found")
+            })
     public User getUserById(@Path("user_id") int id) {
         return users.stream()
                 .filter(user -> user.id == id)
@@ -52,6 +66,11 @@ public class UserController extends ApiController {
     }
 
     @Post
+    @Docs(summary = "Create a new user", description = "Create a new user with the provided details", operationId = "createUser", tags = {
+            "users" }, requestBody = CreateUserDto.class, requestDescription = "User creation data (name, email, date of birth)", responses = {
+                    @ApiResponse(code = 201, description = "The created user", schema = User.class),
+                    @ApiResponse(code = 400, description = "Invalid request")
+            })
     public ResponseEntity<?> createUser(@Body CreateUserDto dto) {
         if (dto.name == null || dto.email == null || dto.dob == null) {
             return badRequest("Invalid dto, missing required fields: name, email, dob");
