@@ -3,7 +3,9 @@ package io.github.t1willi.openapi.models;
 import java.util.List;
 import java.util.Map;
 
-@SuppressWarnings("unused")
+import lombok.Getter;
+
+@Getter
 public final class SecurityRequirementModel {
     private Map<String, List<String>> requirements;
 

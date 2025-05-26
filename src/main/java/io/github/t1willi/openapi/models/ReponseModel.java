@@ -5,8 +5,9 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.github.t1willi.openapi.annotations.ApiResponse;
+import lombok.Getter;
 
-@SuppressWarnings("unused")
+@Getter
 public final class ReponseModel {
     private String description;
     private Map<String, MediaTypeModel> content;

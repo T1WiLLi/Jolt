@@ -2,7 +2,9 @@ package io.github.t1willi.openapi.models;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@SuppressWarnings("unused")
+import lombok.Getter;
+
+@Getter
 public final class MediaTypeModel {
     private SchemaModel schema;
 

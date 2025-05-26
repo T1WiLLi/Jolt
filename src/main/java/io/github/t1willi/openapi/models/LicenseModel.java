@@ -1,6 +1,8 @@
 package io.github.t1willi.openapi.models;
 
-@SuppressWarnings("unused")
+import lombok.Getter;
+
+@Getter
 public final class LicenseModel {
     private String name;
     private String url;

@@ -7,7 +7,9 @@ import java.util.Map;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 
-@SuppressWarnings("unused")
+import lombok.Getter;
+
+@Getter
 public final class SchemaModel {
     private String type;
     private String format;

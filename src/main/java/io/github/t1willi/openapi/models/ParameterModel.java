@@ -3,8 +3,9 @@ package io.github.t1willi.openapi.models;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.github.t1willi.openapi.annotations.ApiParameter;
+import lombok.Getter;
 
-@SuppressWarnings("unused")
+@Getter
 public final class ParameterModel {
     private String name;
     private String in;

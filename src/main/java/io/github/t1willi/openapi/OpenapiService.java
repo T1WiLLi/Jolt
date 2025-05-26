@@ -39,7 +39,7 @@ public class OpenapiService {
             OpenApi openApi = JoltApplication.openApi();
             Thread.startVirtualThread(() -> {
                 try {
-                    Thread.sleep(10 * 60 * 1000); // 10 seconds
+                    Thread.sleep(10 * 1000); // 10 seconds
                     model = OpenApiModel.of(openApi, getMethods());
                     initialized = true;
                     logger.info("OpenAPI model initialized successfully");

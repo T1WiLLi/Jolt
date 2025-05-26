@@ -2,12 +2,13 @@ package io.github.t1willi.openapi.models;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import io.github.t1willi.openapi.annotations.Docs;
+import lombok.Getter;
 import lombok.Setter;
 import io.github.t1willi.annotations.*;
 import java.lang.reflect.Method;
 
 @Setter
-@SuppressWarnings("unused")
+@Getter
 public final class PathItemModel {
     private OperationModel get;
     private OperationModel put;

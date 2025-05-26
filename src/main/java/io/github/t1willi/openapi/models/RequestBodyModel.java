@@ -5,8 +5,9 @@ import java.util.Map;
 import com.fasterxml.jackson.databind.ObjectMapper;
 
 import io.github.t1willi.openapi.annotations.Docs;
+import lombok.Getter;
 
-@SuppressWarnings("unused")
+@Getter
 public final class RequestBodyModel {
     private String description;
     private boolean required;

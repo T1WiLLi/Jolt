@@ -1,6 +1,8 @@
 package io.github.t1willi.openapi.models;
 
-@SuppressWarnings("unused")
+import lombok.Getter;
+
+@Getter
 public final class ContactModel {
     private String name;
     private String email;
