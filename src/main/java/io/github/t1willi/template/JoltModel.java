@@ -60,6 +60,34 @@ public class JoltModel {
     }
 
     /**
+     * Creates a new model with multiple key-value pairs.
+     * 
+     * @param keyValues The entries to be added to the model
+     * @return A new model with the specified entries
+     */
+    public static JoltModel of(Object... keyValues) {
+        if (keyValues.length % 2 != 0) {
+            throw new IllegalArgumentException("key-value pairs must be even in number");
+        }
+
+        Map<String, Object> data = new HashMap<>();
+        for (int i = 0; i < keyValues.length; i += 2) {
+            Object keyObj = keyValues[i];
+            Object valueObj = keyValues[i + 1];
+
+            if (keyObj == null || !(keyObj instanceof String)) {
+                throw new IllegalArgumentException("keys must be non-null strings");
+            }
+
+            String key = (String) keyObj;
+            if (valueObj != null) {
+                data.put(key, valueObj);
+            }
+        }
+        return new JoltModel(data);
+    }
+
+    /**
      * Adds a value to the model.
      * 
      * @param key   The key
