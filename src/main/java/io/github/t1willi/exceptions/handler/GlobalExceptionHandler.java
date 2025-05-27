@@ -4,6 +4,7 @@ import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.core.JoltDispatcherServlet;
 import io.github.t1willi.exceptions.JoltHttpException;
 import io.github.t1willi.http.HttpStatus;
+import io.github.t1willi.template.JoltModel;
 import jakarta.servlet.http.HttpServletResponse;
 
 public abstract class GlobalExceptionHandler implements ExceptionHandler {
@@ -52,6 +53,8 @@ public abstract class GlobalExceptionHandler implements ExceptionHandler {
         }
     }
 
+    // Helpers methods to return a response with specific details
+
     /**
      * This method is called to retrieve the current JoltContext object for this
      * request.
@@ -62,5 +65,32 @@ public abstract class GlobalExceptionHandler implements ExceptionHandler {
      */
     public final JoltContext context() {
         return JoltDispatcherServlet.getCurrentContext();
+    }
+
+    /**
+     * Allow rendering of a view through an error model.
+     * 
+     * @param status The HTTP status code
+     * @param view   The view to render
+     * @param model  The error model
+     */
+    public final void render(HttpStatus status, String view, JoltModel model) {
+        context()
+                .status(status)
+                .render(view, model)
+                .commit();
+    }
+
+    /**
+     * Allow rendering of a view through an error model as a JSON response.
+     * 
+     * @param status The HTTP status code
+     * @param data   The data to render
+     */
+    public final void json(HttpStatus status, Object data) {
+        context()
+                .status(status)
+                .json(data)
+                .commit();
     }
 }
