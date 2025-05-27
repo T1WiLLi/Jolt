@@ -5,6 +5,7 @@ import io.github.t1willi.annotations.Get;
 import io.github.t1willi.annotations.Mapping;
 import io.github.t1willi.annotations.Post;
 import io.github.t1willi.annotations.Put;
+import io.github.t1willi.core.ApiController;
 import io.github.t1willi.core.BaseController;
 import io.github.t1willi.core.ControllerRegistry;
 import io.github.t1willi.core.JoltApplication;
@@ -56,12 +57,14 @@ public class OpenapiService {
         List<BaseController> controllers = ControllerRegistry.getControllers();
 
         for (BaseController baseController : controllers) {
-            List<Method> methods = filterMethods(baseController.getClass().getMethods());
-            result.addAll(
-                    methods.stream()
-                            .filter(method -> method.isAnnotationPresent(Docs.class))
-                            .map(method -> Map.entry(method.getAnnotation(Docs.class), method))
-                            .collect(Collectors.toList()));
+            if (baseController instanceof ApiController apiController) {
+                List<Method> methods = filterMethods(apiController.getClass().getMethods());
+                result.addAll(
+                        methods.stream()
+                                .filter(method -> method.isAnnotationPresent(Docs.class))
+                                .map(method -> Map.entry(method.getAnnotation(Docs.class), method))
+                                .collect(Collectors.toList()));
+            }
         }
         return result;
     }
