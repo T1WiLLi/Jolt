@@ -73,7 +73,7 @@ public final class Session {
     public static final String KEY_INITIALIZED = Constant.SessionKeys.INITIALIZED;
     public static final String KEY_IP_ADDRESS = Constant.SessionKeys.IP_ADDRESS;
     public static final String KEY_USER_AGENT = Constant.SessionKeys.USER_AGENT;
-    public static final String KEY_ACCESS_TIME = Constant.SessionKeys.ACCESS_TIME;
+    public static final String KEY_LAST_ACCESS = Constant.SessionKeys.LAST_ACCESS;
     public static final String KEY_EXPIRE_TIME = Constant.SessionKeys.EXPIRE_TIME;
     public static final String KEY_IS_AUTHENTICATED = Constant.SessionKeys.IS_AUTHENTICATED;
 
@@ -119,6 +119,15 @@ public final class Session {
     // ─────────────────────────────────────────────────────────────────────
     // Public API
     // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Retrieves the current Session as the 'raw' data values.
+     * 
+     * @return the current Session as a Map of key-value pairs.
+     */
+    public static HttpSession raw() {
+        return ensure(true).raw();
+    }
 
     /**
      * Retrieves the value of the given session attribute, or returns
@@ -224,7 +233,7 @@ public final class Session {
      * @return last‑access in ms
      */
     public static long getUnixAccess() {
-        return getOptional(KEY_ACCESS_TIME)
+        return getOptional(KEY_LAST_ACCESS)
                 .map(Long::valueOf)
                 .orElse(0L);
     }
@@ -365,7 +374,7 @@ public final class Session {
         expire(js);
 
         if (js != null) {
-            js.setAttribute(KEY_ACCESS_TIME, Instant.now().toEpochMilli());
+            js.setAttribute(KEY_LAST_ACCESS, Instant.now().toEpochMilli());
         }
         return js;
     }
@@ -375,7 +384,7 @@ public final class Session {
         s.setAttribute(KEY_INITIALIZED, true);
         s.setAttribute(KEY_IP_ADDRESS, ctx.clientIp());
         s.setAttribute(KEY_USER_AGENT, ctx.userAgent());
-        s.setAttribute(KEY_ACCESS_TIME, now);
+        s.setAttribute(KEY_LAST_ACCESS, now);
         s.setAttribute(KEY_EXPIRE_TIME, now + Duration.ofSeconds(getLifetime()).toMillis());
         s.setAttribute(KEY_IS_AUTHENTICATED, false);
     }

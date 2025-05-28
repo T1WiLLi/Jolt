@@ -43,7 +43,7 @@ public final class JoltSession {
             Session.KEY_INITIALIZED,
             Session.KEY_IP_ADDRESS,
             Session.KEY_USER_AGENT,
-            Session.KEY_ACCESS_TIME,
+            Session.KEY_LAST_ACCESS,
             Session.KEY_EXPIRE_TIME,
             Session.KEY_IS_AUTHENTICATED));
 

@@ -30,19 +30,18 @@ public final class Constant {
         public static final String INITIALIZED = "jolt_session_initialized";
         public static final String IP_ADDRESS = "ip_address";
         public static final String USER_AGENT = "user_agent";
-        public static final String ACCESS_TIME = "access_time";
+        public static final String LAST_ACCESS = "last_access";
         public static final String EXPIRE_TIME = "expire_time";
         public static final String IS_AUTHENTICATED = "is_authenticated";
 
-        public static final Set<String> EXCLUDED_KEYS_FOR_SERIALIZATION_OF_SESSION_IN_DATABASE = Set.of(
+        public static final Set<String> EXCLUDED_KEY_FOR_SESSION_ATTRIBUTES = Set.of(
                 "id",
-                "data",
                 "last_access",
                 "max_inactive",
-                "expiry_time",
+                "expire_time",
                 "ip_address",
                 "user_agent",
-                "updated_time");
+                "created_time");
     }
 
     public static final class Database {
