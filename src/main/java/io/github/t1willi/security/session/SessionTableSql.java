@@ -22,7 +22,7 @@ final class SessionTableSql {
                         "  FOREIGN KEY (session_id) REFERENCES " + SESSION_TABLE + "(id) ON DELETE CASCADE" +
                         ");";
 
-        public static final String CREATE_INDEX_EXPIRY = "CREATE INDEX IF NOT EXISTS idx_" + SESSION_TABLE + "_expire "
+        public static final String CREATE_INDEX_EXPIRE = "CREATE INDEX IF NOT EXISTS idx_" + SESSION_TABLE + "_expire "
                         + "ON " + SESSION_TABLE + "(expire_time);";
 
         public static final String CREATE_INDEX_LAST_ACCESS = "CREATE INDEX IF NOT EXISTS idx_" + SESSION_TABLE
