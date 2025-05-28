@@ -255,6 +255,7 @@ public class JoltJDBCStore extends StoreBase {
     }
 
     private void populateSessionMetadata(ResultSet rs, StandardSession session) throws SQLException {
+        session.setValid(true);
         session.setMaxInactiveInterval(rs.getInt("max_inactive"));
         session.setCreationTime(rs.getLong("created_time"));
         session.setAttribute(io.github.t1willi.security.session.Session.KEY_IP_ADDRESS,
