@@ -8,7 +8,7 @@ final class SessionTableSql {
                         "  id VARCHAR(255) PRIMARY KEY," +
                         "  last_access BIGINT NOT NULL," +
                         "  max_inactive INT NOT NULL," +
-                        "  expiry_time BIGINT," +
+                        "  expire_time BIGINT," +
                         "  ip_address VARCHAR(45)," +
                         "  user_agent VARCHAR(512)," +
                         "  created_time BIGINT NOT NULL" +
@@ -22,8 +22,8 @@ final class SessionTableSql {
                         "  FOREIGN KEY (session_id) REFERENCES " + SESSION_TABLE + "(id) ON DELETE CASCADE" +
                         ");";
 
-        public static final String CREATE_INDEX_EXPIRY = "CREATE INDEX IF NOT EXISTS idx_" + SESSION_TABLE + "_expiry "
-                        + "ON " + SESSION_TABLE + "(expiry_time);";
+        public static final String CREATE_INDEX_EXPIRY = "CREATE INDEX IF NOT EXISTS idx_" + SESSION_TABLE + "_expire "
+                        + "ON " + SESSION_TABLE + "(expire_time);";
 
         public static final String CREATE_INDEX_LAST_ACCESS = "CREATE INDEX IF NOT EXISTS idx_" + SESSION_TABLE
                         + "_last_access "
@@ -41,18 +41,18 @@ final class SessionTableSql {
                         + "ON " + ATTRS_TABLE + "(name);";
 
         public static final String UPSERT_SESSION = "INSERT INTO " + SESSION_TABLE +
-                        " (id, last_access, max_inactive, expiry_time, ip_address, user_agent, created_time) " +
+                        " (id, last_access, max_inactive, expire_time, ip_address, user_agent, created_time) " +
                         "VALUES (?, ?, ?, ?, ?, ?, ?) " +
                         "ON CONFLICT (id) DO UPDATE SET " +
                         "  last_access  = EXCLUDED.last_access, " +
                         "  max_inactive = EXCLUDED.max_inactive, " +
-                        "  expiry_time  = EXCLUDED.expiry_time, " +
+                        "  expire_time  = EXCLUDED.expiry_time, " +
                         "  ip_address   = EXCLUDED.ip_address, " +
                         "  user_agent   = EXCLUDED.user_agent";
 
         public static final String DELETE_SESSION = "DELETE FROM " + SESSION_TABLE + " WHERE id = ?";
 
-        public static final String SELECT_SESSION = "SELECT last_access, max_inactive, expiry_time, created_time, ip_address, user_agent "
+        public static final String SELECT_SESSION = "SELECT last_access, max_inactive, expire_time, created_time, ip_address, user_agent "
                         +
                         "FROM " + SESSION_TABLE + " WHERE id = ?";
 
