@@ -46,7 +46,7 @@ final class SessionTableSql {
                         "ON CONFLICT (id) DO UPDATE SET " +
                         "  last_access  = EXCLUDED.last_access, " +
                         "  max_inactive = EXCLUDED.max_inactive, " +
-                        "  expire_time  = EXCLUDED.expiry_time, " +
+                        "  expire_time  = EXCLUDED.expire_time, " +
                         "  ip_address   = EXCLUDED.ip_address, " +
                         "  user_agent   = EXCLUDED.user_agent";
 
