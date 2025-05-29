@@ -14,6 +14,7 @@ import io.github.t1willi.security.csrf.CsrfToken;
 import io.github.t1willi.template.JoltModel;
 import io.github.t1willi.template.TemplateConfiguration;
 import io.github.t1willi.template.TemplateEngine;
+import io.github.t1willi.utils.Flash;
 
 /**
  * Handles template rendering with security features like CSRF token injection.
@@ -46,6 +47,8 @@ final class TemplatingContext {
         }
 
         JoltModel finalModel = baseModel.clone();
+
+        injectFlashIntoModel(finalModel);
 
         if (model != null) {
             finalModel.merge(model);
@@ -134,5 +137,24 @@ final class TemplatingContext {
 
         out.append(html.substring(lastEnd));
         return out.toString();
+    }
+
+    private void injectFlashIntoModel(JoltModel model) {
+        FlashWrapper flashWrapper = new FlashWrapper();
+        model.with("flash", flashWrapper);
+    }
+
+    public static final class FlashWrapper {
+        public String message() {
+            return Flash.message();
+        }
+
+        public String type() {
+            return Flash.type();
+        }
+
+        public boolean has() {
+            return Flash.has();
+        }
     }
 }

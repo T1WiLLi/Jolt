@@ -314,7 +314,7 @@ public final class ControllerRegistry {
         }
 
         throw new JoltDIException("Cannot resolve parameter: " + p.getName() +
-                ". Must be annotated with @Path, @Query, @Body, @ToForm or be JoltContext");
+                ". Must be annotated with @Path, @Query, @Header, @Body, @ToForm or be of JoltContext type.");
     }
 
     private static JoltContext dispatchReturn(JoltContext ctx, Object result) {
