@@ -3,6 +3,7 @@ package io.github.t1willi.core;
 import io.github.t1willi.annotations.Body;
 import io.github.t1willi.annotations.Controller;
 import io.github.t1willi.annotations.Get;
+import io.github.t1willi.annotations.Header;
 import io.github.t1willi.annotations.Mapping;
 import io.github.t1willi.annotations.Post;
 import io.github.t1willi.annotations.Put;
@@ -286,17 +287,15 @@ public final class ControllerRegistry {
         }
 
         if (p.isAnnotationPresent(Path.class)) {
-            Path pathAnn = p.getAnnotation(Path.class);
-            String paramName = pathAnn.value().isEmpty() ? p.getName() : pathAnn.value();
-            String raw = ctx.path(paramName);
-            return HelpMethods.convert(raw, p.getType());
+            return processParamAnnotation(p, p.getAnnotation(Path.class), ctx);
         }
 
         if (p.isAnnotationPresent(Query.class)) {
-            Query queryAnn = p.getAnnotation(Query.class);
-            String paramName = queryAnn.value().isEmpty() ? p.getName() : queryAnn.value();
-            String raw = ctx.query(paramName);
-            return HelpMethods.convert(raw, p.getType());
+            return processParamAnnotation(p, p.getAnnotation(Query.class), ctx);
+        }
+
+        if (p.isAnnotationPresent(Header.class)) {
+            return processParamAnnotation(p, p.getAnnotation(Header.class), ctx);
         }
 
         if (p.isAnnotationPresent(Body.class)) {
@@ -406,4 +405,23 @@ public final class ControllerRegistry {
         return path;
     }
 
+    private static Object processParamAnnotation(Parameter p, Annotation a, JoltContext ctx) {
+        try {
+            String paramName = ((String) a.annotationType().getMethod("value").invoke(a)).isEmpty() ? p.getName()
+                    : (String) a.annotationType().getMethod("value").invoke(a);
+            String raw = getFromContextBasedOnType(paramName, a, ctx);
+            return HelpMethods.convert(raw, p.getType());
+        } catch (Exception e) {
+            throw new JoltDIException("Failed to read 'value' from annotation: " + a.annotationType().getName(), e);
+        }
+    }
+
+    private static String getFromContextBasedOnType(String paramName, Annotation a, JoltContext ctx) {
+        return switch (a) {
+            case Query q -> ctx.query(paramName);
+            case Path p -> ctx.path(paramName);
+            case Header h -> ctx.header(paramName);
+            default -> null;
+        };
+    }
 }
