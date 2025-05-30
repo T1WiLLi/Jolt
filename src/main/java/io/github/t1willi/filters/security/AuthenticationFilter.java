@@ -44,12 +44,16 @@ public class AuthenticationFilter extends JoltFilter {
                     return;
                 }
 
-                if (r.getStrategy() != null && r.getStrategy().authenticate(ctx)) {
-                    chain.doFilter(request, response);
-                } else if (r.getStrategy() != null) {
-                    r.getStrategy().challenge(ctx);
-                } else {
+                if (r.getStrategy() == null) {
                     ctx.abortUnauthorized("Authentication required but no strategy defined");
+                    return;
+                }
+                if (r.getStrategy().authenticate(ctx)) {
+                    chain.doFilter(request, response);
+                    return;
+                }
+                if (!r.handleFailure(ctx)) {
+                    r.getStrategy().challenge(ctx);
                 }
                 return;
             }
