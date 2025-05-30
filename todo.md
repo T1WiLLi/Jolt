@@ -70,6 +70,8 @@ Update freemarker default configuration to always enforce escaping variables to 
         .route("/users/**")
             .methods(GET)
             .authenticated()
+            .onSuccess("/dashboard") // Same as onFailure
+            .onFailure("/") // Should also be able to pass a Function(JoltContext context, JoltContext context); to make further decisions based on the context and we return the updated context
         .route("/jokes")
             .methods(GET)
             .authenticated(new CustomAuthStrategy())
@@ -323,6 +325,33 @@ public class HomeController extends ApiController {
             .body("{\"message\": \"Hello World\"}");
     }
 }
+```
+
+# Authentification configuration
+
+```java
+// ... In DefaultSecurityConfiguration.java
+
+    .auth(auth -> auth
+        .login(login -> login
+            .page("/login")
+            .successUrl("/dashboard") // Always redirect to this page.
+            .failureUrl("/login") // Also allow Function(JoltContext ctx, JoltContext ctx) in all of those
+        )
+        .logout(logout -> logout
+            .logoutUrl("/logout")
+            .destroySession(true)
+            .logoutSuccessUrl("/")
+        )
+    )
+
+    .withRoutes()
+        .route("/dashboard")
+            .methods(HttpMethod.GET, HttpMethod.POST, HttpMethod.PUT)
+            .authenticated()
+            .onFailure("/") // Can be a function, or a string
+        .anyRoute()
+            .denyAll();
 ```
 
 New server properties : 

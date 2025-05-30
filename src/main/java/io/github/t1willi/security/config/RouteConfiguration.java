@@ -4,7 +4,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.function.Function;
 
+import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.http.HttpMethod;
 import io.github.t1willi.security.authentification.AuthStrategy;
 import io.github.t1willi.security.authentification.RouteRule;
@@ -54,6 +56,7 @@ public class RouteConfiguration {
         private AuthStrategy strategy;
         private boolean permitAll;
         private boolean denyAll;
+        private Function<JoltContext, JoltContext> onFailureHandler;
 
         RouteBuilder(RouteConfiguration parent, String pattern, boolean any) {
             this.parent = parent;
@@ -89,6 +92,18 @@ public class RouteConfiguration {
             return parent;
         }
 
+        public RouteConfiguration onFailure(String redirectTo) {
+            this.onFailureHandler = ctx -> ctx.redirect(redirectTo);
+            addRule();
+            return parent;
+        }
+
+        public RouteConfiguration onFailure(Function<JoltContext, JoltContext> handler) {
+            this.onFailureHandler = handler;
+            addRule();
+            return parent;
+        }
+
         /**
          * Require session-based authentication.
          */
@@ -106,7 +121,7 @@ public class RouteConfiguration {
         }
 
         private void addRule() {
-            rules.add(new RouteRule(pattern, any, methods, strategy, permitAll, denyAll));
+            rules.add(new RouteRule(pattern, any, methods, strategy, permitAll, denyAll, onFailureHandler));
         }
     }
 }
