@@ -33,4 +33,21 @@ public final class RouteRule {
         this.denyAll = denyAll;
         this.onFailureHandler = onFailureHandler;
     }
+
+    public RouteRule(String pattern, boolean any, Set<String> methods, AuthStrategy strategy,
+            boolean permitAll, boolean denyAll, String redirectTo) {
+        this(pattern, any, methods, strategy, permitAll, denyAll,
+                redirectTo != null && !redirectTo.isEmpty() ? ctx -> {
+                    ctx.redirect(redirectTo);
+                    return ctx;
+                } : null);
+    }
+
+    public boolean handleFailure(JoltContext ctx) {
+        if (onFailureHandler != null) {
+            onFailureHandler.apply(ctx);
+            return true;
+        }
+        return false;
+    }
 }

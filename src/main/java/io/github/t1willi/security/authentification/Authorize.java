@@ -8,5 +8,7 @@ import java.lang.annotation.Target;
 @Retention(RetentionPolicy.RUNTIME)
 @Target({ ElementType.METHOD, ElementType.TYPE })
 public @interface Authorize {
-    Class<? extends AuthStrategy> value() default SessionAuthStrategy.class;
+    Class<? extends AuthStrategy> strategy() default SessionAuthStrategy.class;
+
+    String onFailure() default "";
 }
