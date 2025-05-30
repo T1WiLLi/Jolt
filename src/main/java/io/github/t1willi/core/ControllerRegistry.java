@@ -200,8 +200,10 @@ public final class ControllerRegistry {
         if (effective == null)
             return;
         try {
-            AuthStrategy strat = effective.value().getDeclaredConstructor().newInstance();
-            AUTHORIZATION.add(new RouteRule(fullPath, false, Set.of(verb.name()), strat, false, false));
+            AuthStrategy strat = effective.strategy().getDeclaredConstructor().newInstance();
+            String failureRedirect = effective.onFailure().isEmpty() ? null : effective.onFailure();
+            AUTHORIZATION
+                    .add(new RouteRule(fullPath, false, Set.of(verb.name()), strat, false, false, failureRedirect));
         } catch (Exception e) {
             throw new JoltDIException("Failed to create AuthStrategy for method: " + method.getName(), e);
         }
@@ -215,15 +217,18 @@ public final class ControllerRegistry {
             return;
         }
         try {
-            AuthStrategy strategy = JoltContainer.getInstance().getBean(effective.value());
+            AuthStrategy strategy = JoltContainer.getInstance().getBean(effective.strategy());
             if (strategy != null) {
+                String failureRedirect = effective.onFailure().isEmpty() ? null : effective.onFailure();
+
                 AUTHORIZATION.add(new RouteRule(
                         fullPath,
                         false,
                         Set.of(verb.name()),
                         strategy,
                         false,
-                        false));
+                        false,
+                        failureRedirect));
             }
         } catch (Exception e) {
             throw new JoltDIException("Failed to resolve AuthStrategy for method: " + method.getName(), e);
