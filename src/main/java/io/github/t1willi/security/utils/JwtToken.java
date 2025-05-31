@@ -29,7 +29,6 @@ public final class JwtToken {
 
     private static final String SECRET_KEY;
     private static final String PEPPER;
-    private static final String ENCRYPTION_KEY;
 
     /** Default token expiration time: 30 minutes in milliseconds */
     private static final long DEFAULT_EXPIRATION_MS = Constant.Security.DEFAULT_JWT_TOKEN_EXPIRATION_IN_MS;
@@ -45,10 +44,6 @@ public final class JwtToken {
         );
         PEPPER = ConfigurationManager.getInstance().getProperty(
                 "server.security.pepper",
-                CryptographyUtils.randomBase64(32) // 256 bits
-        );
-        ENCRYPTION_KEY = ConfigurationManager.getInstance().getProperty(
-                "server.security.encryption_key",
                 CryptographyUtils.randomBase64(32) // 256 bits
         );
     }
@@ -246,7 +241,7 @@ public final class JwtToken {
      * @return Encryption key for JWT
      */
     private static SecretKeySpec getEncryptionKey() {
-        byte[] keyBytes = ENCRYPTION_KEY.getBytes(java.nio.charset.StandardCharsets.UTF_8);
+        byte[] keyBytes = SECRET_KEY.getBytes(java.nio.charset.StandardCharsets.UTF_8);
         return new SecretKeySpec(Arrays.copyOf(keyBytes, 32), "AES");
     }
 }
