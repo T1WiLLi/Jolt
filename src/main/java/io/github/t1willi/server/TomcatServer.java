@@ -183,15 +183,16 @@ public final class TomcatServer {
             }
             context.setResources(resources);
 
-            Wrapper defaultServlet = Tomcat.addServlet(
-                    context,
-                    "default",
-                    "org.apache.catalina.servlets.DefaultServlet");
-            defaultServlet.setLoadOnStartup(1);
-            defaultServlet.addInitParameter(
-                    "listings",
-                    sconf.isDirectoryListingEnabled() ? "true" : "false");
-            context.addServletMappingDecoded(listingPath + "/*", "default");
+            if (sconf.isDirectoryListingEnabled()) {
+                Wrapper defaultServlet = Tomcat.addServlet(
+                        context,
+                        "default",
+                        "org.apache.catalina.servlets.DefaultServlet");
+                defaultServlet.setLoadOnStartup(1);
+                defaultServlet.addInitParameter("listings", "true");
+                context.addServletMappingDecoded(listingPath, "default");
+                context.addServletMappingDecoded(listingPath + "/*", "default");
+            }
 
             MultipartConfigElement multipartConfig = new MultipartConfigElement(
                     (String) context
