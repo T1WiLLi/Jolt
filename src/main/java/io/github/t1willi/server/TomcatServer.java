@@ -109,6 +109,13 @@ public final class TomcatServer {
             httpConnector.setProperty("compressableMimeType",
                     "text/html,text/xml,text/css,text/javascript,application/javascript,application/json");
             httpConnector.addUpgradeProtocol(new Http2Protocol()); // Support HTTP/2
+
+            if (config.isSslEnabled()
+                    && Boolean.parseBoolean(ConfigurationManager.getInstance().getProperty("server.http.redirect"))) {
+                httpConnector.setRedirectPort(config.getSslPort()); // Redirect HTTP to HTTPS only if SSL is enabled AND
+                                                                    // redirect for HTTP is enabled
+            }
+
             connectors.add(httpConnector);
         }
 
