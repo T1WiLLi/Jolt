@@ -9,6 +9,7 @@ import org.apache.catalina.Wrapper;
 import org.apache.catalina.connector.Connector;
 import org.apache.catalina.core.StandardThreadExecutor;
 import org.apache.catalina.startup.Tomcat;
+import org.apache.catalina.valves.RemoteIpValve;
 import org.apache.catalina.webresources.DirResourceSet;
 import org.apache.catalina.webresources.StandardRoot;
 import org.apache.coyote.http2.Http2Protocol;
@@ -43,6 +44,7 @@ public final class TomcatServer {
         try {
             validateEnvironment();
             initializeTomcat();
+            configureRemoteIpValueIfNeeded();
             tomcat.getService().addExecutor(createAndConfigureExecutor());
             for (Connector connector : createAndConfigureConnectors()) {
                 tomcat.getService().addConnector(connector);
@@ -250,5 +252,22 @@ public final class TomcatServer {
         if (config.getKeyAlias() == null || config.getKeyAlias().isEmpty()) {
             throw new ServerException("SSL configuration error: key alias is required");
         }
+    }
+
+    private void configureRemoteIpValueIfNeeded() {
+        boolean remoteIpValueNeeded = Boolean.parseBoolean(
+                ConfigurationManager.getInstance().getProperty("server.proxy.trust_proxy_headers"));
+        if (!remoteIpValueNeeded) {
+            return;
+        }
+
+        RemoteIpValve valve = new RemoteIpValve();
+
+        valve.setProtocolHeader("X-Forwared-Proto");
+        valve.setProtocolHeaderHttpsValue("https");
+        valve.setPortHeader("X-Forwarded-Port");
+        valve.setRemoteIpHeader("X-Forwarded-For");
+        valve.setInternalProxies("10\\.\\d+\\.\\d+\\.\\d+|192\\.168\\.\\d+\\.\\d+|127\\.0\\.0\\.1");
+        tomcat.getEngine().getPipeline().addValve(valve);
     }
 }
