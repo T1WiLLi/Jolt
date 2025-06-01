@@ -30,7 +30,7 @@ public class StaticResourceStep implements PipelineStep {
         String path = ctx.getPath();
 
         RouteMatch match = router.match("GET", path);
-        if (match != null) {
+        if (match != null && !isCatchAllRoute(match)) {
             return false;
         }
 
@@ -75,5 +75,10 @@ public class StaticResourceStep implements PipelineStep {
                     "Error serving static resource: " + e.getMessage(),
                     e);
         }
+    }
+
+    private boolean isCatchAllRoute(RouteMatch match) {
+        String path = match.route().getPath();
+        return path.matches("/\\*+");
     }
 }
