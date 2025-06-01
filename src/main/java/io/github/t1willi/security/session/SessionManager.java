@@ -60,7 +60,7 @@ public class SessionManager {
 
             context.setManager(manager);
             int sessionTimeoutSeconds = Integer
-                    .parseInt(ConfigurationManager.getInstance().getProperty("session.timeout", "900"));
+                    .parseInt(ConfigurationManager.getInstance().getProperty("session.lifetime", "900"));
             context.setSessionTimeout(sessionTimeoutSeconds / 60);
             logger.info("JoltJDBCStore configured for immediate session persistence.");
         } else {
