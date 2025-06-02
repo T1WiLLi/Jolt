@@ -23,7 +23,7 @@ public abstract class SecurityConfiguration {
      *
      * @return This configuration instance for method chaining
      */
-    protected abstract SecurityConfiguration configure();
+    protected abstract void configure();
 
     /**
      * The CORS configuration for this security setup.

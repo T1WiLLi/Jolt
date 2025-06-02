@@ -5,8 +5,6 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.lang.annotation.Target;
 
-import io.github.t1willi.injector.type.ConfigurationType;
-
 /**
  * Annotation to mark a configuration class.
  * When scanned, the container will instantiate the configuration class and
@@ -15,13 +13,6 @@ import io.github.t1willi.injector.type.ConfigurationType;
 @Retention(RetentionPolicy.RUNTIME)
 @Target(ElementType.TYPE)
 public @interface Configuration {
-    /**
-     * The type of configuration. For example, EXCEPTION_HANDLER, SECURITY, SERVER,
-     * etc.
-     * 
-     * @return the type of configuration
-     */
-    ConfigurationType value();
 
     /**
      * Flag to indicate if this configuration is the framework's default

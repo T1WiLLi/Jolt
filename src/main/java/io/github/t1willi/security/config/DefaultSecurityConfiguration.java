@@ -1,14 +1,12 @@
 package io.github.t1willi.security.config;
 
 import io.github.t1willi.injector.annotation.Configuration;
-import io.github.t1willi.injector.type.ConfigurationType;
 import io.github.t1willi.security.policies.CacheControlPolicy;
 import io.github.t1willi.security.policies.ContentSecurityPolicy;
 import io.github.t1willi.security.policies.FrameOptionsPolicy;
 import io.github.t1willi.security.policies.HstsPolicy;
 import io.github.t1willi.security.policies.ReferrerPolicy;
 import io.github.t1willi.security.policies.XssProtectionPolicy;
-import jakarta.annotation.PostConstruct;
 
 /**
  * Default implementation of the SecurityConfiguration.
@@ -16,18 +14,8 @@ import jakarta.annotation.PostConstruct;
  * defaults.
  * This configuration includes CORS settings and security headers configuration.
  */
-@Configuration(value = ConfigurationType.SECURITY, isDefault = true)
+@Configuration(isDefault = true)
 public final class DefaultSecurityConfiguration extends SecurityConfiguration {
-
-        /**
-         * Initializes this configuration when the bean is constructed.
-         * This method is automatically called by the container due to
-         * the @PostConstruct annotation.
-         */
-        @PostConstruct
-        public void init() {
-
-        }
 
         /**
          * Configures security settings with default values.
@@ -60,7 +48,7 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
          * @return This configuration instance for method chaining
          */
         @Override
-        public SecurityConfiguration configure() {
+        public void configure() {
                 withCORS()
                                 .allowedOrigins("*")
                                 .allowedMethods("GET", "POST", "PUT", "DELETE")
@@ -91,6 +79,5 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
                 withCSRF()
                                 .disable();
                 withMaxRequest(9999);
-                return this;
         }
 }

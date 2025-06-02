@@ -1,9 +1,7 @@
 package io.github.t1willi.template;
 
 import io.github.t1willi.injector.annotation.Configuration;
-import io.github.t1willi.injector.type.ConfigurationType;
 import io.github.t1willi.template.engines.FreemarkerTemplateEngine;
-import jakarta.annotation.PostConstruct;
 
 /**
  * Provides the default template configuration for the Jolt framework.
@@ -19,13 +17,8 @@ import jakarta.annotation.PostConstruct;
  * @author William Beaudin.
  * @since 3.0
  */
-@Configuration(value = ConfigurationType.TEMPLATE, isDefault = true)
+@Configuration(isDefault = true)
 public final class DefaultTemplateConfiguration extends TemplateConfiguration {
-
-    @PostConstruct
-    public void init() {
-
-    }
 
     /**
      * Performs template configuration steps for the default setup.

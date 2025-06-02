@@ -1,8 +1,6 @@
 package io.github.t1willi.filters;
 
 import io.github.t1willi.injector.annotation.Configuration;
-import io.github.t1willi.injector.type.ConfigurationType;
-import jakarta.annotation.PostConstruct;
 
 /**
  * Provides the default filter configuration for the Jolt framework.
@@ -17,13 +15,8 @@ import jakarta.annotation.PostConstruct;
  *
  * @since 1.0
  */
-@Configuration(value = ConfigurationType.FILTER, isDefault = true)
+@Configuration(isDefault = true)
 public final class DefaultFilterConfiguration extends FilterConfiguration {
-
-    @PostConstruct
-    public void init() {
-        configure();
-    }
 
     /**
      * Performs filter configuration steps for the default setup.
