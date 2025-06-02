@@ -10,6 +10,7 @@ import java.util.logging.Logger;
 import io.github.t1willi.exceptions.JoltDIException;
 import io.github.t1willi.exceptions.handler.GlobalExceptionHandler;
 import io.github.t1willi.injector.annotation.Configuration;
+import io.github.t1willi.template.TemplateConfiguration;
 
 /**
  * The ConfigurationManager is responsible for registering and validating
@@ -60,7 +61,8 @@ final class ConfigurationManager {
 
     private void invokeConfigureMethod(Object instance) {
         Class<?> clazz = instance.getClass();
-        if (GlobalExceptionHandler.class.isAssignableFrom(clazz)) {
+        if (GlobalExceptionHandler.class.isAssignableFrom(clazz)
+                || TemplateConfiguration.class.isAssignableFrom(clazz)) {
             logger.fine(() -> "Skipping configure() invocation for " + clazz.getName());
             return;
         }

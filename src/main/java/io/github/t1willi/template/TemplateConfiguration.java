@@ -47,7 +47,7 @@ public abstract class TemplateConfiguration {
         }
 
         if (engine != null && !engine.isInitialized()) {
-            engine.initialize(engineConfig.copy());
+            this.engine.initialize(engineConfig.copy());
         } else {
             LOGGER.severe("No template engine set!");
         }

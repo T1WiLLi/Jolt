@@ -64,7 +64,6 @@ final class TemplatingContext {
             renderedHtml = injectCsrfTokenIntoForms(renderedHtml, csrfToken, tokenName);
             response.setContentType("text/html; charset=UTF-8");
             response.html(renderedHtml);
-
             logger.log(Level.FINE, () -> "Rendered template: " + templatePath +
                     " with model keys: " + String.join(", ", finalModel.getKeys()));
         } catch (Exception e) {
