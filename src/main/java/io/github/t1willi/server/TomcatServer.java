@@ -111,7 +111,8 @@ public final class TomcatServer {
             httpConnector.addUpgradeProtocol(new Http2Protocol()); // Support HTTP/2
 
             if (config.isSslEnabled()
-                    && Boolean.parseBoolean(ConfigurationManager.getInstance().getProperty("server.http.redirect"))) {
+                    && Boolean.parseBoolean(
+                            ConfigurationManager.getInstance().getProperty("server.http.redirect", "false"))) {
                 httpConnector.setRedirectPort(config.getSslPort()); // Redirect HTTP to HTTPS only if SSL is enabled AND
                                                                     // redirect for HTTP is enabled
             }
