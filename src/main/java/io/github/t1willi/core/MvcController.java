@@ -58,6 +58,24 @@ public abstract class MvcController extends BaseController {
     }
 
     /**
+     * Renders an HTML view.
+     * <p>
+     * This method creates a {@link ResponseEntity} with an HTTP status of 200 (OK)
+     * but without a model.
+     * That is, it is equivalent to calling {@link #render(String, JoltModel)} with
+     * a null model.
+     * 
+     * @see #render(String, JoltModel)
+     * @param view the name of the view template to render (e.g., the name of a
+     *             Freemarker template file, without the .ftl extension)
+     * @return a {@link ResponseEntity} with HTTP status 200, HTML content type, and
+     *         ModelView as parameter.
+     */
+    protected ResponseEntity<ModelView> render(String view) {
+        return render(view, null);
+    }
+
+    /**
      * Constructs an HTTP 302 Found response to redirect the client to the specified
      * location.
      * <p>
