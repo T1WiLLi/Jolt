@@ -255,7 +255,28 @@ public class ResponseEntity<T> {
      * @since 1.0.0
      */
     public static <U> ResponseEntity<U> created(U body, String location) {
-        return of(HttpStatus.CREATED, body, Map.of("Location", location));
+        if (location == null || location.isEmpty()) {
+            throw new IllegalArgumentException("Location cannot be null or empty");
+        }
+        Map<String, List<String>> headers = new LinkedHashMap<>();
+        headers.put("Location", List.of(location));
+        return of(HttpStatus.CREATED, body, false, headers);
+    }
+
+    /**
+     * Creates a 201 Created ResponseEntity with the specified body.
+     * <p>
+     * This static factory method constructs a {@code ResponseEntity} with an HTTP
+     * status of 201 Created,
+     * It is commonly used for POST requests that creates a new resource, where the
+     * body is the new resource.
+     * 
+     * @param <U>  The type of the response body
+     * @param body the response body, or null if none
+     * @return a new {@code ResponseEntity} instance with HTTP status 201 Created
+     */
+    public <U> ResponseEntity<U> created(U body) {
+        return of(HttpStatus.CONFLICT, body);
     }
 
     /**
