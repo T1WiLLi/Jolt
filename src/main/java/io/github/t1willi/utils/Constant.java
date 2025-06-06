@@ -1,5 +1,6 @@
 package io.github.t1willi.utils;
 
+import java.util.Map;
 import java.util.Set;
 import java.util.regex.Pattern;
 
@@ -53,6 +54,21 @@ public final class Constant {
         public static final Pattern SAFE_WHERE_CLAUSE_PATTERN = Pattern.compile(
                 "^(WHERE\\s+)?(([a-zA-Z0-9_]+(\\.[a-zA-Z0-9_]+)?)\\s*(=|!=|<>|>|<|>=|<=|LIKE|IN|IS NULL|IS NOT NULL|BETWEEN)\\s*((\\?)|('[^']*')|([0-9]+)))"
                         + "(\\s+(AND|OR)\\s+\\2)*$");
+    }
+
+    public static final class RuleTypeRegex {
+        public static final Map<Class<?>, String> RULE_TYPE_REGEX = Map.ofEntries(
+                Map.entry(String.class, ".*"),
+                Map.entry(int.class, "^-?\\d+$"),
+                Map.entry(Integer.class, "^-?\\d+$"),
+                Map.entry(double.class, "^-?\\d*\\.?\\d+$"),
+                Map.entry(Double.class, "^-?\\d*\\.?\\d+$"),
+                Map.entry(long.class, "^-?\\d+$"),
+                Map.entry(Long.class, "^-?\\d+$"),
+                Map.entry(boolean.class, "^(true|false)$"),
+                Map.entry(Boolean.class, "^(true|false)$"),
+                Map.entry(char.class, "^.$"),
+                Map.entry(Character.class, "^.$"));
     }
 
     public static final class Filter {
