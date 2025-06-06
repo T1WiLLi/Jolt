@@ -107,38 +107,145 @@ public abstract class JoltApplication {
     }
 
     // Route registration methods
+
+    /**
+     * Registers a "before" filter that executes before matching routes.
+     * <p>
+     * The specified handler will be invoked before any route that matches the given
+     * route patterns.
+     * This is typically used for tasks such as authentication, logging, or
+     * modifying the request context
+     * before the main route handler is executed.
+     *
+     * @param handler the {@link Consumer} that accepts a {@link JoltContext} and
+     *                performs pre-processing
+     * @param routes  one or more route patterns (e.g., "/api/*") to which the
+     *                filter applies; if empty, applies to all routes
+     * @since 1.0
+     */
     public static void before(Consumer<JoltContext> handler, String... routes) {
         router.before(handler, routes);
     }
 
+    /**
+     * Registers an "after" filter that executes after matching routes.
+     * <p>
+     * The specified handler will be invoked after any route that matches the given
+     * route patterns.
+     * This is typically used for tasks such as response modification, logging, or
+     * cleanup after the main
+     * route handler has executed.
+     *
+     * @param handler the {@link Consumer} that accepts a {@link JoltContext} and
+     *                performs post-processing
+     * @param routes  one or more route patterns (e.g., "/api/*") to which the
+     *                filter applies; if empty, applies to all routes
+     * @since 1.0
+     */
     public static void after(Consumer<JoltContext> handler, String... routes) {
         router.after(handler, routes);
     }
 
+    /**
+     * Registers a GET route handler for the specified path.
+     * <p>
+     * The handler will be invoked when an HTTP GET request matches the given path.
+     *
+     * @param path    the route path (e.g., "/users/{id}")
+     * @param handler the {@link RouteHandler} to handle the request
+     * @since 1.0
+     */
     protected static void get(String path, RouteHandler handler) {
         router.get(path, handler);
     }
 
+    /**
+     * Registers a POST route handler for the specified path.
+     * <p>
+     * The handler will be invoked when an HTTP POST request matches the given path.
+     *
+     * @param path    the route path (e.g., "/users")
+     * @param handler the {@link RouteHandler} to handle the request
+     * @since 1.0
+     */
     protected static void post(String path, RouteHandler handler) {
         router.post(path, handler);
     }
 
+    /**
+     * Registers a PUT route handler for the specified path.
+     * <p>
+     * The handler will be invoked when an HTTP PUT request matches the given path.
+     *
+     * @param path    the route path (e.g., "/users/{id}")
+     * @param handler the {@link RouteHandler} to handle the request
+     * @since 1.0
+     */
     protected static void put(String path, RouteHandler handler) {
         router.put(path, handler);
     }
 
+    /**
+     * Registers a DELETE route handler for the specified path.
+     * <p>
+     * The handler will be invoked when an HTTP DELETE request matches the given
+     * path.
+     *
+     * @param path    the route path (e.g., "/users/{id}")
+     * @param handler the {@link RouteHandler} to handle the request
+     * @since 1.0
+     */
     protected static void delete(String path, RouteHandler handler) {
         router.delete(path, handler);
     }
 
+    /**
+     * Registers a route handler for a custom HTTP method and path.
+     * <p>
+     * This method allows you to register handlers for any HTTP method (e.g., PATCH,
+     * OPTIONS)
+     * by specifying the {@link HttpMethod} explicitly.
+     *
+     * @param method  the HTTP method (e.g., {@link HttpMethod#PATCH})
+     * @param path    the route path (e.g., "/users/{id}")
+     * @param handler the {@link RouteHandler} to handle the request
+     * @since 1.0
+     */
     protected static void route(HttpMethod method, String path, RouteHandler handler) {
         router.route(method, path, handler);
     }
 
+    /**
+     * Groups multiple route definitions under a common base path.
+     * <p>
+     * This method allows you to organize related routes under a shared base path.
+     * All routes defined within the {@code block} will be prefixed with the
+     * specified base.
+     *
+     * @param base  the base path for the group (e.g., "/api")
+     * @param block a {@link Runnable} containing route definitions to group
+     * @since 1.0
+     */
     protected static void group(String base, Runnable block) {
         router.group(base, block);
     }
 
+    /**
+     * Groups multiple route definitions under a common base path and version.
+     * <p>
+     * This method allows you to organize related routes under a shared base path
+     * and version number.
+     * All routes defined within the {@code block} will be prefixed with the
+     * specified base and version.
+     * For example, {@code group("/api", 2, () -> { ... })} will prefix routes with
+     * "/api/v2".
+     *
+     * @param base    the base path for the group (e.g., "/api")
+     * @param version the version number to append to the base path (e.g., 2 for
+     *                "/api/v2")
+     * @param block   a {@link Runnable} containing route definitions to group
+     * @since 1.0
+     */
     protected static void group(String base, int version, Runnable block) {
         router.group(base, version, block);
     }
