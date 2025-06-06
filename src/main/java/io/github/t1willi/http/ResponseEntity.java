@@ -79,6 +79,9 @@ public class ResponseEntity<T> {
             U body,
             boolean redirect,
             Map<String, List<String>> headers) {
+        if (status == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
         return new ResponseEntity<>(status, headers, body, redirect);
     }
 
