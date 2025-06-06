@@ -310,10 +310,15 @@ public class ResponseEntity<T> {
      * @param location the URI for the "Location" header
      * @return a new {@code ResponseEntity} instance with HTTP status 302 Found
      * @throws IllegalArgumentException if the location is null or empty
-     * @since 1.0.0
+     * @since 1.0.1
      */
     public static ResponseEntity<Void> redirect(String location) {
-        return of(HttpStatus.FOUND, null, true, Map.of("Location", List.of(location)));
+        if (location == null || location.isEmpty()) {
+            throw new IllegalArgumentException("Location cannot be null or empty");
+        }
+        Map<String, List<String>> headers = new LinkedHashMap<>();
+        headers.put("Location", List.of(location));
+        return of(HttpStatus.FOUND, null, true, headers);
     }
 
     /**
@@ -334,16 +339,40 @@ public class ResponseEntity<T> {
      * @param model    the {@link JoltModel} to carry to the target endpoint
      * @return a new {@code ResponseEntity} instance with HTTP status 302 Found
      * @throws IllegalArgumentException if the location is null or empty
-     * @since 1.0.0
+     * @since 1.0.1
      */
     public static ResponseEntity<JoltModel> redirect(
             String location,
             JoltModel model) {
-        return new ResponseEntity<>(
-                HttpStatus.FOUND,
-                Map.of("Location", List.of(location)),
-                model,
-                true);
+        if (location == null || location.isEmpty()) {
+            throw new IllegalArgumentException("Location cannot be null or empty");
+        }
+        Map<String, List<String>> headers = new LinkedHashMap<>();
+        headers.put("Location", List.of(location));
+        return new ResponseEntity<>(HttpStatus.FOUND, headers, model, true);
+    }
+
+    /**
+     * Sets the Content-Type header of the response, returning a modified instance.
+     * <p>
+     * This method sets the "Content-Type" header to the specified value, replacing
+     * any existing values for the header. It returns the same
+     * {@code ResponseEntity}
+     * instance for method chaining, modifying the headers map in place. This is a
+     * convenience method for setting the Content-Type header commonly used in HTTP
+     * responses.
+     *
+     * @param contentType the value for the "Content-Type" header
+     * @return this {@code ResponseEntity} instance for method chaining
+     * @throws IllegalArgumentException if the contentType is null or empty
+     * @since 1.0.1
+     */
+    public ResponseEntity<T> contentType(String contentType) {
+        if (contentType == null || contentType.isEmpty()) {
+            throw new IllegalArgumentException("Content-Type cannot be null or empty");
+        }
+        headers.put("Content-Type", List.of(contentType));
+        return this;
     }
 
     /**
@@ -363,6 +392,9 @@ public class ResponseEntity<T> {
      * @since 1.0.0
      */
     public ResponseEntity<T> header(String name, String value) {
+        if (name == null || value == null) {
+            throw new IllegalArgumentException("Header name or value cannot be null");
+        }
         headers.computeIfAbsent(name, k -> new ArrayList<>()).add(value);
         return this;
     }
