@@ -415,6 +415,9 @@ public class ResponseEntity<T> {
      * @since 1.0.0
      */
     public ResponseEntity<T> status(HttpStatus newStatus) {
+        if (newStatus == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
         return new ResponseEntity<>(
                 newStatus,
                 new LinkedHashMap<>(this.headers),
