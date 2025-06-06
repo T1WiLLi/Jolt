@@ -106,6 +106,9 @@ public class ResponseEntity<T> {
     public static <U> ResponseEntity<U> of(
             HttpStatus status,
             U body) {
+        if (status == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
         return new ResponseEntity<>(status, new LinkedHashMap<>(), body, false);
     }
 
@@ -126,6 +129,9 @@ public class ResponseEntity<T> {
      */
     public static ResponseEntity<Void> of(
             HttpStatus status) {
+        if (status == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
         return new ResponseEntity<>(status, new LinkedHashMap<>(), null, false);
     }
 
@@ -146,12 +152,15 @@ public class ResponseEntity<T> {
      * @param redirect whether this response is a redirect
      * @return a new {@code ResponseEntity} instance
      * @throws IllegalArgumentException if the status is null
-     * @since 1.0.0
+     * @since 1.0.1
      */
     public static <U> ResponseEntity<U> of(
             HttpStatus status,
             U body,
             boolean redirect) {
+        if (status == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
         return new ResponseEntity<>(status, new LinkedHashMap<>(), body, redirect);
     }
 
@@ -180,6 +189,13 @@ public class ResponseEntity<T> {
             HttpStatus status,
             U body,
             Map<String, String> singleValueHeaders) {
+        if (status == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
+        if (singleValueHeaders == null || singleValueHeaders.containsKey(null)
+                || singleValueHeaders.containsValue(null)) {
+            throw new IllegalArgumentException("Headers map cannot contain null keys or values");
+        }
         var multi = new LinkedHashMap<String, List<String>>();
         singleValueHeaders.forEach((k, v) -> multi.put(k, List.of(v)));
         return new ResponseEntity<>(status, multi, body, false);
