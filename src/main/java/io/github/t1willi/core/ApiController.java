@@ -3,8 +3,6 @@ package io.github.t1willi.core;
 import io.github.t1willi.http.ResponseEntity;
 import io.github.t1willi.http.HttpStatus;
 
-import java.util.Map;
-
 /**
  * An abstract base class for API controllers, providing utility methods to
  * construct HTTP response entities
@@ -110,7 +108,7 @@ public abstract class ApiController extends BaseController {
      */
     protected ResponseEntity<String> badRequest(String msg) {
         return ResponseEntity
-                .of(HttpStatus.BAD_REQUEST, msg, false, Map.of())
+                .of(HttpStatus.BAD_REQUEST, msg)
                 .header("Content-Type", "text/plain");
     }
 
@@ -133,7 +131,7 @@ public abstract class ApiController extends BaseController {
      */
     protected ResponseEntity<String> notFound(String msg) {
         return ResponseEntity
-                .of(HttpStatus.NOT_FOUND, msg, false, Map.of())
+                .of(HttpStatus.NOT_FOUND, msg)
                 .header("Content-Type", "text/plain");
     }
 }
