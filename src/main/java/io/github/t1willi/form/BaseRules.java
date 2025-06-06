@@ -4,6 +4,8 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.regex.Pattern;
 
+import io.github.t1willi.utils.Constant;
+
 final class BaseRules {
     private BaseRules() {
         // No-Op
@@ -11,6 +13,38 @@ final class BaseRules {
 
     static Rule required(String msg) {
         return Rule.custom(data -> data != null && !data.trim().isEmpty(), msg);
+    }
+
+    static Rule type(Class<?> type, String msg) {
+        return Rule.custom(data -> {
+            if (data == null || data.trim().isEmpty()) {
+                return false;
+            }
+            String regex = Constant.RuleTypeRegex.RULE_TYPE_REGEX.getOrDefault(type, ".*");
+            String trimmedData = data.trim();
+            try {
+                return switch (type.getName()) {
+                    case "java.lang.String" -> trimmedData.matches(regex);
+                    case "int", "java.lang.Integer" -> {
+                        Integer.parseInt(trimmedData);
+                        yield trimmedData.matches(regex);
+                    }
+                    case "double", "java.lang.Double" -> {
+                        Double.parseDouble(trimmedData);
+                        yield trimmedData.matches(regex);
+                    }
+                    case "long", "java.lang.Long" -> {
+                        Long.parseLong(trimmedData);
+                        yield trimmedData.matches(regex);
+                    }
+                    case "boolean", "java.lang.Boolean" -> trimmedData.matches(regex);
+                    case "char", "java.lang.Character" -> trimmedData.matches(regex);
+                    default -> false;
+                };
+            } catch (NumberFormatException e) {
+                return false;
+            }
+        }, msg);
     }
 
     static Rule min(Number min, String msg) {
