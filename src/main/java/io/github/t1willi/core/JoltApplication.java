@@ -47,212 +47,309 @@ import io.github.t1willi.server.config.ServerConfig;
  */
 public abstract class JoltApplication {
 
-    /**
-     * The logger for this application.
-     */
     private static final Logger log = Logger.getLogger(JoltApplication.class.getName());
-
-    /**
-     * A single global instance of this application.
-     */
     private static JoltApplication instance;
-
-    /**
-     * A router for mapping HTTP methods and paths to handler logic.
-     */
     protected static Router router;
-
-    /**
-     * The embedded Tomcat server.
-     */
     protected TomcatServer server;
 
     /**
      * Constructs a new Jolt application.
-     * <p>
-     * Ensures that only one instance is allowed per JVM, and performs startup
-     * logging and bean scanning.
+     * Ensures that only one instance is allowed per JVM.
      *
      * @throws IllegalStateException if more than one instance is created
      */
     protected JoltApplication() {
-        if (instance != null) {
-            throw new IllegalStateException("Only one JoltApplication instance is allowed per JVM");
-        }
-        StartupLog.printStartup();
-        LogConfigurator.configure();
+        ensureSingleInstance();
+        initializeLogging();
         log.info("JoltApplication initialized");
     }
 
     /**
      * Launches a Jolt application of the specified type.
-     * <p>
-     * Reflectively creates an instance of the given subclass, initializes its IoC
-     * container, acquires a router, invokes the subclass's {@link #setup()} method,
-     * and starts an embedded Tomcat server.
-     * <p>
-     * Logs any exceptions at SEVERE level and exits the JVM with status code 1
-     * if a fatal error occurs during launch.
      *
      * @param <T>      A concrete subclass of {@code JoltApplication}
      * @param appClass The class of the application subclass to launch
-     * @param scan     A package to scan for beans in addition to {@code ca.jolt}
      * @throws IllegalStateException if an instance is already running
      */
-    public static <T extends JoltApplication> void launch(Class<T> app) {
+    public static <T extends JoltApplication> void launch(Class<T> appClass) {
         try {
-            if (instance == null) {
-                instance = app.getDeclaredConstructor().newInstance();
-            }
-            JoltContainer.getInstance().autoScan();
-            Database.init();
-            JoltContainer.getInstance().initialize();
-            router = JoltContainer.getInstance().getBean(Router.class);
-            ControllerRegistry.registerControllers();
-            instance.init();
-            ServerConfig config = ConfigurationManager.getInstance().getServerConfig();
-            instance.server = new TomcatServer(config);
-            instance.server.start();
+            createApplicationInstance(appClass);
+            initializeApplication();
+            startServer();
             log.info("Server started successfully!");
         } catch (Exception e) {
-            log.severe("Failed to launch application: " + e.getMessage());
-
-            StringBuilder stackTrace = new StringBuilder();
-            stackTrace.append("Stack trace:\n");
-            for (StackTraceElement element : e.getStackTrace()) {
-                stackTrace.append("    at ").append(element.toString()).append("\n");
-            }
-            log.severe(stackTrace.toString());
-
-            Throwable cause = e.getCause();
-            if (cause != null) {
-                log.severe("Caused by: " + cause.getMessage());
-                StringBuilder causeStackTrace = new StringBuilder();
-                for (StackTraceElement element : cause.getStackTrace()) {
-                    causeStackTrace.append("    at ").append(element.toString()).append("\n");
-                }
-                log.severe(causeStackTrace.toString());
-            }
-
-            System.exit(1);
+            handleLaunchFailure(e);
         }
     }
 
     /**
      * Stops the running Jolt application, if any.
-     * <p>
-     * Shuts down the embedded Tomcat server gracefully and prints any
-     * {@link ServerException} to the error stream.
      */
     public static void stop() {
-        if (instance != null && instance.server != null) {
-            try {
-                instance.server.stop();
-            } catch (ServerException e) {
-                e.printStackTrace();
-            }
+        if (isServerRunning()) {
+            stopServer();
         }
     }
 
+    /**
+     * Returns the OpenApi annotation if present on the application class.
+     */
     public static OpenApi openApi() {
-        return instance.getClass().isAnnotationPresent(OpenApi.class) ? instance.getClass().getAnnotation(OpenApi.class)
-                : null;
+        return getOpenApiAnnotation();
     }
 
     /**
      * A lifecycle method that subclasses override to configure routes and server
      * settings.
-     * <p>
-     * This method is invoked automatically by {@link #launch(Class, String)}.
      */
     protected void init() {
         // No-op by default.
-    };
+    }
+
+    // Route registration methods
 
     /**
-     * Registers a before-handler for the specified routes.
+     * Registers a "before" filter that executes before matching routes.
+     * <p>
+     * The specified handler will be invoked before any route that matches the given
+     * route patterns.
+     * This is typically used for tasks such as authentication, logging, or
+     * modifying the request context
+     * before the main route handler is executed.
      *
-     * @param handler A handler that executes before each matching route.
-     *                Receives a {@link JoltContext} for the current request.
-     * @param routes  One or more path patterns (e.g., "/doc", "/api").
+     * @param handler the {@link Consumer} that accepts a {@link JoltContext} and
+     *                performs pre-processing
+     * @param routes  one or more route patterns (e.g., "/api/*") to which the
+     *                filter applies; if empty, applies to all routes
+     * @since 1.0
      */
     public static void before(Consumer<JoltContext> handler, String... routes) {
         router.before(handler, routes);
     }
 
     /**
-     * Registers an after-handler for the specified routes.
+     * Registers an "after" filter that executes after matching routes.
+     * <p>
+     * The specified handler will be invoked after any route that matches the given
+     * route patterns.
+     * This is typically used for tasks such as response modification, logging, or
+     * cleanup after the main
+     * route handler has executed.
      *
-     * @param handler A handler that executes after each matching route.
-     *                Receives a {@link JoltContext} for the current request.
-     * @param routes  One or more path patterns (e.g., "/doc", "/api").
+     * @param handler the {@link Consumer} that accepts a {@link JoltContext} and
+     *                performs post-processing
+     * @param routes  one or more route patterns (e.g., "/api/*") to which the
+     *                filter applies; if empty, applies to all routes
+     * @since 1.0
      */
     public static void after(Consumer<JoltContext> handler, String... routes) {
         router.after(handler, routes);
     }
 
     /**
-     * Defines an HTTP GET route with a specified handler.
+     * Registers a GET route handler for the specified path.
+     * <p>
+     * The handler will be invoked when an HTTP GET request matches the given path.
      *
-     * @param path    The path pattern, for example "/user/{id}"
-     * @param handler A {@link RouteHandler} that processes the request
+     * @param path    the route path (e.g., "/users/{id}")
+     * @param handler the {@link RouteHandler} to handle the request
+     * @since 1.0
      */
     protected static void get(String path, RouteHandler handler) {
         router.get(path, handler);
     }
 
     /**
-     * Defines an HTTP POST route with a specified handler.
+     * Registers a POST route handler for the specified path.
+     * <p>
+     * The handler will be invoked when an HTTP POST request matches the given path.
      *
-     * @param path    The path pattern to match
-     * @param handler A {@link RouteHandler} that processes the request
+     * @param path    the route path (e.g., "/users")
+     * @param handler the {@link RouteHandler} to handle the request
+     * @since 1.0
      */
     protected static void post(String path, RouteHandler handler) {
         router.post(path, handler);
     }
 
     /**
-     * Defines an HTTP PUT route with a specified handler.
+     * Registers a PUT route handler for the specified path.
+     * <p>
+     * The handler will be invoked when an HTTP PUT request matches the given path.
      *
-     * @param path    The path pattern to match
-     * @param handler A {@link RouteHandler} that processes the request
+     * @param path    the route path (e.g., "/users/{id}")
+     * @param handler the {@link RouteHandler} to handle the request
+     * @since 1.0
      */
     protected static void put(String path, RouteHandler handler) {
         router.put(path, handler);
     }
 
     /**
-     * Defines an HTTP DELETE route with a specified handler.
+     * Registers a DELETE route handler for the specified path.
+     * <p>
+     * The handler will be invoked when an HTTP DELETE request matches the given
+     * path.
      *
-     * @param path    The path pattern to match
-     * @param handler A {@link RouteHandler} that processes the request
+     * @param path    the route path (e.g., "/users/{id}")
+     * @param handler the {@link RouteHandler} to handle the request
+     * @since 1.0
      */
     protected static void delete(String path, RouteHandler handler) {
         router.delete(path, handler);
     }
 
     /**
-     * Defines an HTTP route with a specified handler, method, and path.
-     * 
-     * @param method  The HTTP method to match
-     * @param path    The path pattern to match
-     * @param handler A {@link RouteHandler} that processes the request
+     * Registers a route handler for a custom HTTP method and path.
+     * <p>
+     * This method allows you to register handlers for any HTTP method (e.g., PATCH,
+     * OPTIONS)
+     * by specifying the {@link HttpMethod} explicitly.
+     *
+     * @param method  the HTTP method (e.g., {@link HttpMethod#PATCH})
+     * @param path    the route path (e.g., "/users/{id}")
+     * @param handler the {@link RouteHandler} to handle the request
+     * @since 1.0
      */
     protected static void route(HttpMethod method, String path, RouteHandler handler) {
         router.route(method, path, handler);
     }
 
     /**
-     * Defines a group of routes sharing a common prefix path.
+     * Groups multiple route definitions under a common base path.
+     * <p>
+     * This method allows you to organize related routes under a shared base path.
+     * All routes defined within the {@code block} will be prefixed with the
+     * specified base.
      *
-     * @param base  The base path for the group of routes
-     * @param block A {@link Runnable} that defines the nested routes
+     * @param base  the base path for the group (e.g., "/api")
+     * @param block a {@link Runnable} containing route definitions to group
+     * @since 1.0
      */
     protected static void group(String base, Runnable block) {
         router.group(base, block);
     }
 
+    /**
+     * Groups multiple route definitions under a common base path and version.
+     * <p>
+     * This method allows you to organize related routes under a shared base path
+     * and version number.
+     * All routes defined within the {@code block} will be prefixed with the
+     * specified base and version.
+     * For example, {@code group("/api", 2, () -> { ... })} will prefix routes with
+     * "/api/v2".
+     *
+     * @param base    the base path for the group (e.g., "/api")
+     * @param version the version number to append to the base path (e.g., 2 for
+     *                "/api/v2")
+     * @param block   a {@link Runnable} containing route definitions to group
+     * @since 1.0
+     */
     protected static void group(String base, int version, Runnable block) {
         router.group(base, version, block);
+    }
+
+    // Private helper methods to reduce complexity
+
+    private void ensureSingleInstance() {
+        if (instance != null) {
+            throw new IllegalStateException("Only one JoltApplication instance is allowed per JVM");
+        }
+    }
+
+    private void initializeLogging() {
+        StartupLog.printStartup();
+        LogConfigurator.configure();
+    }
+
+    private static <T extends JoltApplication> void createApplicationInstance(Class<T> appClass) throws Exception {
+        if (instance == null) {
+            instance = appClass.getDeclaredConstructor().newInstance();
+        }
+    }
+
+    private static void initializeApplication() throws Exception {
+        initializeContainer();
+        initializeDatabase();
+        initializeRouter();
+        registerControllers();
+        instance.init();
+    }
+
+    private static void initializeContainer() throws Exception {
+        JoltContainer container = JoltContainer.getInstance();
+        container.autoScan();
+        container.initialize();
+    }
+
+    private static void initializeDatabase() {
+        Database.init();
+    }
+
+    private static void initializeRouter() {
+        router = JoltContainer.getInstance().getBean(Router.class);
+    }
+
+    private static void registerControllers() {
+        ControllerRegistry.registerControllers();
+    }
+
+    private static void startServer() throws Exception {
+        ServerConfig config = ConfigurationManager.getInstance().getServerConfig();
+        instance.server = new TomcatServer(config);
+        instance.server.start();
+    }
+
+    private static void handleLaunchFailure(Exception e) {
+        logError("Failed to launch application: " + e.getMessage());
+        logStackTrace(e);
+        logCauseIfPresent(e);
+        System.exit(1);
+    }
+
+    private static void logError(String message) {
+        log.severe(message);
+    }
+
+    private static void logStackTrace(Exception e) {
+        StringBuilder stackTrace = buildStackTrace(e.getStackTrace());
+        log.severe("Stack trace:\n" + stackTrace.toString());
+    }
+
+    private static void logCauseIfPresent(Exception e) {
+        Throwable cause = e.getCause();
+        if (cause != null) {
+            log.severe("Caused by: " + cause.getMessage());
+            StringBuilder causeStackTrace = buildStackTrace(cause.getStackTrace());
+            log.severe(causeStackTrace.toString());
+        }
+    }
+
+    private static StringBuilder buildStackTrace(StackTraceElement[] elements) {
+        StringBuilder stackTrace = new StringBuilder();
+        for (StackTraceElement element : elements) {
+            stackTrace.append("    at ").append(element.toString()).append("\n");
+        }
+        return stackTrace;
+    }
+
+    private static boolean isServerRunning() {
+        return instance != null && instance.server != null;
+    }
+
+    private static void stopServer() {
+        try {
+            instance.server.stop();
+        } catch (ServerException e) {
+            e.printStackTrace();
+        }
+    }
+
+    private static OpenApi getOpenApiAnnotation() {
+        Class<?> instanceClass = instance.getClass();
+        return instanceClass.isAnnotationPresent(OpenApi.class)
+                ? instanceClass.getAnnotation(OpenApi.class)
+                : null;
     }
 }
