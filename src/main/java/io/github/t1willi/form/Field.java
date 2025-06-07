@@ -44,6 +44,46 @@ public interface Field {
     Field required(String msg);
 
     /**
+     * Sets the type of the field and specifies a custom error message for type
+     * validation.
+     * <p>
+     * This method validates that the field's value matches the specified Java type.
+     * The validation logic
+     * typically checks if the value can be parsed or converted to the given type
+     * (e.g., {@code Integer},
+     * {@code Double}, {@code Boolean}), and may also apply a regular expression
+     * check for the type.
+     * <p>
+     * Supported types include:
+     * <ul>
+     * <li>{@code String.class} - any value is accepted</li>
+     * <li>{@code Integer.class} or {@code int.class} - value must be a valid
+     * integer</li>
+     * <li>{@code Double.class} or {@code double.class} - value must be a valid
+     * double</li>
+     * <li>{@code Long.class} or {@code long.class} - value must be a valid
+     * long</li>
+     * <li>{@code Boolean.class} or {@code boolean.class} - value must be "true" or
+     * "false"</li>
+     * <li>{@code Character.class} or {@code char.class} - value must be a single
+     * character</li>
+     * </ul>
+     * If the value does not match the specified type, the provided error message is
+     * used.
+     *
+     * @param type the {@link Class} object representing the type to validate
+     *             against
+     * @param msg  the error message to use if the value does not match the
+     *             specified type
+     * @return this {@link Field} instance for method chaining
+     * @throws IllegalArgumentException if the {@code type} or {@code msg} is
+     *                                  {@code null}
+     * @since 1.0.0
+     * @see #type(Class)
+     */
+    Field type(Class<?> type, String msg);
+
+    /**
      * Specifies a minimum length for the field's value, adding an error message if
      * the length is too short.
      * <p>
@@ -407,6 +447,47 @@ public interface Field {
      */
     default Field required() {
         return required("Value is required.");
+    }
+
+    /**
+     * Sets the type of the field with a default error message.
+     * <p>
+     * This is a convenience overload for {@link #type(Class, String)} that uses a
+     * default
+     * error message ("Invalid type for value."). It validates that the field's
+     * value matches
+     * the specified Java type. The validation logic typically checks if the value
+     * can be
+     * parsed or converted to the given type (e.g., {@code Integer}, {@code Double},
+     * {@code Boolean}),
+     * and may also apply a regular expression check for the type.
+     * <p>
+     * Supported types include:
+     * <ul>
+     * <li>{@code String.class} - any value is accepted</li>
+     * <li>{@code Integer.class} or {@code int.class} - value must be a valid
+     * integer</li>
+     * <li>{@code Double.class} or {@code double.class} - value must be a valid
+     * double</li>
+     * <li>{@code Long.class} or {@code long.class} - value must be a valid
+     * long</li>
+     * <li>{@code Boolean.class} or {@code boolean.class} - value must be "true" or
+     * "false"</li>
+     * <li>{@code Character.class} or {@code char.class} - value must be a single
+     * character</li>
+     * </ul>
+     * If the value does not match the specified type, the default error message is
+     * used.
+     *
+     * @param type the {@link Class} object representing the type to validate
+     *             against
+     * @return this {@link Field} instance for method chaining
+     * @throws IllegalArgumentException if the {@code type} is {@code null}
+     * @since 1.0.0
+     * @see #type(Class, String)
+     */
+    default Field type(Class<?> type) {
+        return type(type, "Invalid type for value.");
     }
 
     /**

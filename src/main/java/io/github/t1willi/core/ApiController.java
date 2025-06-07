@@ -3,8 +3,6 @@ package io.github.t1willi.core;
 import io.github.t1willi.http.ResponseEntity;
 import io.github.t1willi.http.HttpStatus;
 
-import java.util.Map;
-
 /**
  * An abstract base class for API controllers, providing utility methods to
  * construct HTTP response entities
@@ -92,48 +90,55 @@ public abstract class ApiController extends BaseController {
     }
 
     /**
-     * Constructs an HTTP 400 Bad Request response with a plain text message.
+     * Constructs an HTTP 400 Bad Request response with a body.
      * <p>
      * This method creates a {@link ResponseEntity} with an HTTP status of 400 (Bad
-     * Request) and a
-     * plain text message describing the error. The response includes a
-     * "Content-Type" header set to
-     * "text/plain". It is intended for use in RESTful APIs when the client sends an
-     * invalid request,
-     * such as malformed input or missing required parameters.
+     * Request) and the provided body. The response includes a "Content-Type" header
+     * set to "text/plain" if the body is a String, or "application/json" otherwise.
+     * It is intended for use in RESTful APIs when the client sends an invalid
+     * request,
+     * such as malformed input or missing required parameters. The body can be a
+     * String message or a structured object (e.g., for JSON serialization).
      *
-     * @param msg the error message to include in the response body
-     * @return a {@link ResponseEntity} with HTTP status 400, plain text content
-     *         type, and the error message
-     * @throws IllegalArgumentException if the message is null
-     * @since 1.0.0
+     * @param <T>  the type of the response body
+     * @param body the object to include in the response body
+     * @return a {@link ResponseEntity} with HTTP status 400 and the appropriate
+     *         content type
+     * @throws IllegalArgumentException if the body is null
+     * @since 1.0.1
      */
-    protected ResponseEntity<String> badRequest(String msg) {
-        return ResponseEntity
-                .of(HttpStatus.BAD_REQUEST, msg, false, Map.of())
-                .header("Content-Type", "text/plain");
+    protected <T> ResponseEntity<T> badRequest(T body) {
+        if (body == null) {
+            throw new IllegalArgumentException("Body cannot be null");
+        }
+        String contentType = body instanceof String ? "text/plain" : "application/json";
+        return ResponseEntity.of(HttpStatus.BAD_REQUEST, body)
+                .header("Content-Type", contentType);
     }
 
     /**
-     * Constructs an HTTP 404 Not Found response with a plain text message.
+     * Constructs an HTTP 404 Not Found response with a body.
      * <p>
      * This method creates a {@link ResponseEntity} with an HTTP status of 404 (Not
-     * Found) and a
-     * plain text message describing the error. The response includes a
-     * "Content-Type" header set to
-     * "text/plain". It is used in RESTful APIs when a requested resource cannot be
-     * found, such as
-     * when a client attempts to access a non-existent entity.
+     * Found) and the provided body. The response includes a "Content-Type" header
+     * set to "text/plain" if the body is a String, or "application/json" otherwise.
+     * It is used in RESTful APIs when a requested resource cannot be found, such as
+     * when a client attempts to access a non-existent entity. The body can be a
+     * String message or a structured object (e.g., for JSON serialization).
      *
-     * @param msg the error message to include in the response body
-     * @return a {@link ResponseEntity} with HTTP status 404, plain text content
-     *         type, and the error message
-     * @throws IllegalArgumentException if the message is null
-     * @since 1.0.0
+     * @param <T>  the type of the response body
+     * @param body the object to include in the response body
+     * @return a {@link ResponseEntity} with HTTP status 404 and the appropriate
+     *         content type
+     * @throws IllegalArgumentException if the body is null
+     * @since 1.0.1
      */
-    protected ResponseEntity<String> notFound(String msg) {
-        return ResponseEntity
-                .of(HttpStatus.NOT_FOUND, msg, false, Map.of())
-                .header("Content-Type", "text/plain");
+    protected <T> ResponseEntity<T> notFound(T body) {
+        if (body == null) {
+            throw new IllegalArgumentException("Body cannot be null");
+        }
+        String contentType = body instanceof String ? "text/plain" : "application/json";
+        return ResponseEntity.of(HttpStatus.NOT_FOUND, body)
+                .header("Content-Type", contentType);
     }
 }

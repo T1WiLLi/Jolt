@@ -1,5 +1,13 @@
 package io.github.t1willi.core;
 
+import java.net.URLEncoder;
+import java.nio.charset.StandardCharsets;
+import java.util.Map;
+import java.util.stream.Collectors;
+
+import org.thymeleaf.exceptions.TemplateProcessingException;
+
+import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.http.ModelView;
 import io.github.t1willi.http.ResponseEntity;
 import io.github.t1willi.template.JoltModel;
@@ -27,34 +35,78 @@ import io.github.t1willi.template.JoltModel;
 public abstract class MvcController extends BaseController {
 
     /**
-     * Renders an HTML view with the specified model data.
+     * Renders an HTML view with the specified model data and HTTP status.
      * <p>
-     * This method creates a {@link ResponseEntity} with an HTTP status of 200 (OK)
-     * and a {@link ModelView}
-     * that encapsulates the specified view name and data model. If the provided
-     * model is null, an empty
-     * {@link JoltModel} is used to ensure safe rendering. The response includes a
-     * "Content-Type" header
-     * set to "text/html". This method is typically used in MVC controllers to
-     * render HTML templates
-     * populated with data from the model, such as in response to a GET request in a
-     * web application.
+     * This method creates a {@link ResponseEntity} with the specified HTTP status
+     * and a {@link ModelView} that encapsulates the view name and data model. If
+     * the model is null, an empty {@link JoltModel} is used. The response includes
+     * a "Content-Type" header set to "text/html". This method is used to render
+     * HTML templates populated with model data, such as in response to GET requests
+     * or error scenarios. View resolution (prefix/suffix) is handled downstream.
      *
-     * @param view  the name of the view template to render (e.g., the name of an
-     *              HTML template file)
+     * @param view   the name of the view template to render
+     * @param model  the {@link JoltModel} containing data to populate the view, or
+     *               null for an empty model
+     * @param status the HTTP status code for the response (e.g., 200 OK, 404 Not
+     *               Found)
+     * @return a {@link ResponseEntity} with the specified status, HTML content
+     *         type,
+     *         and rendered view
+     * @throws IllegalArgumentException    if the view name is null or empty, or if
+     *                                     status is null
+     * @throws TemplateProcessingException if the view cannot be rendered due to
+     *                                     template errors
+     * @since 1.0.1
+     */
+    protected ResponseEntity<ModelView> render(String view, JoltModel model, HttpStatus status) {
+        if (view == null || view.isEmpty()) {
+            throw new IllegalArgumentException("View name cannot be null or empty");
+        }
+        if (status == null) {
+            throw new IllegalArgumentException("Status cannot be null");
+        }
+        JoltModel m = model != null ? model : JoltModel.empty();
+        return ResponseEntity.of(status, ModelView.of(view, m))
+                .contentType("text/html");
+    }
+
+    /**
+     * Renders an HTML view with the specified model data and HTTP 200 OK status.
+     * <p>
+     * This method is a convenience wrapper for
+     * {@link #render(String, JoltModel, HttpStatus)}
+     * with a status of 200 OK.
+     *
+     * @param view  the name of the view template to render
      * @param model the {@link JoltModel} containing data to populate the view, or
      *              null for an empty model
      * @return a {@link ResponseEntity} with HTTP status 200, HTML content type, and
-     *         the rendered view
+     *         rendered view
      * @throws IllegalArgumentException    if the view name is null or empty
      * @throws TemplateProcessingException if the view cannot be rendered due to
      *                                     template errors
      * @since 1.0.0
      */
     protected ResponseEntity<ModelView> render(String view, JoltModel model) {
-        JoltModel m = model != null ? model : JoltModel.empty();
-        return ResponseEntity.ok(ModelView.of(view, m))
-                .header("Content-Type", "text/html");
+        return render(view, model, HttpStatus.OK);
+    }
+
+    /**
+     * Renders an HTML view.
+     * <p>
+     * This method creates a {@link ResponseEntity} with an HTTP status of 200 (OK)
+     * but without a model.
+     * That is, it is equivalent to calling {@link #render(String, JoltModel)} with
+     * a null model.
+     * 
+     * @see #render(String, JoltModel)
+     * @param view the name of the view template to render (e.g., the name of a
+     *             Freemarker template file, without the .ftl extension)
+     * @return a {@link ResponseEntity} with HTTP status 200, HTML content type, and
+     *         ModelView as parameter.
+     */
+    protected ResponseEntity<ModelView> render(String view) {
+        return render(view, null);
     }
 
     /**
@@ -108,5 +160,43 @@ public abstract class MvcController extends BaseController {
     protected ResponseEntity<JoltModel> redirect(String location, JoltModel model) {
         return ResponseEntity.redirect(location, model)
                 .header("Content-Type", "text/html");
+    }
+
+    /**
+     * Constructs an HTTP 302 Found response to redirect the client to the specified
+     * location with query parameters.
+     * <p>
+     * This method creates a {@link ResponseEntity} with an HTTP status of 302 Found
+     * and a "Location" header set to the provided URI, appending the specified
+     * query
+     * parameters. It is useful for redirects that require dynamic URL construction,
+     * such as passing data in the query string.
+     *
+     * @param location the base URI to which the client should be redirected
+     * @param params   a map of query parameter names and values to append to the
+     *                 URI
+     * @return a {@link ResponseEntity} with HTTP status 302 and the constructed
+     *         location header
+     * @throws IllegalArgumentException if the location is null or empty, or if the
+     *                                  params map contains null keys or values
+     * @since 1.0.1
+     */
+    protected ResponseEntity<Void> redirect(String location, Map<String, String> params) {
+        if (location == null || location.isEmpty()) {
+            throw new IllegalArgumentException("Location cannot be null or empty");
+        }
+        if (params == null || params.containsKey(null) || params.containsValue(null)) {
+            throw new IllegalArgumentException("Query parameters cannot contain null keys or values");
+        }
+        StringBuilder uri = new StringBuilder(location);
+        if (!params.isEmpty()) {
+            uri.append("?");
+            String query = params.entrySet().stream()
+                    .map(e -> URLEncoder.encode(e.getKey(), StandardCharsets.UTF_8) + "=" +
+                            URLEncoder.encode(e.getValue(), StandardCharsets.UTF_8))
+                    .collect(Collectors.joining("&"));
+            uri.append(query);
+        }
+        return ResponseEntity.redirect(uri.toString());
     }
 }
