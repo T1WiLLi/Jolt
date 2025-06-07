@@ -181,45 +181,32 @@ class DefaultField implements Field {
         boolean isValid = true;
         boolean hasRequiredRule = false;
         String requiredErrorMessage = null;
-        Rule typeRule = null;
-        String typeErrorMessage = null;
         List<String> otherErrors = new ArrayList<>();
 
         for (Rule rule : rules) {
-            String msg = rule.getErrorMessage();
-            if (msg.contains("required")) {
+            boolean isRequiredRule = rule.getErrorMessage().contains("required");
+            if (isRequiredRule) {
                 hasRequiredRule = true;
-                requiredErrorMessage = msg;
-            } else if (msg.contains("type")) {
-                typeRule = rule;
-                typeErrorMessage = msg;
+                requiredErrorMessage = rule.getErrorMessage();
+            }
+            if (!rule.validate(value)) {
+                if (isRequiredRule) {
+                    form.addError(name, rule.getErrorMessage());
+                    return false;
+                } else {
+                    otherErrors.add(rule.getErrorMessage());
+                    isValid = false;
+                }
             }
         }
 
-        if (hasRequiredRule && !rules.stream()
-                .filter(r -> r.getErrorMessage().contains("required"))
-                .allMatch(r -> r.validate(value))) {
+        if (!isValid && hasRequiredRule) {
             form.addError(name, requiredErrorMessage);
             return false;
         }
 
-        if (typeRule != null && !typeRule.validate(value)) {
-            form.addError(name, typeErrorMessage);
-            return false;
-        }
-
-        for (Rule rule : rules) {
-            String msg = rule.getErrorMessage();
-            if (!msg.contains("required") && !msg.contains("type") && !rule.validate(value)) {
-                otherErrors.add(msg);
-                isValid = false;
-            }
-        }
-
-        if (!isValid) {
-            for (String error : otherErrors) {
-                form.addError(name, error);
-            }
+        for (String error : otherErrors) {
+            form.addError(name, error);
         }
 
         return isValid;
