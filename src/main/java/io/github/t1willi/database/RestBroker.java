@@ -3,6 +3,7 @@ package io.github.t1willi.database;
 import java.lang.reflect.Field;
 import java.lang.reflect.InvocationTargetException;
 import java.lang.reflect.Method;
+import java.lang.reflect.Modifier;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -233,24 +234,28 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         Map<String, Object> fields = new HashMap<>();
         Class<?> entityClass = entity.getClass();
 
-        for (Method method : entityClass.getMethods()) {
-            if (isValidGetter(method)) {
-                String fieldName = extractFieldName(method);
-                if (fieldName != null) {
-                    try {
-                        Object value = method.invoke(entity);
-                        if (value != null && isScalarValue(value)) {
-                            fields.put(StringUtils.camelToSnakeCase(fieldName), value);
-                        } else if (value != null) {
-                            logger.fine(() -> "Skipping non-scalar field: " + fieldName + " (type: "
-                                    + value.getClass().getSimpleName() + ")");
-                        }
-                    } catch (Exception e) {
-                        logger.severe(
-                                () -> "Could not invoke getter method: " + method.getName() + " - " + e.getMessage());
+        while (entityClass != null && entityClass != Object.class) {
+            for (Field field : entityClass.getDeclaredFields()) {
+                int modifiers = field.getModifiers();
+                if (Modifier.isStatic(modifiers) ||
+                        Modifier.isFinal(modifiers) ||
+                        Modifier.isTransient(modifiers)) {
+                    continue;
+                }
+
+                try {
+                    field.setAccessible(true);
+                    Object value = field.get(entity);
+
+                    if (value != null && isScalarValue(value)) {
+                        String dbColumnName = StringUtils.camelToSnakeCase(field.getName());
+                        fields.put(dbColumnName, value);
                     }
+                } catch (IllegalAccessException e) {
+                    logger.warning(() -> "Could not access field: " + field.getName() + " - " + e.getMessage());
                 }
             }
+            entityClass = entityClass.getSuperclass();
         }
         return fields;
     }
@@ -259,24 +264,6 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         return !(value instanceof Collection<?> ||
                 value instanceof Map<?, ?> ||
                 value.getClass().isArray());
-    }
-
-    private boolean isValidGetter(Method method) {
-        String methodName = method.getName();
-        return method.getDeclaringClass() != Object.class
-                && method.getParameterCount() == 0
-                && (methodName.startsWith("get") || methodName.startsWith("is") || methodName.startsWith("has"))
-                && !methodName.equals("getClass");
-    }
-
-    private String extractFieldName(Method method) {
-        String methodName = method.getName();
-        if (methodName.startsWith("is")) {
-            return methodName.substring(2, 3).toLowerCase() + methodName.substring(3);
-        } else if (methodName.startsWith("get") || methodName.startsWith("has")) {
-            return methodName.substring(3, 4).toLowerCase() + methodName.substring(4);
-        }
-        return null;
     }
 
     private Field getIdField(Class<?> clazz) {
