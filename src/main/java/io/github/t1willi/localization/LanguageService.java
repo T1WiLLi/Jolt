@@ -23,7 +23,7 @@ public class LanguageService {
         lang = ConfigurationManager.getInstance().getProperty("server.defaultLanguage", null);
         if (lang == null) {
             logger.fine("No default language defined. If you want to use localization, add a language file " +
-                    "to the /local directory in the /resources directory (e.g., /local/en.json) and set " +
+                    "to the /locale directory in the /resources directory (e.g., /locale/en.json) and set " +
                     "'server.defaultLanguage' in your configuration.");
         }
         initializeLanguage(lang);
@@ -45,7 +45,7 @@ public class LanguageService {
             Map<String, Object> translations = languageConfig.getTranslations();
             if (translations == null) {
                 logger.severe("Failed to load translations for language: " + langToUse +
-                        ". Check that /local/" + langToUse + ".json exists and is valid.");
+                        ". Check that /locale/" + langToUse + ".json exists and is valid.");
                 globalLanguageModel = JoltModel.empty();
             } else {
                 translations.put("languageCode", langToUse);

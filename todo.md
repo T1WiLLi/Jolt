@@ -354,6 +354,36 @@ public class HomeController extends ApiController {
             .denyAll();
 ```
 
+# WebHooks and Hook-Event-Driven-Architecture
+```java
+@Bean // Only pick up @Event annotated method that are public and in @Bean annotated classes
+public class Something {
+
+
+    @Event("MyEvent") // If no name is provided, it will be the method name.
+    public void doingSomething() {
+
+    }
+
+    public void doingSomethingElse() {
+        HookEvent.trigger("MyEvent2")
+    }
+}
+
+// Example in a controller : 
+
+@Get("/trigger-event")
+@EventListener("MyEvent") // This will trigger when MyEvent method is invoke
+public ResponseEntity<Void> triggerEvent() {
+    // ... Do something ...
+}
+
+@EventListener("MyEvent2")
+public void onMyEvent2(JoltContext ctx) {
+    // ... Do something ...
+}
+```
+
 New server properties : 
 
 server.logging.level=SEVERE, WARNING, INFO, FINE, FINER, FINEST, ALL, OFF

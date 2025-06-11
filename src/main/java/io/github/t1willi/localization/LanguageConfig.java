@@ -31,9 +31,9 @@ public class LanguageConfig {
         }
 
         ObjectMapper mapper = JacksonUtil.getObjectMapper();
-        try (InputStream in = getClass().getResourceAsStream("/local/" + language + ".json")) {
+        try (InputStream in = getClass().getResourceAsStream("/locale/" + language + ".json")) {
             if (in == null) {
-                logger.warning("Language file not found: /local/" + language + ".json");
+                logger.warning("Language file not found: /locale/" + language + ".json");
                 return null;
             }
             Map<String, Object> translations = mapper.readValue(in,
