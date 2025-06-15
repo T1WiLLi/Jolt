@@ -1,5 +1,14 @@
 [![Coverage](https://sonarcloud.io/api/project_badges/measure?project=T1WiLLi_Jolt&metric=coverage)](https://sonarcloud.io/summary/new_code?id=T1WiLLi_Jolt) [![Duplicated Lines (%)](https://sonarcloud.io/api/project_badges/measure?project=T1WiLLi_Jolt&metric=duplicated_lines_density)](https://sonarcloud.io/summary/new_code?id=T1WiLLi_Jolt) [![Code Smells](https://sonarcloud.io/api/project_badges/measure?project=T1WiLLi_Jolt&metric=code_smells)](https://sonarcloud.io/summary/new_code?id=T1WiLLi_Jolt) [![Lines of Code](https://sonarcloud.io/api/project_badges/measure?project=T1WiLLi_Jolt&metric=ncloc)](https://sonarcloud.io/summary/new_code?id=T1WiLLi_Jolt) [![Vulnerabilities](https://sonarcloud.io/api/project_badges/measure?project=T1WiLLi_Jolt&metric=vulnerabilities)](https://sonarcloud.io/summary/new_code?id=T1WiLLi_Jolt) [![Maven Central](https://img.shields.io/maven-central/v/io.github.t1willi/jolt.svg)](https://central.sonatype.com/artifact/io.github.t1willi/jolt) [![License](https://img.shields.io/badge/License-MIT-blue.svg)](https://opensource.org/licenses/Apache-2.0)
 
+# **Jolt Development is currently on hold !**
+> Hi, I'm William, the creator of Jolt. First of all, I want to let you know that i'm not 
+> abandoning the Jolt project, but I'm currently working full-time on my internship, while 
+> I absolutely love working on Jolt, It's simply not possible for me to keep up with the pace.
+> I believe that Jolt has reach a point where it is stable and bugfree enough to be used in
+> production, and I'm proud of what was achieved so far. I'm not entierly sure when I'll be able to start working on Jolt again. In the meantime, I'll keep an eye on the issues and will try to answer any questions you may have. Regarding external contributions, I'll be happy to review and merge any pull requests, but I won't be able to provide any rapid feedback. I apologize for any inconvenience this may cause. While Jolt is on hold, some of my other projects might be more active, one of which being the [GitNar Project](https://github.com/T1WiLLi/Gitnar) which you can learn more about on the repository's README. 
+
+> Thank you for your understanding and I wish you all the best with your projects.
+
 # **Jolt**
 
 ### A lightweight ⚡ yet enterprise‑grade Java web framework
