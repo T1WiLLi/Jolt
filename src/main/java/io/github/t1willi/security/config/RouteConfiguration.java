@@ -121,7 +121,7 @@ public class RouteConfiguration {
         }
 
         private void addRule() {
-            rules.add(new RouteRule(pattern, any, methods, strategy, permitAll, denyAll, onFailureHandler));
+            rules.add(new RouteRule(pattern, any, methods, strategy, permitAll, denyAll, onFailureHandler, null));
         }
     }
 }

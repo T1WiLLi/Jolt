@@ -59,4 +59,67 @@ public class HelpMethods {
         }
         throw new JoltDIException("Cannot convert String to " + targetType.getSimpleName());
     }
+
+    public static Object smartParse(Object value) {
+        if (value == null) {
+            return null;
+        }
+
+        if (!(value instanceof String)) {
+            return value;
+        }
+
+        String trimmedValue = ((String) value).trim();
+        if (trimmedValue.isEmpty()) {
+            return "";
+        }
+
+        if (trimmedValue.equalsIgnoreCase("null")) {
+            return null;
+        }
+
+        if (trimmedValue.equalsIgnoreCase("true") || trimmedValue.equalsIgnoreCase("false")) {
+            return Boolean.parseBoolean(trimmedValue);
+        }
+
+        try {
+            if (!trimmedValue.contains(".") && !trimmedValue.toLowerCase().contains("e")) {
+                return Integer.parseInt(trimmedValue);
+            }
+        } catch (NumberFormatException e) {
+            // Not an integer, continue
+        }
+
+        try {
+            return Double.parseDouble(trimmedValue);
+        } catch (NumberFormatException e) {
+            // Not a double, continue
+        }
+
+        return trimmedValue;
+    }
+
+    public static boolean equivalentValues(Object value1, Object value2) {
+        if (value1 == null && value2 == null) {
+            return true;
+        }
+        if (value1 == null || value2 == null) {
+            return false;
+        }
+
+        if (value1.getClass().equals(value2.getClass())) {
+            return value1.equals(value2);
+        }
+
+        if (value1 instanceof String && !(value2 instanceof String)) {
+            Object parsed = smartParse((String) value1);
+            return parsed.equals(value2);
+        }
+        if (value2 instanceof String && !(value1 instanceof String)) {
+            Object parsed = smartParse((String) value2);
+            return value1.equals(parsed);
+        }
+
+        return value1.toString().equals(value2.toString());
+    }
 }

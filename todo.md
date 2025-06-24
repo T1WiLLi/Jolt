@@ -384,6 +384,20 @@ public void onMyEvent2(JoltContext ctx) {
 }
 ```
 
+# Security - Basic Auth Strategy
+```java
+// In security configuration : 
+
+BasicAuthStrategy.credentials("admin", "password") // Could also pass a Map<String, String>, or a function that returns a Map<String, String> with the allowed credentials.
+
+// Then as usual, can call 
+@Authorize(JwtAuthStrategy.class)
+@AuthorizationCriteria({key: "isLogin", expected: true})
+public void doSomething() {
+    // ... Do something ...
+}
+```
+
 New server properties : 
 
 server.logging.level=SEVERE, WARNING, INFO, FINE, FINER, FINEST, ALL, OFF

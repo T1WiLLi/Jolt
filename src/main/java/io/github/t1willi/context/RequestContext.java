@@ -124,7 +124,8 @@ final class RequestContext {
      */
     public Optional<String> bearerToken() {
         String authHeader = getHeader("Authorization");
-        if (authHeader != null && authHeader.toLowerCase().startsWith("bearer ")) {
+        if (authHeader != null && authHeader.length() >= 7 &&
+                authHeader.regionMatches(true, 0, "Bearer ", 0, 7)) {
             return Optional.of(authHeader.substring(7).trim());
         }
         return Optional.empty();
