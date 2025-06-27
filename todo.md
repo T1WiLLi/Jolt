@@ -392,7 +392,7 @@ BasicAuthStrategy.credentials("admin", "password") // Could also pass a Map<Stri
 
 // Then as usual, can call 
 @Authorize(JwtAuthStrategy.class)
-@AuthorizationCriteria({key: "isLogin", expected: true})
+@AuthorizationCriteria(key = "isLogin", expected = true)
 public void doSomething() {
     // ... Do something ...
 }

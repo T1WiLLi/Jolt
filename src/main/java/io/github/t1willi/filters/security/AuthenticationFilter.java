@@ -3,6 +3,7 @@ package io.github.t1willi.filters.security;
 import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.core.ControllerRegistry;
 import io.github.t1willi.filters.JoltFilter;
+import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.security.authentification.AuthStrategy;
@@ -50,17 +51,22 @@ public class AuthenticationFilter extends JoltFilter {
                 return;
             }
             if (rule.getStrategy() == null) {
-                ctx.status(401).contentType("application/x-www-form-urlencoded")
+                ctx.status(403).contentType("application/x-www-form-urlencoded")
                         .abortUnauthorized("Authentication required but no strategy defined");
                 return;
             }
-            if (authenticateWithCredentials(ctx, rule)) {
-                chain.doFilter(request, response);
+            if (!authenticate(ctx, rule)) {
+                if (!rule.handleFailure(ctx)) {
+                    rule.getStrategy().challenge(ctx);
+                }
                 return;
             }
-            if (!rule.handleFailure(ctx)) {
-                rule.getStrategy().challenge(ctx);
+            if (!authenticateWithCredentials(ctx, rule)) {
+                ctx.status(HttpStatus.UNAUTHORIZED).contentType("application/x-www-form-urlencoded")
+                        .abortUnauthorized("Authentication failed due to invalid credentials");
+                return;
             }
+            chain.doFilter(request, response);
             return;
         }
         chain.doFilter(request, response);
@@ -75,11 +81,16 @@ public class AuthenticationFilter extends JoltFilter {
         return rules;
     }
 
+    private boolean authenticate(JoltContext context, RouteRule rule) {
+        AuthStrategy strategy = rule.getStrategy();
+        if (strategy.authenticate(context)) {
+            return true;
+        }
+        return false;
+    }
+
     private boolean authenticateWithCredentials(JoltContext ctx, RouteRule rule) {
         AuthStrategy strategy = rule.getStrategy();
-        if (!strategy.authenticate(ctx)) {
-            return false;
-        }
         if (!(strategy instanceof JWTAuthStrategy) && !(strategy instanceof SessionAuthStrategy)) {
             return true;
         }
@@ -98,12 +109,8 @@ public class AuthenticationFilter extends JoltFilter {
         for (Map.Entry<String, Object> entry : credentials.entrySet()) {
             String key = entry.getKey();
             Object expected = entry.getValue();
-            Object actual = HelpMethods.smartParse(authData.get(key));
-            if (expected == null) {
-                if (actual != null) {
-                    return false;
-                }
-            } else if (actual == null || !actual.equals(expected)) {
+            Object actual = authData.get(key);
+            if (!HelpMethods.equivalentValues(actual, expected)) {
                 return false;
             }
         }

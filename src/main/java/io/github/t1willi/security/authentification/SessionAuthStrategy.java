@@ -15,7 +15,7 @@ public final class SessionAuthStrategy implements AuthStrategy {
         }
         Map<String, Object> attributes = new HashMap<>();
         for (String key : keys) {
-            Session.getOptional(key).ifPresent(value -> attributes.put(key, value));
+            Session.getOptional(key).ifPresent(val -> attributes.put(key, val));
         }
         return attributes;
     }

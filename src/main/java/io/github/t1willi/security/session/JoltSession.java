@@ -88,7 +88,8 @@ public final class JoltSession {
     }
 
     /**
-     * Retrieves the attribute under {@code key}, decrypted if needed.
+     * Retrieves the attribute under {@code key}, decrypted and deserialized if
+     * needed.
      *
      * @param key the attribute name
      * @return an Optional containing the stored value as a String, or empty
@@ -101,9 +102,11 @@ public final class JoltSession {
 
         if (ENCRYPT && raw instanceof String enc && !NO_ENCRYPT.contains(key)) {
             try {
-                return Optional.of(Cryptography.decrypt(enc));
+                String decrypted = Cryptography.decrypt(enc);
+                Object deserialized = JacksonUtil.getObjectMapper().readValue(decrypted, Object.class);
+                return Optional.of(String.valueOf(deserialized));
             } catch (Exception e) {
-                throw new RuntimeException("Failed to decrypt attribute: " + key, e);
+                throw new RuntimeException("Failed to decrypt and deserialize attribute: " + key, e);
             }
         }
         return Optional.of(String.valueOf(raw));
@@ -160,7 +163,7 @@ public final class JoltSession {
                 try {
                     session.setAttribute(attributeName, null);
                 } catch (Exception e) {
-                    continue; // Continue cleanup even if individual attribute fails
+                    continue;
                 }
             }
 
@@ -168,10 +171,11 @@ public final class JoltSession {
                 try {
                     session.removeAttribute(attributeName);
                 } catch (Exception e) {
-                    continue; // Continue cleanup even if individual attribute fails
+                    continue;
                 }
             }
         } catch (IllegalStateException e) {
+            // Session already invalidated - ignore
         }
     }
 
@@ -190,7 +194,11 @@ public final class JoltSession {
      */
     public void invalidate() {
         clearAllAttributes();
-        session.invalidate();
+        try {
+            session.invalidate();
+        } catch (IllegalStateException e) {
+            // Session already invalidated - ignore
+        }
     }
 
     /**
@@ -209,6 +217,10 @@ public final class JoltSession {
      * @throws UnsupportedOperationException on older containers
      */
     public void changeSessionId(HttpServletRequest request) {
-        request.changeSessionId();
+        try {
+            request.changeSessionId();
+        } catch (UnsupportedOperationException e) {
+            throw new UnsupportedOperationException("Session ID rotation not supported by this container", e);
+        }
     }
 }
