@@ -10,6 +10,7 @@ class DefaultField implements Field {
     private final String name;
     private final DefaultForm form;
     private final List<Rule> rules = new ArrayList<>();
+    private boolean optional;
 
     DefaultField(String name, DefaultForm form) {
         this.name = name;
@@ -23,6 +24,12 @@ class DefaultField implements Field {
     @Override
     public Field required(String msg) {
         add(BaseRules.required(msg));
+        return this;
+    }
+
+    @Override
+    public Field optional() {
+        this.optional = true;
         return this;
     }
 
@@ -177,6 +184,10 @@ class DefaultField implements Field {
     }
 
     boolean verifyOne() {
+        if (optional && !form.getValues().containsKey(name)) {
+            return true;
+        }
+
         String value = get();
         boolean isValid = true;
         boolean hasRequiredRule = false;

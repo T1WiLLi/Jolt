@@ -44,6 +44,17 @@ public interface Field {
     Field required(String msg);
 
     /**
+     * Marks this field as optional.
+     * <p>
+     * If the form data does not contain this key,
+     * no validation rules will be applied.
+     * 
+     * @return this {@link Field} instance for method chaining
+     * @since 2.8.9
+     */
+    Field optional();
+
+    /**
      * Sets the type of the field and specifies a custom error message for type
      * validation.
      * <p>

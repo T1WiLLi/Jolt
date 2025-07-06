@@ -134,7 +134,7 @@ public final class ControllerRegistry {
             AuthStrategy strategy = effective.strategy().getDeclaredConstructor().newInstance();
             Map<String, Object> credentials = parseCredentials(method);
             AUTHORIZATION.add(new RouteRule(fullPath, false, Set.of(verb.name()), strategy, false, false,
-                    effective.onFailure().isEmpty() ? null : effective.onFailure(), credentials));
+                    effective.onFailureRedirect().isEmpty() ? null : effective.onFailureRedirect(), credentials));
         } catch (Exception e) {
             throw new JoltDIException("Failed to create AuthStrategy for method: " + method.getName(), e);
         }
@@ -152,7 +152,7 @@ public final class ControllerRegistry {
             if (strategy != null) {
                 Map<String, Object> credentials = parseCredentials(method);
                 AUTHORIZATION.add(new RouteRule(fullPath, false, Set.of(verb.name()), strategy, false, false,
-                        effective.onFailure().isEmpty() ? null : effective.onFailure(), credentials));
+                        effective.onFailureRedirect().isEmpty() ? null : effective.onFailureRedirect(), credentials));
             }
         } catch (Exception e) {
             throw new JoltDIException("Failed to resolve AuthStrategy for method: " + method.getName(), e);

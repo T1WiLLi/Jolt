@@ -10,5 +10,5 @@ import java.lang.annotation.Target;
 public @interface Authorize {
     Class<? extends AuthStrategy> strategy() default SessionAuthStrategy.class;
 
-    String onFailure() default "";
+    String onFailureRedirect() default "";
 }

@@ -22,7 +22,7 @@ public final class JWTAuthStrategy implements AuthStrategy {
     private static final Map<String, Object> criteria = Collections.synchronizedMap(new HashMap<>());
 
     public static void criteria(String key, Object expectedValue) {
-        criteria.put(key, expectedValue);
+        JWTAuthStrategy.criteria.put(key, expectedValue);
     }
 
     public static void criteria(Map<String, Object> criteria) {

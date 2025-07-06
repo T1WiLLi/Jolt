@@ -4,7 +4,9 @@ import java.time.LocalDate;
 import java.time.format.DateTimeFormatter;
 import java.util.regex.Pattern;
 
-import io.github.t1willi.utils.Constant;
+import com.fasterxml.jackson.core.JsonProcessingException;
+
+import io.github.t1willi.utils.JacksonUtil;
 
 final class BaseRules {
     private BaseRules() {
@@ -15,33 +17,22 @@ final class BaseRules {
         return Rule.custom(data -> data != null && !data.trim().isEmpty(), msg);
     }
 
-    static Rule type(Class<?> type, String msg) {
+    static <T> Rule type(Class<T> type, String msg) {
         return Rule.custom(data -> {
             if (data == null || data.trim().isEmpty()) {
                 return false;
             }
-            String regex = Constant.RuleTypeRegex.RULE_TYPE_REGEX.getOrDefault(type, ".*");
-            String trimmedData = data.trim();
+            var mapper = JacksonUtil.getObjectMapper();
+            String trimmed = data.trim();
+
             try {
-                return switch (type.getName()) {
-                    case "java.lang.String" -> trimmedData.matches(regex);
-                    case "int", "java.lang.Integer" -> {
-                        Integer.parseInt(trimmedData);
-                        yield trimmedData.matches(regex);
-                    }
-                    case "double", "java.lang.Double" -> {
-                        Double.parseDouble(trimmedData);
-                        yield trimmedData.matches(regex);
-                    }
-                    case "long", "java.lang.Long" -> {
-                        Long.parseLong(trimmedData);
-                        yield trimmedData.matches(regex);
-                    }
-                    case "boolean", "java.lang.Boolean" -> trimmedData.matches(regex);
-                    case "char", "java.lang.Character" -> trimmedData.matches(regex);
-                    default -> false;
-                };
-            } catch (NumberFormatException e) {
+                if (type == String.class) {
+                    mapper.readValue(mapper.writeValueAsString(trimmed), type);
+                } else {
+                    mapper.readValue(trimmed, type);
+                }
+                return true;
+            } catch (JsonProcessingException e) {
                 return false;
             }
         }, msg);

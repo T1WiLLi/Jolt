@@ -6,7 +6,7 @@
 
     <groupId>io.github.t1willi</groupId>
     <artifactId>jolt</artifactId>
-    <version>2.9.8</version>
+    <version>2.9.9</version>
     <packaging>jar</packaging>
 
     <name>Jolt</name>
