@@ -59,7 +59,7 @@ public final class DefaultSecurityConfiguration extends SecurityConfiguration {
                 withHeaders()
                                 .withXssProtection(XssProtectionPolicy.ENABLE_BLOCK)
                                 .withFrameOptions(FrameOptionsPolicy.DENY)
-                                .withHsts(HstsPolicy.ONE_YEAR_WITH_SUBDOMAINS_PRELOAD)
+                                .withHsts(HstsPolicy.NONE)
                                 .withReferrerPolicy(ReferrerPolicy.STRICT_ORIGIN)
                                 .withCacheControl(CacheControlPolicy.NO_CACHE)
                                 .withCSP()

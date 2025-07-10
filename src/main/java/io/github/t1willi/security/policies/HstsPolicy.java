@@ -13,6 +13,11 @@ import lombok.Getter;
  */
 public enum HstsPolicy {
     /**
+     * No HSTS policy applied.
+     */
+    NONE(""),
+
+    /**
      * Enforces HTTPS for one year (31,536,000 seconds).
      */
     ONE_YEAR("max-age=31536000"),
