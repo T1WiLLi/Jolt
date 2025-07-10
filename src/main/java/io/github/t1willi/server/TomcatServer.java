@@ -93,6 +93,7 @@ public final class TomcatServer {
     private void initializeTomcat() {
         tomcat = new Tomcat();
         tomcat.setPort(config.isHttpEnabled() ? config.getPort() : config.getSslPort());
+        tomcat.setHostname(ConfigurationManager.getInstance().getProperty("server.address", "0.0.0.0"));
         tomcat.setBaseDir(new File(config.getTempDir()).getAbsolutePath());
     }
 
@@ -270,12 +271,20 @@ public final class TomcatServer {
         }
 
         RemoteIpValve valve = new RemoteIpValve();
+        ConfigurationManager mgr = ConfigurationManager.getInstance();
 
-        valve.setProtocolHeader("X-Forwared-Proto");
-        valve.setProtocolHeaderHttpsValue("https");
-        valve.setPortHeader("X-Forwarded-Port");
-        valve.setRemoteIpHeader("X-Forwarded-For");
-        valve.setInternalProxies("10\\.\\d+\\.\\d+\\.\\d+|192\\.168\\.\\d+\\.\\d+|127\\.0\\.0\\.1");
+        valve.setProtocolHeader(
+                mgr.getProperty("server.proxy.protocol_header", "X-Forwarded-Proto"));
+        valve.setProtocolHeaderHttpsValue(
+                mgr.getProperty("server.proxy.protocol_header_https_value", "https"));
+        valve.setPortHeader(
+                mgr.getProperty("server.proxy.port_header", "X-Forwarded-Port"));
+        valve.setRemoteIpHeader(
+                mgr.getProperty("server.proxy.remote_ip_header", "X-Forwarded-For"));
+        valve.setInternalProxies(
+                mgr.getProperty("server.proxy.internal_proxies",
+                        "10\\.\\d+\\.\\d+\\.\\d+|192\\.168\\.\\d+\\.\\d+|127\\.0\\.0\\.1"));
+
         tomcat.getEngine().getPipeline().addValve(valve);
     }
 }
