@@ -41,7 +41,7 @@ final class TemplatingContext {
      * @param model        The data model for the template
      */
     public void render(ResponseContext response, String templatePath, JoltModel model) {
-        JoltModel baseModel = LanguageService.getGlobalLanguageModel();
+        JoltModel baseModel = LanguageService.forCurrentRequest();
         if (baseModel == null) {
             baseModel = JoltModel.empty();
         }

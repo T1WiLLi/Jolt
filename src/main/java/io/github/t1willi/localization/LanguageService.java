@@ -1,72 +1,92 @@
 package io.github.t1willi.localization;
 
 import java.util.Map;
+import java.util.Optional;
 import java.util.logging.Logger;
 
+import io.github.t1willi.context.JoltContext;
+import io.github.t1willi.core.JoltDispatcherServlet;
 import io.github.t1willi.injector.annotation.Bean;
 import io.github.t1willi.server.config.ConfigurationManager;
 import io.github.t1willi.template.JoltModel;
-import jakarta.annotation.PostConstruct;
-import lombok.Getter;
 
 @Bean
 public class LanguageService {
     private static final Logger logger = Logger.getLogger(LanguageService.class.getName());
-
-    private static String lang;
-    @Getter
-    private static LanguageConfig languageConfig;
-    @Getter
-    private static JoltModel globalLanguageModel;
+    private static String defaultLang;
 
     public LanguageService() {
-        lang = ConfigurationManager.getInstance().getProperty("server.defaultLanguage", null);
-        if (lang == null) {
-            logger.fine("No default language defined. If you want to use localization, add a language file " +
-                    "to the /locale directory in the /resources directory (e.g., /locale/en.json) and set " +
-                    "'server.defaultLanguage' in your configuration.");
-        }
-        initializeLanguage(lang);
-    }
-
-    @PostConstruct
-    public void init() {
-        if (globalLanguageModel == null) {
-            initializeLanguage(lang);
-        }
-    }
-
-    private static void initializeLanguage(String langToUse) {
-        if (langToUse == null) {
-            languageConfig = null;
-            globalLanguageModel = JoltModel.empty();
+        LanguageService.defaultLang = ConfigurationManager.getInstance().getProperty("server.defaultLanguage", null);
+        if (defaultLang == null || defaultLang.isBlank()) {
+            logger.fine("No default language defined; localization disabled until a cookie is set");
         } else {
-            languageConfig = new LanguageConfig(langToUse);
-            Map<String, Object> translations = languageConfig.getTranslations();
-            if (translations == null) {
-                logger.severe("Failed to load translations for language: " + langToUse +
-                        ". Check that /locale/" + langToUse + ".json exists and is valid.");
-                globalLanguageModel = JoltModel.empty();
-            } else {
-                translations.put("languageCode", langToUse);
-                globalLanguageModel = JoltModel.of(Map.of("lang", translations));
-            }
+            logger.fine("Default language is: " + defaultLang);
         }
-        lang = langToUse;
     }
 
-    public static void changeLanguage(String langToUse) {
-        if (langToUse == null || langToUse.trim().isEmpty()) {
-            throw new IllegalArgumentException("Language cannot be null or empty when changing language explicitly");
-        }
-        initializeLanguage(langToUse);
-    }
-
+    /**
+     * @return the language code for the current request: the "_language" cookie if
+     *         present,
+     *         otherwise, the default from config (may be null!)
+     */
     public static String getCurrentLanguage() {
-        return lang;
+        JoltContext ctx = JoltDispatcherServlet.getCurrentContext();
+        return ctx.cookieValue("_language").orElse(defaultLang);
     }
 
-    public static boolean isLocalizationEnabled() {
-        return lang != null && globalLanguageModel != null && !globalLanguageModel.asMap().isEmpty();
+    /**
+     * Change the language for subsequent requests by setting the "_language"
+     * cookie.
+     * 
+     * @param newLang the new language code (e.g. "en", "fr")
+     */
+    public static void changeLanguage(String newLang) {
+        JoltContext ctx = JoltDispatcherServlet.getCurrentContext();
+        ctx.addCookie()
+                .setName("_language")
+                .setValue(newLang)
+                .httpOnly(false)
+                .path("/")
+                .maxAge(60 * 60 * 24 * 30)
+                .sameSite("Lax")
+                .build();
+    }
+
+    public static JoltModel forCurrentRequest() {
+        JoltContext ctx = JoltDispatcherServlet.getCurrentContext();
+
+        Optional<String> cookieLang = getCookieLanguage();
+
+        emitDefaultCookieIfNeeded(ctx, cookieLang);
+
+        String lang = cookieLang.orElse(defaultLang);
+        return buildLanguageModel(lang);
+    }
+
+    private static Optional<String> getCookieLanguage() {
+        return JoltDispatcherServlet.getCurrentContext().cookieValue("_language");
+    }
+
+    private static void emitDefaultCookieIfNeeded(JoltContext ctx, Optional<String> cookieLang) {
+        if (cookieLang.isEmpty()
+                && defaultLang != null
+                && !defaultLang.isBlank()) {
+            changeLanguage(defaultLang);
+        }
+    }
+
+    private static JoltModel buildLanguageModel(String lang) {
+        if (lang == null || lang.isBlank()) {
+            return JoltModel.empty();
+        }
+
+        Map<String, Object> translations = new LanguageConfig(lang).getTranslations();
+        if (translations == null || translations.isEmpty()) {
+            logger.warning("Localization file missing or empty for: " + lang);
+            return JoltModel.empty();
+        }
+
+        translations.put("languageCode", lang);
+        return JoltModel.of(Map.of("lang", translations));
     }
 }
