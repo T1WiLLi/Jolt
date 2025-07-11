@@ -29,7 +29,8 @@ public final class TaskScheduler {
     private static final Logger logger = Logger.getLogger(TaskScheduler.class.getName());
 
     private ScheduledExecutorService scheduler;
-    private CronParser parser = new CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX));
+    private CronParser quartzParser = new CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.QUARTZ));
+    private CronParser unixParser = new CronParser(CronDefinitionBuilder.instanceDefinitionFor(CronType.UNIX));
 
     @Autowire
     private SchedulingConfiguration configuration;
@@ -44,7 +45,13 @@ public final class TaskScheduler {
                     Scheduled annotation = method.getAnnotation(Scheduled.class);
                     Runnable task = createTask(bean, method);
                     if (!annotation.cron().isEmpty()) {
-                        scheduleCronTask(task, annotation.cron());
+                        try {
+                            scheduleCronTask(task, annotation.cron());
+                        } catch (Exception e) {
+                            logger.severe(() -> "Failed to schedule cron task for " +
+                                    bean.getClass().getSimpleName() + "#" + method.getName() +
+                                    " with cron expression: " + annotation.cron() + ". Error: " + e.getMessage());
+                        }
                     } else {
                         this.scheduler.scheduleAtFixedRate(
                                 task,
@@ -78,9 +85,31 @@ public final class TaskScheduler {
     }
 
     private void scheduleCronTask(Runnable task, String cronExpression) {
-        Cron cron = parser.parse(cronExpression);
+        Cron cron = parseCronExpression(cronExpression);
         ExecutionTime executionTime = ExecutionTime.forCron(cron);
         scheduleNext(task, executionTime);
+    }
+
+    private Cron parseCronExpression(String cronExpression) {
+        String[] fields = cronExpression.trim().split("\\s+");
+
+        if (fields.length == 6) {
+            String quartzExpression = fixQuartzExpression(cronExpression);
+            return quartzParser.parse(quartzExpression);
+        } else if (fields.length == 5) {
+            return unixParser.parse(cronExpression);
+        } else {
+            throw new IllegalArgumentException("Invalid cron expression: " + cronExpression +
+                    ". Expected 5 fields (UNIX format) or 6 fields (QUARTZ format)");
+        }
+    }
+
+    private String fixQuartzExpression(String cronExpression) {
+        String[] fields = cronExpression.trim().split("\\s+");
+        if (fields.length == 6 && fields[3].equals("*") && fields[5].equals("*")) {
+            fields[5] = "?";
+        }
+        return String.join(" ", fields);
     }
 
     private void scheduleNext(Runnable task, ExecutionTime executionTime) {
