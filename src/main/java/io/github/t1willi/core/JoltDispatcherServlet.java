@@ -14,6 +14,7 @@ import io.github.t1willi.exceptions.handler.GlobalExceptionHandler;
 import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.pipeline.AfterStep;
 import io.github.t1willi.pipeline.BeforeStep;
+import io.github.t1willi.pipeline.EncodingStep;
 import io.github.t1willi.pipeline.FilterStep;
 import io.github.t1willi.pipeline.InvocationStep;
 import io.github.t1willi.pipeline.ParamBindingStep;
@@ -60,13 +61,14 @@ public final class JoltDispatcherServlet extends HttpServlet {
 
     public JoltDispatcherServlet() {
         this.pipeline = new RoutePipeline(List.of(
-                new FilterStep(),
-                new BeforeStep(),
-                new StaticResourceStep(),
-                new RoutingStep(),
-                new ParamBindingStep(),
-                new InvocationStep(),
-                new ResponseStep()));
+                new EncodingStep(), // 1. Encoding
+                new FilterStep(), // 2. Filters
+                new BeforeStep(), // 3. Before handlers
+                new StaticResourceStep(), // 4. Static resources
+                new RoutingStep(), // 5. Routing
+                new ParamBindingStep(), // 6. Param binding
+                new InvocationStep(), // 7. Invocation
+                new ResponseStep())); // 8. Response
         this.exceptionHandler = JoltContainer.getInstance().getBean(GlobalExceptionHandler.class);
         this.exceptionHandler.init();
     }
