@@ -11,4 +11,6 @@ public @interface Authorize {
     Class<? extends AuthStrategy> strategy() default SessionAuthStrategy.class;
 
     String onFailureRedirect() default "";
+
+    Class<? extends OnAuthFailure> onFailureHandler() default NoOpAuthFailureHandler.class;
 }

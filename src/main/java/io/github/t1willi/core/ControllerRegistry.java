@@ -12,6 +12,8 @@ import io.github.t1willi.injector.JoltContainer;
 import io.github.t1willi.routing.RouteHandler;
 import io.github.t1willi.security.authentification.AuthStrategy;
 import io.github.t1willi.security.authentification.Authorize;
+import io.github.t1willi.security.authentification.NoOpAuthFailureHandler;
+import io.github.t1willi.security.authentification.OnAuthFailure;
 import io.github.t1willi.security.authentification.AuthorizationCredentials;
 import io.github.t1willi.security.authentification.RouteRule;
 import io.github.t1willi.template.JoltModel;
@@ -132,9 +134,11 @@ public final class ControllerRegistry {
         }
         try {
             AuthStrategy strategy = effective.strategy().getDeclaredConstructor().newInstance();
+            OnAuthFailure failureHandler = createFailureHandler(effective);
             Map<String, Object> credentials = parseCredentials(method);
             AUTHORIZATION.add(new RouteRule(fullPath, false, Set.of(verb.name()), strategy, false, false,
-                    effective.onFailureRedirect().isEmpty() ? null : effective.onFailureRedirect(), credentials));
+                    effective.onFailureRedirect().isEmpty() ? null : effective.onFailureRedirect(), credentials,
+                    failureHandler));
         } catch (Exception e) {
             throw new JoltDIException("Failed to create AuthStrategy for method: " + method.getName(), e);
         }
@@ -149,13 +153,25 @@ public final class ControllerRegistry {
         }
         try {
             AuthStrategy strategy = JoltContainer.getInstance().getBean(effective.strategy());
+            OnAuthFailure failureHandler = createFailureHandler(effective);
             if (strategy != null) {
                 Map<String, Object> credentials = parseCredentials(method);
                 AUTHORIZATION.add(new RouteRule(fullPath, false, Set.of(verb.name()), strategy, false, false,
-                        effective.onFailureRedirect().isEmpty() ? null : effective.onFailureRedirect(), credentials));
+                        effective.onFailureRedirect().isEmpty() ? null : effective.onFailureRedirect(), credentials,
+                        failureHandler));
             }
         } catch (Exception e) {
             throw new JoltDIException("Failed to resolve AuthStrategy for method: " + method.getName(), e);
+        }
+    }
+
+    private static OnAuthFailure createFailureHandler(Authorize authorize) {
+        try {
+            var handlerClass = authorize.onFailureHandler();
+            return handlerClass.getDeclaredConstructor().newInstance();
+        } catch (Exception e) {
+            log.warning("Failed to create OnAuthFailure handler, using NoOp:" + e.getMessage());
+            return new NoOpAuthFailureHandler();
         }
     }
 

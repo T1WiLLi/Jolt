@@ -56,7 +56,7 @@ public class AuthenticationFilter extends JoltFilter {
                 return;
             }
             if (!authenticate(ctx, rule)) {
-                if (!rule.handleFailure(ctx)) {
+                if (rule.handleFailure(ctx)) {
                     rule.getStrategy().challenge(ctx);
                 }
                 return;

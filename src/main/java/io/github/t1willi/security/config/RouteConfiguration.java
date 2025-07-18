@@ -4,11 +4,9 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Function;
-
-import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.http.HttpMethod;
 import io.github.t1willi.security.authentification.AuthStrategy;
+import io.github.t1willi.security.authentification.OnAuthFailure;
 import io.github.t1willi.security.authentification.RouteRule;
 import io.github.t1willi.security.authentification.SessionAuthStrategy;
 import lombok.Getter;
@@ -56,7 +54,8 @@ public class RouteConfiguration {
         private AuthStrategy strategy;
         private boolean permitAll;
         private boolean denyAll;
-        private Function<JoltContext, JoltContext> onFailureHandler;
+        private OnAuthFailure authFailureHandler;
+        private String redirectTo;
 
         RouteBuilder(RouteConfiguration parent, String pattern, boolean any) {
             this.parent = parent;
@@ -92,16 +91,20 @@ public class RouteConfiguration {
             return parent;
         }
 
-        public RouteConfiguration onFailure(String redirectTo) {
-            this.onFailureHandler = ctx -> ctx.redirect(redirectTo);
-            addRule();
-            return parent;
+        /**
+         * Set redirect URL for authentication failure.
+         */
+        public RouteBuilder onFailureRedirect(String redirectTo) {
+            this.redirectTo = redirectTo;
+            return this;
         }
 
-        public RouteConfiguration onFailure(Function<JoltContext, JoltContext> handler) {
-            this.onFailureHandler = handler;
-            addRule();
-            return parent;
+        /**
+         * Set OnAuthFailure handler for authentication failure.
+         */
+        public RouteBuilder onFailureHandler(OnAuthFailure handler) {
+            this.authFailureHandler = handler;
+            return this;
         }
 
         /**
@@ -121,7 +124,17 @@ public class RouteConfiguration {
         }
 
         private void addRule() {
-            rules.add(new RouteRule(pattern, any, methods, strategy, permitAll, denyAll, onFailureHandler, null));
+            // Use the constructor that supports OnAuthFailure
+            rules.add(new RouteRule(
+                    pattern,
+                    any,
+                    methods,
+                    strategy,
+                    permitAll,
+                    denyAll,
+                    redirectTo,
+                    null, // credentials
+                    authFailureHandler));
         }
     }
 }
