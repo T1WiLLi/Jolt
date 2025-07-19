@@ -187,7 +187,7 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
                                 "The database did not insert the entity",
                                 null);
                     }
-                    newId = id.cast(fields.get(idColumnName));
+                    newId = convertToIdType(fields.get(idColumnName));
                 }
             } else {
                 try (PreparedStatement stmt = connection.prepareStatement(
