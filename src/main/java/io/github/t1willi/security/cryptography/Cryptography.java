@@ -7,7 +7,7 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.Base64;
 
 import javax.crypto.Cipher;
-import javax.crypto.SecretKey;
+import javax.crypto.Mac;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
@@ -18,368 +18,340 @@ import io.github.t1willi.server.config.ConfigurationManager;
 import io.github.t1willi.utils.Constant;
 
 /**
- * Utility class for text hashing, verification, encryption, and decryption.
- * It also includes methods for generating and validating strong passwords.
- * This class provides a comprehensive set of cryptographic operations for
- * secure
- * password handling, data encryption, and key derivation.
+ * <p>
+ * Provides cryptographic utilities for secure password hashing, message
+ * authentication,
+ * and data confidentiality. This class supports:
+ * </p>
+ * <ul>
+ * <li>PBKDF2-based hashing with random or user-supplied salts</li>
+ * <li>HMAC-SHA256 generation for message authentication codes</li>
+ * <li>AES/GCM encryption and decryption for confidentiality and integrity</li>
+ * <li>Deriving keys via PBKDF2-HMAC-SHA256 for external use</li>
+ * <li>Random password generation and strength validation</li>
+ * <li>Unified verification API to detect credential format and perform correct
+ * checks</li>
+ * </ul>
+ * <p>
+ * All methods throw {@link JoltSecurityException} on internal failures,
+ * and {@link IllegalArgumentException} for invalid arguments.
+ * </p>
+ *
+ * @since 1.0
  */
 public final class Cryptography {
 
-    /**
-     * The algorithm used for password hashing.
-     */
+    private Cryptography() {
+        // Utility class; prevent instantiation
+    }
+
+    // ----- Configuration parameters -----
     private static final String HASH_ALGORITHM = Constant.Security.PBKDF2_SHA512;
-
-    /**
-     * The number of iterations used in the password hashing algorithm.
-     * Higher values increase security but also computational cost.
-     */
-    private static final int HASH_ITERATIONS = 210000;
-
-    /**
-     * The length of the hash key in bits.
-     */
+    private static final int HASH_ITERATIONS = 210_000;
     private static final int HASH_KEY_LENGTH = 512;
-
-    /**
-     * The length of the salt in bytes used for password hashing.
-     */
     private static final int SALT_LENGTH = 16;
 
-    /**
-     * The algorithm used for data encryption/decryption.
-     * AES/GCM/NoPadding provides authenticated encryption with associated data
-     * (AEAD).
-     */
     private static final String ENCRYPTION_ALGORITHM = Constant.Security.AES_GCM_NOPADDING;
-
-    /**
-     * The authentication tag length in bits for GCM mode.
-     */
-    private static final int GCM_TAG_LENGTH = 128; // 16 bytes
-
-    /**
-     * The initialization vector length in bytes for GCM mode.
-     */
+    private static final int GCM_TAG_LENGTH = 128;
     private static final int GCM_IV_LENGTH = 12;
 
-    /**
-     * The project-wide secret key used for encryption/decryption operations.
-     * This key is loaded from configuration or generated randomly if not found.
-     */
-    private static final String PROJECT_SECRET_KEY = ConfigurationManager.getInstance().getProperty(
-            "server.security.secret_key",
-            CryptographyUtils.randomBase64(32));
+    private static final String PROJECT_SECRET_KEY;
+    private static final String PEPPER;
+
+    static {
+        ConfigurationManager cfg = ConfigurationManager.getInstance();
+        PROJECT_SECRET_KEY = cfg.getProperty(
+                "server.security.secret_key",
+                CryptographyUtils.randomBase64(32));
+        PEPPER = cfg.getProperty(
+                "server.security.pepper",
+                CryptographyUtils.randomBase64(32));
+        validateKeyLength(PROJECT_SECRET_KEY);
+    }
 
     /**
-     * A secret value added to passwords before hashing for additional security.
-     * This pepper is loaded from configuration or generated randomly if not found.
-     */
-    private static final String PEPPER = ConfigurationManager.getInstance().getProperty(
-            "server.security.pepper",
-            CryptographyUtils.randomBase64(32));
-
-    /**
-     * Hashes a text using PBKDF2 with a salt and a pepper.
-     * The method generates a random salt, adds the pepper to the text,
-     * and then creates a hash using the specified algorithm.
-     *
-     * @param text the text to hash
-     * @return a Base64-encoded string containing the salt and the hashed text
-     * @throws JoltSecurityException if hashing fails
+     * Generates a PBKDF2 hash of the given text using a random salt and configured
+     * pepper.
+     * 
+     * @param text plaintext to hash (not null)
+     * @return "PBKDF2$<base64>" blob containing iteration, salt, and hash
      */
     public static String hash(String text) {
-        try {
-            byte[] salt = SecureRandomGenerator.generateRandomBytes(SALT_LENGTH);
-
-            String pepperedPassword = text + PEPPER;
-
-            PBEKeySpec spec = new PBEKeySpec(
-                    pepperedPassword.toCharArray(),
-                    salt,
-                    HASH_ITERATIONS,
-                    HASH_KEY_LENGTH);
-
-            SecretKeyFactory skf = SecretKeyFactory.getInstance(HASH_ALGORITHM);
-            byte[] hash = skf.generateSecret(spec).getEncoded();
-
-            spec.clearPassword();
-            ByteBuffer buffer = ByteBuffer.allocate(4 + 4 + salt.length + hash.length);
-
-            buffer.putInt(HASH_ITERATIONS);
-            buffer.putInt(salt.length);
-            buffer.put(salt);
-            buffer.put(hash);
-
-            return Base64.getEncoder().encodeToString(buffer.array());
-        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
-            throw new JoltSecurityException("Error hashing password", e);
-        }
+        if (text == null)
+            throw new IllegalArgumentException("Text to hash cannot be null");
+        byte[] salt = SecureRandomGenerator.generateRandomBytes(SALT_LENGTH);
+        return hash(text, salt);
     }
 
     /**
-     * Verifies if the provided text matches the stored hash.
-     * This method extracts the salt and hash from the stored hash value,
-     * adds the pepper to the provided password, and compares the generated
-     * hash with the stored hash using a constant-time comparison.
-     *
-     * @param storedHash the Base64-encoded hash to verify against
-     * @param text       the text to verify
-     * @return true if the password matches the stored hash, false otherwise
-     * @throws JoltSecurityException if verification fails
-     */
-    public static boolean verify(String storedHash, String text) {
-        try {
-            byte[] decodedHash = Base64.getDecoder().decode(storedHash);
-            ByteBuffer buffer = ByteBuffer.wrap(decodedHash);
-
-            int iterations = buffer.getInt();
-            int saltLength = buffer.getInt();
-
-            byte[] salt = new byte[saltLength];
-            buffer.get(salt);
-
-            byte[] originalHash = new byte[buffer.remaining()];
-            buffer.get(originalHash);
-
-            String pepperedPassword = text + PEPPER;
-
-            PBEKeySpec spec = new PBEKeySpec(
-                    pepperedPassword.toCharArray(),
-                    salt,
-                    iterations,
-                    originalHash.length * 8);
-
-            SecretKeyFactory skf = SecretKeyFactory.getInstance(HASH_ALGORITHM);
-            byte[] hash = skf.generateSecret(spec).getEncoded();
-
-            spec.clearPassword();
-
-            return constantTimeEquals(originalHash, hash);
-        } catch (Exception e) {
-            throw new JoltSecurityException("Error verifying password", e);
-        }
-    }
-
-    /**
-     * Encrypts the provided text using AES-GCM with the specified key.
-     * This method generates a random initialization vector (IV) and
-     * uses the GCM mode for authenticated encryption.
-     *
-     * @param text the text to encrypt
-     * @param key  the Base64-encoded encryption key
-     * @return a Base64-encoded string containing the IV and encrypted data
-     * @throws JoltSecurityException if encryption fails
-     */
-    public static String encrypt(String text, String key) {
-        try {
-            byte[] iv = SecureRandomGenerator.generateRandomBytes(GCM_IV_LENGTH);
-
-            SecretKey secretKey = new SecretKeySpec(
-                    Base64.getDecoder().decode(key),
-                    "AES");
-
-            Cipher cipher = Cipher.getInstance(ENCRYPTION_ALGORITHM);
-            GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.ENCRYPT_MODE, secretKey, parameterSpec);
-
-            byte[] passwordBytes = text.getBytes(StandardCharsets.UTF_8);
-            byte[] encryptedBytes = cipher.doFinal(passwordBytes);
-
-            ByteBuffer byteBuffer = ByteBuffer.allocate(iv.length + encryptedBytes.length);
-            byteBuffer.put(iv);
-            byteBuffer.put(encryptedBytes);
-
-            return Base64.getEncoder().encodeToString(byteBuffer.array());
-        } catch (Exception e) {
-            throw new JoltSecurityException("Error encrypting password", e);
-        }
-    }
-
-    /**
-     * Encrypts the provided text using AES-GCM with the project's secret key.
-     * This is a convenience method that uses the project-wide secret key for
-     * encryption.
-     *
-     * @param text the text to encrypt
-     * @return a Base64-encoded string containing the IV and encrypted data
-     * @throws JoltSecurityException if encryption fails
-     * @see #encrypt(String, String)
-     */
-    public static String encrypt(String text) {
-        return encrypt(text, PROJECT_SECRET_KEY);
-    }
-
-    /**
-     * Decrypts the provided encrypted text using AES-GCM with the specified key.
-     * This method extracts the IV from the encrypted data and uses it along with
-     * the key to decrypt the data.
-     *
-     * @param encryptedText the Base64-encoded encrypted text
-     * @param key           the Base64-encoded decryption key
-     * @return the decrypted text as a string
-     * @throws JoltSecurityException if decryption fails
-     */
-    public static String decrypt(String encryptedText, String key) {
-        try {
-            byte[] encryptedBytes = Base64.getDecoder().decode(encryptedText);
-
-            ByteBuffer byteBuffer = ByteBuffer.wrap(encryptedBytes);
-            byte[] iv = new byte[GCM_IV_LENGTH];
-            byteBuffer.get(iv);
-
-            byte[] ciphertext = new byte[byteBuffer.remaining()];
-            byteBuffer.get(ciphertext);
-
-            SecretKey secretKey = new SecretKeySpec(
-                    Base64.getDecoder().decode(key),
-                    "AES");
-
-            Cipher cipher = Cipher.getInstance(ENCRYPTION_ALGORITHM);
-            GCMParameterSpec parameterSpec = new GCMParameterSpec(GCM_TAG_LENGTH, iv);
-            cipher.init(Cipher.DECRYPT_MODE, secretKey, parameterSpec);
-
-            byte[] decryptedBytes = cipher.doFinal(ciphertext);
-
-            return new String(decryptedBytes, StandardCharsets.UTF_8);
-
-        } catch (Exception e) {
-            throw new JoltSecurityException("Error decrypting password", e);
-        }
-    }
-
-    /**
-     * Decrypts the provided encrypted text using AES-GCM with the project's secret
-     * key.
-     * This is a convenience method that uses the project-wide secret key for
-     * decryption.
-     *
-     * @param encryptedText the Base64-encoded encrypted text
-     * @return the decrypted text as a string
-     * @throws JoltSecurityException if decryption fails
-     * @see #decrypt(String, String)
-     */
-    public static String decrypt(String encryptedText) {
-        return decrypt(encryptedText, PROJECT_SECRET_KEY);
-    }
-
-    /**
-     * Derives an AES-256 encryption key from a password and salt.
-     * This method delegates to {@link KeyDerivation#deriveKey(String, String)}
-     * which uses
-     * PBKDF2 with HMAC-SHA256 to derive a cryptographically strong key
-     * suitable for encryption operations.
+     * Generates a PBKDF2 hash of the given text using a salt string (UTF-8) and
+     * configured pepper.
      * 
-     * @param password The password to derive the key from.
-     * @param salt     The salt to use in the key derivation process. Using a unique
-     *                 salt
-     *                 for each password greatly enhances security against rainbow
-     *                 table attacks.
-     * @return A Base64-encoded string representing the derived AES-256 key.
-     * @throws JoltSecurityException If the key derivation process fails due to
-     *                               algorithm unavailability or invalid key
-     *                               specification.
+     * @param text       plaintext to hash (not null)
+     * @param saltString salt as UTF-8 string (not null/empty)
+     * @return "PBKDF2$<base64>" blob
+     */
+    public static String hash(String text, String saltString) {
+        if (text == null)
+            throw new IllegalArgumentException("Text to hash cannot be null");
+        if (saltString == null || saltString.isEmpty())
+            throw new IllegalArgumentException("Salt string cannot be null or empty");
+        return hash(text, saltString.getBytes(StandardCharsets.UTF_8));
+    }
+
+    /**
+     * Generates a PBKDF2 hash using supplied salt bytes and configured pepper.
+     * 
+     * @param text plaintext to hash (not null)
+     * @param salt salt bytes (not null/empty)
+     * @return "PBKDF2$<base64>" blob
+     */
+    public static String hash(String text, byte[] salt) {
+        if (text == null)
+            throw new IllegalArgumentException("Text to hash cannot be null");
+        if (salt == null || salt.length == 0)
+            throw new IllegalArgumentException("Salt cannot be null or empty");
+        try {
+            String peppered = text + PEPPER;
+            PBEKeySpec spec = new PBEKeySpec(
+                    peppered.toCharArray(), salt, HASH_ITERATIONS, HASH_KEY_LENGTH);
+            SecretKeyFactory skf = SecretKeyFactory.getInstance(HASH_ALGORITHM);
+            byte[] hash = skf.generateSecret(spec).getEncoded();
+            spec.clearPassword();
+
+            ByteBuffer buf = ByteBuffer.allocate(4 + 4 + salt.length + hash.length);
+            buf.putInt(HASH_ITERATIONS).putInt(salt.length).put(salt).put(hash);
+            return "PBKDF2$" + encodeBase64(buf.array());
+        } catch (NoSuchAlgorithmException | InvalidKeySpecException e) {
+            throw new JoltSecurityException("Error computing PBKDF2 hash", e);
+        }
+    }
+
+    /**
+     * Computes an HMAC-SHA256 digest of the given text.
+     * 
+     * @param text message to authenticate (not null)
+     * @return "HMAC$<base64>" of 32-byte MAC
+     */
+    public static String hmac(String text) {
+        if (text == null)
+            throw new IllegalArgumentException("Text for HMAC cannot be null");
+        try {
+            Mac mac = Mac.getInstance("HmacSHA256");
+            mac.init(new SecretKeySpec(
+                    PEPPER.getBytes(StandardCharsets.UTF_8), "HmacSHA256"));
+            byte[] digest = mac.doFinal(text.getBytes(StandardCharsets.UTF_8));
+            return "HMAC$" + encodeBase64(digest);
+        } catch (Exception e) {
+            throw new JoltSecurityException("Error computing HMAC-SHA256", e);
+        }
+    }
+
+    /**
+     * Verifies a stored PBKDF2 or HMAC credential against plaintext.
+     * 
+     * @param stored "PBKDF2$..." or "HMAC$..."
+     * @param text   plaintext to verify (not null)
+     * @return true if matches
+     */
+    public static boolean verify(String stored, String text) {
+        if (stored == null)
+            throw new IllegalArgumentException("Stored credential cannot be null");
+        if (text == null)
+            throw new IllegalArgumentException("Text to verify cannot be null");
+        if (stored.startsWith("PBKDF2$"))
+            return verifyPbkdf2(stored.substring(7), text);
+        if (stored.startsWith("HMAC$"))
+            return verifyHmac(stored.substring(5), text);
+        throw new JoltSecurityException("Unrecognized credential format: " + stored);
+    }
+
+    /**
+     * Derives a key via PBKDF2-HMAC-SHA256 by delegating to {@link KeyDerivation}.
+     * 
+     * @param password input password (not null)
+     * @param salt     salt text (not null)
+     * @return Base64-encoded AES-256 key
      */
     public static String deriveKey(String password, String salt) {
         return KeyDerivation.deriveKey(password, salt);
     }
 
     /**
-     * Generates a cryptographically secure random password of the specified length.
-     * The generated password will contain at least one uppercase letter, one
-     * lowercase letter,
-     * one digit, and one special character. The remaining characters are randomly
-     * selected
-     * from all character sets. The characters are then shuffled to ensure
-     * randomness.
-     *
-     * @param length the length of the password to generate (must be at least 4)
-     * @return a random password meeting the complexity requirements
-     * @throws IllegalArgumentException if length is less than 4
+     * Derives a key via PBKDF2-HMAC-SHA256 with full parameter control.
+     * 
+     * @param password   input password
+     * @param salt       salt string
+     * @param algorithm  PBKDF2 algorithm constant
+     * @param iterations number of rounds
+     * @param keyLength  desired key length in bits
+     * @return Base64-encoded key bytes
+     */
+    public static String deriveKey(
+            String password, String salt,
+            String algorithm, int iterations, int keyLength) {
+        return KeyDerivation.deriveKey(password, salt, algorithm, iterations, keyLength);
+    }
+
+    /**
+     * Generates a cryptographically secure random password of given length.
+     * 
+     * @param length total length >=4
+     * @return random password meeting complexity: upper, lower, digit, special
      */
     public static String generateRandomPassword(int length) {
-        String uppercase = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
-        String lowercase = "abcdefghijklmnopqrstuvwxyz";
+        if (length < 4)
+            throw new IllegalArgumentException("Password length must be at least 4");
+        String upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
+        String lower = "abcdefghijklmnopqrstuvwxyz";
         String digits = "0123456789";
         String special = "!@#$%^&*()-_=+[]{}|;:,.<>?";
-
-        String allChars = uppercase + lowercase + digits + special;
-        StringBuilder password = new StringBuilder();
-
-        password.append(CryptographyUtils.randomString(1, uppercase));
-        password.append(CryptographyUtils.randomString(1, lowercase));
-        password.append(CryptographyUtils.randomString(1, digits));
-        password.append(CryptographyUtils.randomString(1, special));
-        password.append(CryptographyUtils.randomString(length - 4, allChars));
-
-        char[] passwordChars = password.toString().toCharArray();
-        for (int i = passwordChars.length - 1; i > 0; i--) {
-            int index = SecureRandomGenerator.generateRandomInt(0, i + 1);
-            char temp = passwordChars[index];
-            passwordChars[index] = passwordChars[i];
-            passwordChars[i] = temp;
+        String all = upper + lower + digits + special;
+        StringBuilder sb = new StringBuilder();
+        sb.append(CryptographyUtils.randomString(1, upper));
+        sb.append(CryptographyUtils.randomString(1, lower));
+        sb.append(CryptographyUtils.randomString(1, digits));
+        sb.append(CryptographyUtils.randomString(1, special));
+        sb.append(CryptographyUtils.randomString(length - 4, all));
+        char[] arr = sb.toString().toCharArray();
+        for (int i = arr.length - 1; i > 0; i--) {
+            int j = SecureRandomGenerator.generateRandomInt(0, i + 1);
+            char tmp = arr[j];
+            arr[j] = arr[i];
+            arr[i] = tmp;
         }
-        return new String(passwordChars);
+        return new String(arr);
     }
 
     /**
-     * Validates if a password meets the strong password criteria.
-     * A strong password must:
-     * - Be at least 8 characters long
-     * - Contain at least one uppercase letter
-     * - Contain at least one lowercase letter
-     * - Contain at least one digit
-     * - Contain at least one special character (non-alphanumeric)
-     *
-     * @param password the password to validate
-     * @return true if the password meets all criteria, false otherwise
+     * Validates password strength: min 8, has upper, lower, digit, special.
+     * 
+     * @param password to test
+     * @return true if strong
      */
     public static boolean isStrongPassword(String password) {
-        if (password == null || password.length() < 8) {
+        if (password == null || password.length() < 8)
             return false;
-        }
-
-        boolean hasUppercase = false;
-        boolean hasLowercase = false;
-        boolean hasDigit = false;
-        boolean hasSpecial = false;
-
+        boolean u = false, l = false, d = false, s = false;
         for (char c : password.toCharArray()) {
-            if (Character.isUpperCase(c)) {
-                hasUppercase = true;
-            } else if (Character.isLowerCase(c)) {
-                hasLowercase = true;
-            } else if (Character.isDigit(c)) {
-                hasDigit = true;
-            } else {
-                hasSpecial = true;
-            }
+            if (Character.isUpperCase(c))
+                u = true;
+            else if (Character.isLowerCase(c))
+                l = true;
+            else if (Character.isDigit(c))
+                d = true;
+            else
+                s = true;
         }
-
-        return hasUppercase && hasLowercase && hasDigit && hasSpecial;
+        return u && l && d && s;
     }
 
     /**
-     * Compares two byte arrays in constant time to prevent timing attacks.
-     * This method performs a bitwise XOR comparison of all bytes in both arrays
-     * and returns true only if all bytes are equal. The comparison time is constant
-     * regardless of where the first difference occurs, making it resistant to
-     * timing attacks that could reveal information about the contents.
-     *
-     * @param a the first byte array
-     * @param b the second byte array
-     * @return true if the arrays have the same length and content, false otherwise
+     * Encrypts plaintext using AES/GCM with project key.
      */
-    private static boolean constantTimeEquals(byte[] a, byte[] b) {
-        if (a.length != b.length) {
-            return false;
-        }
+    public static String encrypt(String plain) {
+        return encrypt(plain, PROJECT_SECRET_KEY);
+    }
 
-        int result = 0;
-        for (int i = 0; i < a.length; i++) {
-            result |= a[i] ^ b[i];
+    /**
+     * Encrypts with provided Base64 key
+     */
+    public static String encrypt(String plain, String base64Key) {
+        if (plain == null || base64Key == null)
+            throw new IllegalArgumentException("Invalid args");
+        try {
+            byte[] iv = SecureRandomGenerator.generateRandomBytes(GCM_IV_LENGTH);
+            byte[] key = decodeBase64(base64Key);
+            Cipher c = Cipher.getInstance(ENCRYPTION_ALGORITHM);
+            c.init(Cipher.ENCRYPT_MODE, new SecretKeySpec(key, "AES"), new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+            byte[] ct = c.doFinal(plain.getBytes(StandardCharsets.UTF_8));
+            return encodeBase64(ByteBuffer.allocate(iv.length + ct.length).put(iv).put(ct).array());
+        } catch (Exception e) {
+            throw new JoltSecurityException("Error encrypting", e);
         }
-        return result == 0;
+    }
+
+    /**
+     * Decrypts using project key
+     */
+    public static String decrypt(String encrypted) {
+        return decrypt(encrypted, PROJECT_SECRET_KEY);
+    }
+
+    /**
+     * Decrypts with provided Base64 key
+     */
+    public static String decrypt(String encrypted, String base64Key) {
+        if (encrypted == null || base64Key == null)
+            throw new IllegalArgumentException("Invalid args");
+        try {
+            ByteBuffer buf = ByteBuffer.wrap(decodeBase64(encrypted));
+            byte[] iv = new byte[GCM_IV_LENGTH];
+            buf.get(iv);
+            byte[] ct = new byte[buf.remaining()];
+            buf.get(ct);
+            Cipher c = Cipher.getInstance(ENCRYPTION_ALGORITHM);
+            c.init(Cipher.DECRYPT_MODE, new SecretKeySpec(decodeBase64(base64Key), "AES"),
+                    new GCMParameterSpec(GCM_TAG_LENGTH, iv));
+            return new String(c.doFinal(ct), StandardCharsets.UTF_8);
+        } catch (Exception e) {
+            throw new JoltSecurityException("Error decrypting", e);
+        }
+    }
+
+    // ----- Private helpers -----
+
+    private static boolean constantTimeEquals(byte[] a, byte[] b) {
+        if (a == null || b == null || a.length != b.length)
+            return false;
+        int res = 0;
+        for (int i = 0; i < a.length; i++)
+            res |= a[i] ^ b[i];
+        return res == 0;
+    }
+
+    private static boolean verifyPbkdf2(String blob, String text) {
+        try {
+            ByteBuffer buf = ByteBuffer.wrap(decodeBase64(blob));
+            int iter = buf.getInt(), sl = buf.getInt();
+            byte[] salt = new byte[sl];
+            buf.get(salt);
+            byte[] orig = new byte[buf.remaining()];
+            buf.get(orig);
+            String p = text + PEPPER;
+            PBEKeySpec s = new PBEKeySpec(p.toCharArray(), salt, iter, orig.length * 8);
+            byte[] c = SecretKeyFactory.getInstance(HASH_ALGORITHM).generateSecret(s).getEncoded();
+            s.clearPassword();
+            return constantTimeEquals(orig, c);
+        } catch (Exception e) {
+            throw new JoltSecurityException("Error verifying PBKDF2 blob", e);
+        }
+    }
+
+    private static boolean verifyHmac(String macBlob, String text) {
+        try {
+            byte[] a = decodeBase64(macBlob);
+            byte[] e = decodeBase64(hmac(text).substring(5));
+            return constantTimeEquals(a, e);
+        } catch (Exception e) {
+            throw new JoltSecurityException("Error verifying HMAC blob", e);
+        }
+    }
+
+    private static byte[] decodeBase64(String d) {
+        if (d == null || d.isEmpty())
+            throw new IllegalArgumentException("Invalid Base64");
+        return Base64.getDecoder().decode(d);
+    }
+
+    private static String encodeBase64(byte[] d) {
+        return Base64.getEncoder().encodeToString(d);
+    }
+
+    private static void validateKeyLength(String k) {
+        byte[] b = decodeBase64(k);
+        int l = b.length;
+        if (!(l == 16 || l == 24 || l == 32))
+            throw new JoltSecurityException("Invalid AES key length: " + l);
     }
 }
