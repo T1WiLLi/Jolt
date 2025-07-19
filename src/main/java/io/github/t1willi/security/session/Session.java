@@ -3,7 +3,6 @@ package io.github.t1willi.security.session;
 import io.github.t1willi.context.JoltContext;
 import io.github.t1willi.core.JoltDispatcherServlet;
 import io.github.t1willi.exceptions.SessionExpiredException;
-import io.github.t1willi.exceptions.SessionIpMismatchException;
 import io.github.t1willi.exceptions.SessionUserAgentMismatchException;
 import io.github.t1willi.server.config.ConfigurationManager;
 import io.github.t1willi.utils.Constant;
@@ -51,7 +50,6 @@ import java.util.function.Supplier;
  * </ul>
  *
  * @see JoltSession
- * @see SessionIpMismatchException
  * @see SessionUserAgentMismatchException
  * @see SessionExpiredException
  */
@@ -61,7 +59,7 @@ public final class Session {
      */
     private static final boolean SLIDING = Boolean.parseBoolean(
             ConfigurationManager.getInstance()
-                    .getProperty("session.expirationSliding", "false"));
+                    .getProperty("session.expirationSliding", "true"));
 
     /** Default lifetime in seconds if mis‑configured or missing. */
     private static final int DEFAULT_LIFETIME = 900; // 15 min
