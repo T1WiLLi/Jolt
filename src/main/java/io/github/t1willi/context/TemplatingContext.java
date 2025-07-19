@@ -48,11 +48,11 @@ final class TemplatingContext {
 
         JoltModel finalModel = baseModel.clone();
 
-        injectFlashIntoModel(finalModel);
-
         if (model != null) {
             finalModel.merge(model);
         }
+
+        injectFlashIntoModel(finalModel);
 
         String csrfToken = CsrfToken.generate();
         String tokenName = JoltContainer.getInstance().getBean(SecurityConfiguration.class)
