@@ -1,8 +1,6 @@
 package io.github.t1willi.database;
 
 import java.lang.reflect.Field;
-import java.lang.reflect.InvocationTargetException;
-import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
@@ -144,13 +142,16 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         }
         params[i] = entityId;
 
-        query(sql.toString(), params);
+        int rows = query(sql.toString(), params);
+        if (rows == 0) {
+            insertEntity(entity);
+        }
     }
 
     private ID insertEntity(T entity) {
         Map<String, Object> fields = extractFields(entity);
-
-        if (fields.containsKey(idColumnName) && isEmptyId(fields.get(idColumnName))) {
+        boolean idProvided = fields.containsKey(idColumnName) && !isEmptyId(fields.get(idColumnName));
+        if (!idProvided) {
             fields.remove(idColumnName);
         }
 
@@ -171,54 +172,61 @@ public abstract class RestBroker<ID, T> extends Broker<T> {
         try {
             connection = Database.getInstance().getConnection();
             connection.setAutoCommit(false);
-            ID newId = null;
+            ID newId;
 
-            try (PreparedStatement stmt = connection.prepareStatement(
-                    sql.toString(), Statement.RETURN_GENERATED_KEYS)) {
-
-                int paramIndex = 1;
-                for (Object value : fields.values()) {
-                    stmt.setObject(paramIndex++, value);
-                }
-
-                int affectedRows = stmt.executeUpdate();
-                if (affectedRows == 0) {
-                    throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
-                            "Creating entity failed, no rows affected",
-                            "The database did not insert the entity",
-                            null);
-                }
-
-                try (ResultSet generatedKeys = stmt.getGeneratedKeys()) {
-                    if (generatedKeys.next()) {
-                        newId = convertToIdType(generatedKeys.getObject(1));
-
-                        String setterMethodName = "set" + idColumnName.substring(0, 1).toUpperCase()
-                                + idColumnName.substring(1);
-                        try {
-                            Method setterMethod = entity.getClass().getMethod(setterMethodName, id);
-                            setterMethod.invoke(entity, newId);
-                        } catch (NoSuchMethodException | SecurityException | IllegalAccessException
-                                | InvocationTargetException e) {
-                            logger.warning(
-                                    "Could not invoke setter method: " + setterMethodName + " - " + e.getMessage());
-                            Field idField = getIdField(entity.getClass());
-                            if (idField != null) {
-                                idField.setAccessible(true);
-                                idField.set(entity, newId);
-                            }
-                        }
-                    } else {
+            if (idProvided) {
+                try (PreparedStatement stmt = connection.prepareStatement(sql.toString())) {
+                    int idx = 1;
+                    for (Object val : fields.values()) {
+                        stmt.setObject(idx++, val);
+                    }
+                    int affected = stmt.executeUpdate();
+                    if (affected == 0) {
                         throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
-                                "Creating entity failed, no ID obtained",
-                                "The database did not return a generated ID",
+                                "Creating entity failed, no rows affected",
+                                "The database did not insert the entity",
                                 null);
                     }
+                    newId = id.cast(fields.get(idColumnName));
                 }
-                connection.commit();
-                return newId;
+            } else {
+                try (PreparedStatement stmt = connection.prepareStatement(
+                        sql.toString(), Statement.RETURN_GENERATED_KEYS)) {
+                    int idx = 1;
+                    for (Object val : fields.values()) {
+                        stmt.setObject(idx++, val);
+                    }
+                    int affected = stmt.executeUpdate();
+                    if (affected == 0) {
+                        throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
+                                "Creating entity failed, no rows affected",
+                                "The database did not insert the entity",
+                                null);
+                    }
+                    try (ResultSet gen = stmt.getGeneratedKeys()) {
+                        if (gen.next()) {
+                            newId = convertToIdType(gen.getObject(1));
+                        } else {
+                            throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
+                                    "Creating entity failed, no ID obtained",
+                                    "The database did not return a generated ID",
+                                    null);
+                        }
+                    }
+                }
             }
-        } catch (SQLException | IllegalAccessException e) {
+
+            try {
+                Field idField = getIdField(entity.getClass());
+                idField.setAccessible(true);
+                idField.set(entity, newId);
+            } catch (Exception e) {
+                logger.warning("Could not set ID on entity: " + e.getMessage());
+            }
+
+            connection.commit();
+            return newId;
+        } catch (SQLException e) {
             rollbackSilently(connection);
             logger.severe(() -> "Error during insert: " + e.getMessage());
             throw new DatabaseException(DatabaseErrorType.UNKNOWN_ERROR,
