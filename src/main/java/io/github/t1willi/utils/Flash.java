@@ -3,8 +3,6 @@ package io.github.t1willi.utils;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.Optional;
 
 import io.github.t1willi.context.JoltContext;
@@ -13,11 +11,8 @@ import io.github.t1willi.core.JoltDispatcherServlet;
 /**
  * Manages one‐off flash messages for a single request‐render cycle.
  * <p>
- * Flash messages are simultaneously stored in:
- * <ul>
- * <li>a ThreadLocal map (for immediate retrieval in the same render), and</li>
- * <li>HTTP cookies (to survive redirects and subsequent requests).</li>
- * </ul>
+ * Flash messages are stored in HTTP cookies to survive redirects and subsequent
+ * requests.
  * Once consumed via {@link #message()}, the flash entry is removed, ensuring it
  * appears only once per cycle.
  * <p>
@@ -50,9 +45,6 @@ import io.github.t1willi.core.JoltDispatcherServlet;
 public final class Flash {
     private static final String COOKIE_MESSAGE = "flash_message";
     private static final String COOKIE_TYPE = "flash_type";
-
-    // Immediate access storage for the current thread
-    private static final ThreadLocal<Map<String, String>> local = ThreadLocal.withInitial(HashMap::new);
 
     // Prevent instantiation
     private Flash() {
@@ -100,11 +92,6 @@ public final class Flash {
      * @return the message, or {@code null} if none
      */
     public static String message() {
-        Map<String, String> map = local.get();
-        if (map.containsKey(COOKIE_MESSAGE)) {
-            String decoded = decode(map.remove(COOKIE_MESSAGE));
-            return decoded;
-        }
         JoltContext ctx = JoltDispatcherServlet.getCurrentContext();
         Optional<String> raw = ctx.cookieValue(COOKIE_MESSAGE);
         ctx.removeCookie(COOKIE_MESSAGE);
@@ -118,10 +105,6 @@ public final class Flash {
      * @return the type, or {@code null} if none
      */
     public static String type() {
-        Map<String, String> map = local.get();
-        if (map.containsKey(COOKIE_TYPE)) {
-            return decode(map.remove(COOKIE_TYPE));
-        }
         JoltContext ctx = JoltDispatcherServlet.getCurrentContext();
         Optional<String> raw = ctx.cookieValue(COOKIE_TYPE);
         ctx.removeCookie(COOKIE_TYPE);
@@ -135,25 +118,21 @@ public final class Flash {
      * @return {@code true} if a flash message exists
      */
     public static boolean has() {
-        if (local.get().containsKey(COOKIE_MESSAGE)) {
-            return true;
-        }
         JoltContext ctx = JoltDispatcherServlet.getCurrentContext();
         return ctx.cookieValue(COOKIE_MESSAGE).isPresent();
     }
 
     /**
-     * Clears any pending flash message from both ThreadLocal and cookies.
+     * Clears any pending flash message from cookies.
      */
     public static void clear() {
-        local.get().clear();
         JoltContext ctx = JoltDispatcherServlet.getCurrentContext();
         ctx.removeCookie(COOKIE_MESSAGE);
         ctx.removeCookie(COOKIE_TYPE);
     }
 
     /**
-     * Encodes and stores a flash message and its type.
+     * Encodes and stores a flash message and its type in cookies.
      * 
      * @param message text to display
      * @param type    category of the message
@@ -161,9 +140,6 @@ public final class Flash {
     private static void set(String message, MessageType type) {
         String encMsg = encode(message);
         String encType = encode(type.toString());
-        Map<String, String> map = local.get();
-        map.put(COOKIE_MESSAGE, encMsg);
-        map.put(COOKIE_TYPE, encType);
         JoltContext ctx = JoltDispatcherServlet.getCurrentContext();
         ctx.addCookie().unsecureCookie(COOKIE_MESSAGE, encMsg);
         ctx.addCookie().unsecureCookie(COOKIE_TYPE, encType);
