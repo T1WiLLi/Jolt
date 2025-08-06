@@ -11,6 +11,7 @@ import org.apache.catalina.core.StandardThreadExecutor;
 import org.apache.catalina.startup.Tomcat;
 import org.apache.catalina.valves.RemoteIpValve;
 import org.apache.catalina.webresources.DirResourceSet;
+import org.apache.catalina.webresources.JarResourceSet;
 import org.apache.catalina.webresources.StandardRoot;
 import org.apache.coyote.http2.Http2Protocol;
 import org.apache.tomcat.util.net.SSLHostConfig;
@@ -24,6 +25,7 @@ import io.github.t1willi.server.config.ServerConfig;
 
 import java.io.File;
 import java.net.ServerSocket;
+import java.net.URL;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
@@ -167,7 +169,6 @@ public final class TomcatServer {
             context = tomcat.addContext(
                     "",
                     new File(config.getTempDir()).getAbsolutePath());
-
             context.setMapperContextRootRedirectEnabled(false);
             context.setMapperDirectoryRedirectEnabled(false);
             context.setAllowCasualMultipartParsing(false);
@@ -178,6 +179,7 @@ public final class TomcatServer {
             File staticDir = Paths.get("src", "main", "resources", "static").toFile();
 
             WebResourceRoot resources = new StandardRoot(context);
+
             if (staticDir.isDirectory()) {
                 resources.addPreResources(new DirResourceSet(
                         resources,
@@ -192,6 +194,18 @@ public final class TomcatServer {
                             "/"));
                 }
             }
+
+            URL codeLocation = getClass()
+                    .getProtectionDomain()
+                    .getCodeSource()
+                    .getLocation();
+            String jarPath = new File(codeLocation.toURI()).getAbsolutePath();
+            resources.addJarResources(new JarResourceSet(
+                    resources,
+                    "/static",
+                    jarPath,
+                    "/static"));
+
             context.setResources(resources);
 
             Wrapper defaultServlet = Tomcat.addServlet(
@@ -202,7 +216,6 @@ public final class TomcatServer {
             defaultServlet.addInitParameter(
                     "listings",
                     sconf.isDirectoryListingEnabled() ? "true" : "false");
-
             context.addServletMappingDecoded("/static/*", "default");
             if (!listingPath.equals("/static")) {
                 context.addServletMappingDecoded(listingPath + "/*", "default");
