@@ -520,7 +520,7 @@ public final class JoltContext {
      * @return this {@code JoltContext} for fluent chaining.
      */
     public JoltContext serveStatic(String resource) {
-        responseContext.serve(rawRequest(), resource);
+        responseContext.serve(rawRequest(), rawResponse(), resource);
         return this;
     }
 

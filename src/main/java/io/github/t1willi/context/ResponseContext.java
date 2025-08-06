@@ -1,9 +1,7 @@
 package io.github.t1willi.context;
 
-import java.io.File;
-import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InputStream;
+import java.net.MalformedURLException;
 import java.util.HashMap;
 import java.util.Map;
 
@@ -13,6 +11,8 @@ import io.github.t1willi.files.JoltFile;
 import io.github.t1willi.http.HttpStatus;
 import io.github.t1willi.utils.JacksonUtil;
 import io.github.t1willi.utils.MimeInterpreter;
+import jakarta.servlet.ServletContext;
+import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
@@ -140,49 +140,44 @@ final class ResponseContext {
      *
      * @param resource the resource path relative to the "static" directory
      */
-    // inside ResponseContext...
+    public void serve(HttpServletRequest request,
+            HttpServletResponse response,
+            String resource) {
+        String normalized = resource.startsWith("/")
+                ? resource.substring(1)
+                : resource;
+        String target = "/static/" + normalized;
+        ServletContext sc = request.getServletContext();
 
-    public void serve(HttpServletRequest request, String resource) {
-        String normalized = resource.startsWith("/") ? resource.substring(1) : resource;
-        InputStream in = null;
-
-        File fs = new File("static", normalized);
-        if (fs.isFile()) {
-            try {
-                in = new FileInputStream(fs);
-            } catch (IOException e) {
-                throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                        "Error reading file: " + e.getMessage(), e);
+        try {
+            if (sc.getResource(target) == null) {
+                throw new JoltHttpException(
+                        HttpStatus.NOT_FOUND,
+                        "Resource not found: " + resource);
             }
-        }
 
-        if (in == null) {
-            in = request.getServletContext().getResourceAsStream("/static/" + normalized);
-        }
-
-        if (in == null) {
-            in = Thread.currentThread()
-                    .getContextClassLoader()
-                    .getResourceAsStream("static/" + normalized);
-        }
-
-        if (in == null) {
-            throw new JoltHttpException(HttpStatus.NOT_FOUND,
-                    "Resource not found: " + resource);
-        }
-
-        try (InputStream res = in) {
-            byte[] data = res.readAllBytes();
             String ext = normalized.contains(".")
                     ? normalized.substring(normalized.lastIndexOf('.') + 1)
                     : "";
-            String mime = MimeInterpreter.getMime(ext);
+            String mime = sc.getMimeType(normalized);
+            if (mime == null) {
+                mime = MimeInterpreter.getMime(ext);
+            }
+            response.setContentType(mime);
 
-            setContentType(mime);
-            buffer.setBinaryBody(data);
-        } catch (IOException e) {
-            throw new JoltHttpException(HttpStatus.INTERNAL_SERVER_ERROR,
-                    "Error serving static resource: " + e.getMessage(), e);
+            request.getRequestDispatcher(target)
+                    .forward(request, response);
+
+        } catch (MalformedURLException e) {
+            throw new JoltHttpException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Invalid resource URL: " + e.getMessage(),
+                    e);
+        } catch (ServletException | IOException e) {
+            throw new JoltHttpException(
+                    HttpStatus.INTERNAL_SERVER_ERROR,
+                    "Error serving static resource: " + e.getMessage(),
+                    e);
         }
     }
 

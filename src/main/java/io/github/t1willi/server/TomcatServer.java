@@ -174,7 +174,7 @@ public final class TomcatServer {
             context.setReloadable(false);
 
             ServerConfig sconf = ConfigurationManager.getInstance().getServerConfig();
-            String listingPath = sconf.getDirectoryListingPath(); // ex "/directory"
+            String listingPath = sconf.getDirectoryListingPath();
             File staticDir = Paths.get("src", "main", "resources", "static").toFile();
 
             WebResourceRoot resources = new StandardRoot(context);
@@ -194,14 +194,17 @@ public final class TomcatServer {
             }
             context.setResources(resources);
 
-            if (sconf.isDirectoryListingEnabled()) {
-                Wrapper defaultServlet = Tomcat.addServlet(
-                        context,
-                        "default",
-                        "org.apache.catalina.servlets.DefaultServlet");
-                defaultServlet.setLoadOnStartup(1);
-                defaultServlet.addInitParameter("listings", "true");
-                context.addServletMappingDecoded(listingPath, "default");
+            Wrapper defaultServlet = Tomcat.addServlet(
+                    context,
+                    "default",
+                    "org.apache.catalina.servlets.DefaultServlet");
+            defaultServlet.setLoadOnStartup(1);
+            defaultServlet.addInitParameter(
+                    "listings",
+                    sconf.isDirectoryListingEnabled() ? "true" : "false");
+
+            context.addServletMappingDecoded("/static/*", "default");
+            if (!listingPath.equals("/static")) {
                 context.addServletMappingDecoded(listingPath + "/*", "default");
             }
 
@@ -212,6 +215,7 @@ public final class TomcatServer {
                     config.getMultipartMaxFileSize(),
                     config.getMultipartMaxRequestSize(),
                     config.getMultipartFileSizeThreshold());
+
             Wrapper jolt = Tomcat.addServlet(
                     context,
                     "JoltServlet",
