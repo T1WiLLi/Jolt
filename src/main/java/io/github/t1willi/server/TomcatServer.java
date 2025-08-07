@@ -13,6 +13,7 @@ import org.apache.catalina.valves.RemoteIpValve;
 import org.apache.catalina.webresources.DirResourceSet;
 import org.apache.catalina.webresources.JarResourceSet;
 import org.apache.catalina.webresources.StandardRoot;
+import org.apache.coyote.http11.Http11Nio2Protocol;
 import org.apache.coyote.http2.Http2Protocol;
 import org.apache.tomcat.util.net.SSLHostConfig;
 import org.apache.tomcat.util.net.SSLHostConfigCertificate;
@@ -47,8 +48,9 @@ public final class TomcatServer {
             validateEnvironment();
             initializeTomcat();
             configureRemoteIpValueIfNeeded();
-            tomcat.getService().addExecutor(createAndConfigureExecutor());
-            for (Connector connector : createAndConfigureConnectors()) {
+            StandardThreadExecutor executor = createAndConfigureExecutor();
+            tomcat.getService().addExecutor(executor);
+            for (Connector connector : createAndConfigureConnectors(executor)) {
                 tomcat.getService().addConnector(connector);
             }
             configureContext();
@@ -99,9 +101,12 @@ public final class TomcatServer {
         tomcat.setBaseDir(new File(config.getTempDir()).getAbsolutePath());
     }
 
-    private Connector[] createAndConfigureConnectors() throws ServerException {
+    private Connector[] createAndConfigureConnectors(StandardThreadExecutor executor) throws ServerException {
         List<Connector> connectors = new ArrayList<>();
 
+        tomcat.getService().addExecutor(executor);
+
+        // 2) HTTP connector
         if (config.isHttpEnabled()) {
             Connector httpConnector = new Connector("org.apache.coyote.http11.Http11Nio2Protocol");
             httpConnector.setPort(config.getPort());
@@ -120,18 +125,20 @@ public final class TomcatServer {
             httpConnector.setProperty("maxKeepAliveRequests", "100");
             httpConnector.setProperty("disableUploadTimeout", "true");
 
-            httpConnector.addUpgradeProtocol(new Http2Protocol()); // Support HTTP/2
+            Http11Nio2Protocol httpProto = (Http11Nio2Protocol) httpConnector.getProtocolHandler();
+            httpProto.setExecutor(executor);
+
+            httpConnector.addUpgradeProtocol(new Http2Protocol());
 
             if (config.isSslEnabled()
                     && Boolean.parseBoolean(
                             ConfigurationManager.getInstance().getProperty("server.http.redirect", "false"))) {
-                httpConnector.setRedirectPort(config.getSslPort()); // Redirect HTTP to HTTPS only if SSL is enabled AND
-                                                                    // redirect for HTTP is enabled
+                httpConnector.setRedirectPort(config.getSslPort());
             }
-
             connectors.add(httpConnector);
         }
 
+        // 3) HTTPS connector
         if (config.isSslEnabled()) {
             validateSslConfig();
             Connector httpsConnector = new Connector("org.apache.coyote.http11.Http11Nio2Protocol");
@@ -149,14 +156,20 @@ public final class TomcatServer {
             certificate.setCertificateKeystoreFile(config.getKeyStore());
             certificate.setCertificateKeystorePassword(config.getKeyStorePassword());
             certificate.setCertificateKeyAlias(config.getKeyAlias());
-
             sslHostConfig.addCertificate(certificate);
-            httpsConnector.addSslHostConfig(sslHostConfig);
 
+            httpsConnector.addSslHostConfig(sslHostConfig);
             httpsConnector.setProperty("SSLEnabled", "true");
+
+            Http11Nio2Protocol httpsProto = (Http11Nio2Protocol) httpsConnector.getProtocolHandler();
+            httpsProto.setExecutor(executor);
+
+            // Support HTTP/2
             httpsConnector.addUpgradeProtocol(new Http2Protocol());
+
             connectors.add(httpsConnector);
         }
+
         if (connectors.isEmpty()) {
             throw new ServerException("No connectors configured. At least one of HTTP or HTTPS must be enabled.");
         }
@@ -170,6 +183,7 @@ public final class TomcatServer {
         executor.setMinSpareThreads(config.getThreadsMin());
         executor.setMaxThreads(config.getThreadsMax());
         executor.setMaxIdleTime((int) config.getThreadsTimeout());
+        executor.setDaemon(config.isDaemon());
         return executor;
     }
 
