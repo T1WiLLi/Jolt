@@ -6,7 +6,7 @@
 
     <groupId>io.github.t1willi</groupId>
     <artifactId>jolt</artifactId>
-    <version>25.08.2</version>
+    <version>25.08.3</version>
     <packaging>jar</packaging>
 
     <name>Jolt</name>
@@ -63,22 +63,22 @@
         <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
             <artifactId>tomcat-embed-core</artifactId>
-            <version>11.0.8</version>
+            <version>11.0.10</version>
         </dependency>
         <dependency>
             <groupId>org.apache.tomcat</groupId>
             <artifactId>tomcat-catalina</artifactId>
-            <version>11.0.9</version>
+            <version>11.0.10</version>
         </dependency>
         <dependency>
             <groupId>org.apache.tomcat.embed</groupId>
             <artifactId>tomcat-embed-jasper</artifactId>
-            <version>11.0.6</version>
+            <version>11.0.10</version>
         </dependency>
         <dependency>
             <groupId>org.apache.tomcat</groupId>
             <artifactId>tomcat-juli</artifactId>
-            <version>11.0.6</version>
+            <version>11.0.10</version>
         </dependency>
         <dependency>
             <groupId>jakarta.servlet</groupId>

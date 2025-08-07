@@ -106,11 +106,20 @@ public final class TomcatServer {
             Connector httpConnector = new Connector("org.apache.coyote.http11.Http11Nio2Protocol");
             httpConnector.setPort(config.getPort());
             httpConnector.setURIEncoding("UTF-8");
+
+            // Compression settings
             httpConnector.setProperty("compression", "on");
             httpConnector.setProperty("compressionMinSize", "1024");
             httpConnector.setProperty("compressionMethod", "gzip");
             httpConnector.setProperty("compressableMimeType",
                     "text/html,text/xml,text/css,text/javascript,application/javascript,application/json");
+
+            // Connection / Keep-Alive tuning
+            httpConnector.setProperty("connectionTimeout", "20000");
+            httpConnector.setProperty("keepAliveTimeout", "20000");
+            httpConnector.setProperty("maxKeepAliveRequests", "100");
+            httpConnector.setProperty("disableUploadTimeout", "true");
+
             httpConnector.addUpgradeProtocol(new Http2Protocol()); // Support HTTP/2
 
             if (config.isSslEnabled()
